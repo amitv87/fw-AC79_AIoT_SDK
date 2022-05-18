@@ -3,7 +3,7 @@
 .global app_wifi_camera_version
 
 app_wifi_camera_version:
-.long 197110099 
-.asciz "WIFI_CAMERA-@20220331-$16783bc"
+.long 197709778 
+.asciz "WIFI_CAMERA-@20220407-$16783bc"
 
 

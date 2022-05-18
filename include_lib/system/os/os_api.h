@@ -152,9 +152,28 @@ int os_sem_query(OS_SEM *);
 
 int os_mutex_create(OS_MUTEX *);
 
-int os_mutex_accept(OS_MUTEX *);
-
+/* ----------------------------------------------------------------------------*/
+/**
+ * @brief 等待互斥量
+ * @param[in]  mutex: 互斥量
+ * @param[in]  timeout: 0:阻塞等待（注意:不能传入portMAX_DELAY）; -1:该参数已经弃用，非阻塞请使用os_mutex_accept
+ * @return 0: 成功
+ * @return OS_TIMEOUT: 等待超时
+ * @note	不可在中断函数或者临界区调用
+ */
+/* ----------------------------------------------------------------------------*/
 int os_mutex_pend(OS_MUTEX *, int timeout);
+
+/* ----------------------------------------------------------------------------*/
+/**
+ * @brief 获取互斥量（非堵塞）
+ * @param[in]  mutex: 互斥量
+ * @return 0: 成功
+ * @return OS_TIMEOUT: 获取失败
+ * @note	不可在中断函数或者临界区调用
+ */
+/* ----------------------------------------------------------------------------*/
+int os_mutex_accept(OS_MUTEX *p_mutex);
 
 int os_mutex_post(OS_MUTEX *);
 
