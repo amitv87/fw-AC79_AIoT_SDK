@@ -238,7 +238,7 @@ int main()
 {
     //init_for_stack_info();
 
-    /* early_puts("WL80 SDK RUN !!!\r\n"); */
+    /* early_puts("WL8X SDK RUN !!!\r\n"); */
 
     __local_irq_disable();
 

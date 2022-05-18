@@ -22,7 +22,7 @@
 #define UVC_REC_JPG_HEAD_SIZE	8
 #define UVC_REC_JPG_ALIGN     	512
 #define UVC_JPEG_HEAD 			0xE0FFD8FF
-#define USB_DMA_CP_ENABLE       (1)
+#define USB_DMA_CP_ENABLE       (0)//注意：使用硬件dma copy需要异步接收推送数据，否则出现速度快数据错乱的问题
 
 struct uvc_dev_control {
     OS_SEM sem;
@@ -251,7 +251,10 @@ int uvc_mjpg_stream_out(void *fd, int cnt, void *stream_list, int state)
 
     if (!fh->buf) {
         fh->free_size = uvc_buf_free_space(fh);
-        fh->buf = uvc_buf_malloc(fh, fh->free_size);
+        if (fh->free_size > 1024) {
+            fh->buf = uvc_buf_malloc(fh, fh->free_size);
+            fh->free_size -= UVC_REC_JPG_ALIGN;//减512防止realloc时512对齐断言
+        }
         if (!fh->buf) {
             err = -ENOMEM;
             goto _exit;
@@ -279,7 +282,7 @@ int uvc_mjpg_stream_out(void *fd, int cnt, void *stream_list, int state)
     }
 
 #if USB_DMA_CP_ENABLE
-    dma_task_copy(fh->dma_list, cnt);
+    dma_task_copy(fh->dma_list, cnt);//注意：使用硬件dma copy需要异步接收推送数据，否则出现速度快数据错乱的问题
 #endif
 
     if (state == STREAM_EOF) {
@@ -299,7 +302,7 @@ int uvc_mjpg_stream_out(void *fd, int cnt, void *stream_list, int state)
             /*memset(fh->buf + fh->b_offset + UVC_REC_JPG_HEAD_SIZE, 0, req_size - fh->b_offset - UVC_REC_JPG_HEAD_SIZE);*/
             u32 *head = (u32 *)(fh->buf + UVC_REC_JPG_HEAD_SIZE);
             if (*head == UVC_JPEG_HEAD) {
-                uvc_buf_stream_finish(fh, fh->buf);
+                uvc_buf_stream_finish(fh, fh->buf);//注意：使用硬件dma copy需要异步接收推送数据，否则出现速度快数据错乱的问题
             } else {
                 uvc_buf_free(fh, fh->buf);
             }

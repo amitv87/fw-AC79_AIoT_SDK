@@ -18,6 +18,7 @@
 #define SYSVDD_VOL_SEL_LEVEL				SYSVDD_VOL_SEL_126V //系统内核电压，默认1.26V
 
 
+#define CONFIG_CXX_SUPPORT //使能C++支持
 
 #define CONFIG_DEBUG_ENABLE                     /* 打印开关 */
 

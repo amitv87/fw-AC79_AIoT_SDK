@@ -428,3 +428,405 @@ int usb_audio_event_handler(struct device_event *event)
 }
 
 #endif
+
+
+#if TCFG_HOST_AUDIO_ENABLE
+
+#include "host/audio.h"
+
+struct usb_host_mic_handle {
+    struct video_buffer b;
+    struct audio_format f;
+    void *rec_dev;
+    u8 *audio_rec_dma_buffer;
+    u16 offset;
+    u8 bindex;
+};
+
+struct usb_host_spk_handle {
+    OS_SEM rd_sem;
+    void *play_dev;
+    cbuffer_t play_cbuf;
+    void *play_buf;
+    u8 play_start;
+    u8 single_channel_to_double;
+};
+
+static struct usb_host_mic_handle *uac_host_mic_handle[USB_MAX_HW_NUM];
+static struct usb_host_spk_handle *uac_host_spk_handle[USB_MAX_HW_NUM];
+
+static int usb_host_audio_mic_tx_handler(struct usb_host_mic_handle *hdl, void *data, u32 len)
+{
+    int err = 0;
+    struct video_buffer *b;
+
+    if (!hdl || !hdl->rec_dev) {
+        return 0;
+    }
+
+    b = &hdl->b;
+    b->noblock = 1;
+    b->timeout = 0;
+    b->index = hdl->bindex;
+
+    if (hdl->offset == 0) {
+        err = dev_ioctl(hdl->rec_dev, AUDIOC_DQBUF, (u32)b);
+        if (err || !b->len) {
+            return 0;
+        }
+    }
+
+    memcpy(data, (u8 *)b->baddr + hdl->offset, len);
+    hdl->offset += len;
+
+    if (hdl->offset == b->len) {
+        dev_ioctl(hdl->rec_dev, AUDIOC_QBUF, (u32)b);
+        hdl->offset = 0;
+    }
+
+    return len;
+}
+
+static int usb_host_audio_mic_close(struct usb_host_mic_handle *hdl)
+{
+    if (!hdl) {
+        return -1;
+    }
+
+    if (hdl->rec_dev) {
+        dev_ioctl(hdl->rec_dev, AUDIOC_STREAM_OFF, (u32)&hdl->bindex);
+        if (hdl->offset) {
+            dev_ioctl(hdl->rec_dev, AUDIOC_QBUF, (u32)&hdl->b);
+            hdl->offset = 0;
+        }
+        dev_close(hdl->rec_dev);
+        hdl->rec_dev = NULL;
+    }
+    if (hdl->audio_rec_dma_buffer) {
+        free(hdl->audio_rec_dma_buffer);
+        hdl->audio_rec_dma_buffer = NULL;
+    }
+
+    free(hdl);
+
+    return 0;
+}
+
+static int usb_host_audio_mic_open(struct usb_host_mic_handle *hdl, u32 sample_rate, u32 frame_len, u8 channel)
+{
+    int err = 0;
+    void *mic_hdl = NULL;
+    struct video_reqbufs breq = {0};
+
+    if (hdl->rec_dev) {
+        return 0;
+    }
+
+    memset(&hdl->f, 0, sizeof(struct audio_format));
+    memset(&hdl->b, 0, sizeof(struct video_buffer));
+
+#if CONFIG_AUDIO_ENC_SAMPLE_SOURCE == AUDIO_ENC_SAMPLE_SOURCE_PLNK0
+    mic_hdl = dev_open("audio", (void *)AUDIO_TYPE_ENC_PLNK0);
+#elif CONFIG_AUDIO_ENC_SAMPLE_SOURCE == AUDIO_ENC_SAMPLE_SOURCE_PLNK1
+    mic_hdl = dev_open("audio", (void *)AUDIO_TYPE_ENC_PLNK1);
+#elif CONFIG_AUDIO_ENC_SAMPLE_SOURCE == AUDIO_ENC_SAMPLE_SOURCE_IIS0
+    mic_hdl = dev_open("audio", (void *)AUDIO_TYPE_ENC_IIS0);
+#elif CONFIG_AUDIO_ENC_SAMPLE_SOURCE == AUDIO_ENC_SAMPLE_SOURCE_IIS1
+    mic_hdl = dev_open("audio", (void *)AUDIO_TYPE_ENC_IIS1);
+#elif CONFIG_AUDIO_ENC_SAMPLE_SOURCE == AUDIO_ENC_SAMPLE_SOURCE_LINEIN
+    mic_hdl = dev_open("audio", (void *)AUDIO_TYPE_ENC_LINEIN);
+#else
+    mic_hdl = dev_open("audio", (void *)AUDIO_TYPE_ENC_MIC);
+#endif
+
+    if (!mic_hdl) {
+        log_e("uac host audio_open: err\n");
+        return -EFAULT;
+    }
+
+    hdl->audio_rec_dma_buffer = malloc(frame_len * 6);
+    if (!hdl->audio_rec_dma_buffer) {
+        goto __err;
+    }
+
+    breq.buf  = hdl->audio_rec_dma_buffer;
+    breq.size = frame_len * 6;
+
+    err = dev_ioctl(mic_hdl, AUDIOC_REQBUFS, (unsigned int)&breq);
+    if (err) {
+        goto __err;
+    }
+
+    hdl->offset = 0;
+#ifdef CONFIG_ALL_ADC_CHANNEL_OPEN_ENABLE
+    hdl->f.channel_bit_map = BIT(CONFIG_UAC_MIC_ADC_CHANNEL);
+#endif
+#if CONFIG_AUDIO_ENC_SAMPLE_SOURCE == AUDIO_ENC_SAMPLE_SOURCE_PLNK0
+    hdl->f.sample_source = "plnk0";
+#elif CONFIG_AUDIO_ENC_SAMPLE_SOURCE == AUDIO_ENC_SAMPLE_SOURCE_PLNK1
+    hdl->f.sample_source = "plnk1";
+#elif CONFIG_AUDIO_ENC_SAMPLE_SOURCE == AUDIO_ENC_SAMPLE_SOURCE_IIS0
+    hdl->f.sample_source = "iis0";
+#elif CONFIG_AUDIO_ENC_SAMPLE_SOURCE == AUDIO_ENC_SAMPLE_SOURCE_IIS1
+    hdl->f.sample_source = "iis1";
+#elif CONFIG_AUDIO_ENC_SAMPLE_SOURCE == AUDIO_ENC_SAMPLE_SOURCE_LINEIN
+    hdl->f.sample_source = "linein";
+#else
+    hdl->f.sample_source = "mic";
+#endif
+    hdl->f.format = "pcm";
+    hdl->f.volume = HOST_MIC_VOLUME;
+    hdl->f.channel = channel;
+    hdl->f.sample_rate = sample_rate;
+    hdl->f.frame_len = frame_len;
+
+    log_d("uac host channel : %d\n", hdl->f.channel);
+    log_d("uac host sample_rate : %d\n", hdl->f.sample_rate);
+    log_d("uac host volume : %d\n", hdl->f.volume);
+    log_d("uac host frame_len : %d\n", hdl->f.frame_len);
+
+    err = dev_ioctl(mic_hdl, AUDIOC_SET_FMT, (unsigned int)&hdl->f);
+    if (err) {
+        log_e("uac host audio_set_fmt: err\n");
+        goto __err;
+    }
+
+    err = dev_ioctl(mic_hdl, AUDIOC_STREAM_ON, (u32)&hdl->bindex);
+    if (err) {
+        log_e(" uac host audio rec stream on err\n");
+        goto __err;
+    }
+
+    hdl->rec_dev = mic_hdl;
+
+    log_i("uac host audio_enc_start: suss\n");
+
+    return 0;
+__err:
+    if (mic_hdl) {
+        dev_close(mic_hdl);
+    }
+    if (hdl->audio_rec_dma_buffer) {
+        free(hdl->audio_rec_dma_buffer);
+        hdl->audio_rec_dma_buffer = NULL;
+    }
+
+    return err;
+}
+
+static int uac_host_vfs_fread(void *file, void *data, u32 len)
+{
+    struct usb_host_spk_handle *hdl = (struct usb_host_spk_handle *)file;
+
+    int rlen = 0;
+
+    while (!rlen) {
+        rlen = cbuf_get_data_size(&hdl->play_cbuf);
+        if (!rlen) {
+            if (!hdl->play_start) {
+                return -2;
+            }
+            os_sem_pend(&hdl->rd_sem, 0);
+        }
+    }
+
+    if (hdl->single_channel_to_double) {
+        if (rlen > len / 2) {
+            rlen = len / 2;
+        }
+    } else {
+        if (rlen > len) {
+            rlen = len;
+        }
+    }
+
+    cbuf_read(&hdl->play_cbuf, data, rlen);
+
+    if (hdl->single_channel_to_double) {
+        s16 *start = (s16 *)((u8 *)data + rlen);
+        s16 *end = (s16 *)((u8 *)data + rlen * 2);
+
+        for (u32 i = 0; i < rlen / 2; ++i) {
+            *--end = *--start;
+            *--end = *start;
+        }
+
+        rlen <<= 1;
+    }
+
+    return rlen;
+}
+
+static int uac_host_vfs_fclose(void *file)
+{
+    return 0;
+}
+
+static int uac_host_vfs_flen(void *file)
+{
+    return 0;
+}
+
+static const struct audio_vfs_ops uac_host_vfs_ops = {
+    .fread  = uac_host_vfs_fread,
+    .fclose = uac_host_vfs_fclose,
+    .flen   = uac_host_vfs_flen,
+};
+
+static int usb_host_audio_speaker_open(struct usb_host_spk_handle *hdl, u32 sample_rate, u32 frame_len, u8 channel)
+{
+    int err = 0;
+    union audio_req req = {0};
+
+    if (hdl->play_dev) {
+        return -1;
+    }
+
+    os_sem_create(&hdl->rd_sem, 0);
+
+    int play_buf_size = sample_rate * 4 * channel / 1000 * 10;
+
+    if (channel & BIT(7)) {
+        channel &= ~BIT(7);
+        hdl->single_channel_to_double = 1;
+    }
+
+    hdl->play_buf = malloc(play_buf_size);
+    if (!hdl->play_buf) {
+        return -1;
+    }
+    cbuf_init(&hdl->play_cbuf, hdl->play_buf, play_buf_size);
+
+    hdl->play_dev = server_open("audio_server", "dec");
+    if (!hdl->play_dev) {
+        goto __err;
+    }
+
+    req.dec.cmd             = AUDIO_DEC_OPEN;
+    req.dec.volume          = HOST_SPK_VOLUME;
+    req.dec.output_buf_len  = 640 * 3;
+    req.dec.channel         = channel;
+    req.dec.sample_rate     = sample_rate;
+    req.dec.priority        = 1;
+    req.dec.vfs_ops         = &uac_host_vfs_ops;
+    req.dec.dec_type        = "pcm";
+    req.dec.sample_source   = "dac";
+    /* req.dec.attr            = AUDIO_ATTR_REAL_TIME; */
+    req.dec.file            = (FILE *)hdl;
+
+    err = server_request(hdl->play_dev, AUDIO_REQ_DEC, &req);
+    if (err) {
+        goto __err;
+    }
+
+    hdl->play_start = 1;
+
+    req.dec.cmd = AUDIO_DEC_START;
+    err = server_request_async(hdl->play_dev, AUDIO_REQ_DEC, &req);
+    if (err) {
+        goto __err;
+    }
+
+    return 0;
+
+__err:
+    hdl->play_start = 0;
+
+    if (hdl->play_buf) {
+        free(hdl->play_buf);
+        hdl->play_buf = NULL;
+    }
+
+    if (hdl->play_dev) {
+        server_close(hdl->play_dev);
+        hdl->play_dev = NULL;
+    }
+
+    return -1;
+}
+
+static int usb_host_audio_speaker_close(struct usb_host_spk_handle *hdl)
+{
+    union audio_req req = {0};
+
+    if (!hdl) {
+        return -1;
+    }
+
+    if (hdl->play_dev) {
+        hdl->play_start = 0;
+        os_sem_post(&hdl->rd_sem);
+        req.dec.cmd = AUDIO_DEC_STOP;
+        server_request(hdl->play_dev, AUDIO_REQ_DEC, &req);
+        server_close(hdl->play_dev);
+        free(hdl->play_buf);
+        hdl->play_buf = NULL;
+        hdl->play_dev = NULL;
+    }
+
+    free(hdl);
+
+    return 0;
+}
+
+static int usb_host_audio_play_put_buf(const usb_dev usb_id, void *ptr, u32 len, u8 channel, u32 sample_rate)
+{
+    struct usb_host_mic_handle *hdl = uac_host_mic_handle[usb_id];
+
+    if (channel == 0 && sample_rate == 0) {
+        usb_host_audio_mic_close(hdl);
+        uac_host_mic_handle[usb_id] = NULL;
+        return 0;
+    }
+    if (!hdl) {
+        hdl = zalloc(sizeof(struct usb_host_mic_handle));
+        uac_host_mic_handle[usb_id] = hdl;
+    }
+    if (hdl && !hdl->rec_dev) {
+        usb_host_audio_mic_open(hdl, sample_rate, len, channel);
+    }
+    if (hdl && hdl->rec_dev) {
+        return usb_host_audio_mic_tx_handler(hdl, ptr, len);
+    } else {
+        len = 0;
+    }
+
+    return len;
+}
+
+static int usb_host_audio_record_get_buf(const usb_dev usb_id, void *ptr, u32 len, u8 channel, u32 sample_rate)
+{
+    struct usb_host_spk_handle *hdl = uac_host_spk_handle[usb_id];
+
+    if (channel == 0 && sample_rate == 0) {
+        usb_host_audio_speaker_close(hdl);
+        uac_host_spk_handle[usb_id] = NULL;
+        return 0;
+    }
+    if (!hdl) {
+        hdl = zalloc(sizeof(struct usb_host_spk_handle));
+        uac_host_spk_handle[usb_id] = hdl;
+    }
+    if (hdl && !hdl->play_dev) {
+        usb_host_audio_speaker_open(hdl, sample_rate, len, channel);
+    }
+    if (hdl && hdl->play_dev && len > 0) {
+        cbuf_write(&hdl->play_cbuf, ptr, len);
+        os_sem_set(&hdl->rd_sem, 0);
+        os_sem_post(&hdl->rd_sem);
+    }
+
+    return len;
+}
+
+static int usb_host_audio_api_init(void)
+{
+    usb_host_audio_init(0, usb_host_audio_play_put_buf, usb_host_audio_record_get_buf);
+#if USB_MAX_HW_NUM > 1
+    usb_host_audio_init(1, usb_host_audio_play_put_buf, usb_host_audio_record_get_buf);
+#endif
+    return 0;
+}
+late_initcall(usb_host_audio_api_init);
+
+#endif

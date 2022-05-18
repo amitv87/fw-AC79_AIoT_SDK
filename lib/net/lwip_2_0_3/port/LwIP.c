@@ -424,6 +424,7 @@ void __lwip_renew(unsigned short parm)
                 LWIP_ASSERT("failed to create timeout network_is_dhcp_bound", 0);
             }
         } else {
+            tcpip_untimeout((sys_timeout_handler)network_is_dhcp_bound, &wireless_netif);
             IP4_ADDR(&ipaddr, lan_setting_info.WIRELESS_IP_ADDR0, lan_setting_info.WIRELESS_IP_ADDR1, lan_setting_info.WIRELESS_IP_ADDR2, lan_setting_info.WIRELESS_IP_ADDR3);
             IP4_ADDR(&netmask, lan_setting_info.WIRELESS_NETMASK0, lan_setting_info.WIRELESS_NETMASK1, lan_setting_info.WIRELESS_NETMASK2, lan_setting_info.WIRELESS_NETMASK3);
             IP4_ADDR(&gw, lan_setting_info.WIRELESS_GATEWAY0, lan_setting_info.WIRELESS_GATEWAY1, lan_setting_info.WIRELESS_GATEWAY2, lan_setting_info.WIRELESS_GATEWAY3);

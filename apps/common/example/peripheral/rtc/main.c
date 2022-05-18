@@ -8,6 +8,7 @@
 #include "wifi/wifi_connect.h"
 #endif
 
+#ifdef USE_RTC_TEST_DEMO
 //当应用层不定义该函数时，系统默认时间为SDK发布时间，当RTC设置时间小于SDK发布时间则设置无效
 void set_rtc_default_time(struct sys_time *t)
 {
@@ -43,17 +44,17 @@ static void time_print(void)//网络时间获取方法
         printf("time_lapse timeout %d msec\r\n", to);
     }
 }
-void user_set_rtc_time(void)//用户设置RTC时间
+void user_set_rtc_time(void)//用户设置RTC时间,设置的时间一定要比当前编译的时间偏后，否则rtc会按当前编译时间计时
 {
     struct sys_time st;
     void *fd = dev_open("rtc", NULL);
     if (fd) {
-        st.year = 2020;
-        st.month = 2;
-        st.day = 2;
-        st.hour = 2;
-        st.min = 2;
-        st.sec = 2;
+        st.year = 2023;
+        st.month = 8;
+        st.day = 8;
+        st.hour = 8;
+        st.min = 8;
+        st.sec = 8;
         printf("user_set_rtc_time : %04d-%02d-%02d,%02d:%02d:%02d\n", st.year, st.month, st.day, st.hour, st.min, st.sec);
         dev_ioctl(fd, IOCTL_SET_SYS_TIME, (u32)&st);
         dev_close(fd);
@@ -111,8 +112,11 @@ static void time_rtc_test_task(void *p)
         os_time_dly(300);
     }
 #else //本地RTC获取
-    user_get_rtc_time();
+#ifdef USER_SET_RTC_TIME //用户自己设置rtc时间
     user_set_rtc_time();
+#else //使用sdk当前编译时间作为rtc时间
+    user_get_rtc_time();
+#endif
 #if 1
     user_get_rtc_time_cyc();//100ms检测一次时间变化,
 #else
@@ -130,3 +134,4 @@ static int c_main(void)
     return 0;
 }
 late_initcall(c_main);
+#endif

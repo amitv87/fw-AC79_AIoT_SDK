@@ -497,6 +497,7 @@ int usb_uvc_parser(struct usb_host_device *host_dev, u8 interface_num, u8 *pBuf)
     host_dev->interface_info[interface_num] = &uvc_host_inf;
     __this(usb_id)->dev.private_data = host_dev;
     __this(usb_id)->name = (u8 *)(usb_id ? "uvc1" : "uvc0");
+    __this(usb_id)->frame_cnt = 0;
     return len;
 
 __err:

@@ -3,5 +3,5 @@
 .global lib_wt_version
 
 lib_wt_version:
-.long 199249897 
-.asciz "WT-@20220425-$8374faf"
+.long 199618396 
+.asciz "WT-@20220429-$7455586"

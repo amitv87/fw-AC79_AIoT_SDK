@@ -37,9 +37,7 @@ struct audio_device_t {
 int usb_audio_parser(struct usb_host_device *host_dev, u8 interface_num, const u8 *pBuf);
 
 // API
-int usb_audio_play_put_buf(void *ptr, u32 len);
-int usb_audio_record_get_buf(void *ptr, u32 len);
-void usb_host_audio_init(const usb_dev usb_id, int (*put_buf)(void *ptr, u32 len), int (*get_buf)(void *ptr, u32 len));
+void usb_host_audio_init(const usb_dev usb_id, int (*put_buf)(const usb_dev usb_id, void *ptr, u32 len, u8 channel, u32 sample_rate), int (*get_buf)(const usb_dev usb_id, void *ptr, u32 len, u8 channel, u32 sample_rate));
 void usb_host_audio_exit(const usb_dev usb_id);
 void usb_audio_start_process(const usb_dev usb_id);
 void usb_audio_stop_process(const usb_dev usb_id);

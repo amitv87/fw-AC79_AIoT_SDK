@@ -35,20 +35,23 @@ struct usb_audio_play {
     cbuffer_t usb_audio_play_cbuf;
     u32 usb_audio_remain_len;
     OS_SEM sem;
-    int (*put_buf)(void *ptr, u32 len);
+    int (*put_buf)(const usb_dev usb_id, void *ptr, u32 len, u8 channel, u32 sample_rate);
 };
 struct usb_audio_mic {
     u32 sample_rate;
     u8 Cur_AlternateSetting;
     u8 record_state;
+    u8 src_channel;
     u8 *usb_audio_record_buf;
     u8 *usb_audio_record_buf2;
+    u8 *buffer;
     cbuffer_t usb_audio_record_cbuf;
-    int (*get_buf)(void *ptr, u32 len);
+    int (*get_buf)(const usb_dev usb_id, void *ptr, u32 len, u8 channel, u32 sample_rate);
 };
 struct usb_audio_info {
     struct usb_audio_play player;
     struct usb_audio_mic microphone;
+    OS_SEM *wait_sem;
 };
 
 enum {
@@ -63,8 +66,6 @@ enum {
     AUDIO_RECORD_STOP,
     AUDIO_RECORD_PAUSE,
 };
-
-#define EP_MAX_PACKET_SIZE  (192)
 
 struct usb_audio_info _usb_audio_info[USB_MAX_HW_NUM] = {0};
 #define __this   (&_usb_audio_info[usb_id])
@@ -110,6 +111,22 @@ static const struct usb_interface_info _uac_if[USB_MAX_HW_NUM][MAX_HOST_INTERFAC
             .ctrl = (struct interface_ctrl *) &uac_ctrl,
             .dev.audio = &audio_device[0][3],
         },
+        {
+            .ctrl = (struct interface_ctrl *) &uac_ctrl,
+            .dev.audio = &audio_device[0][4],
+        },
+        {
+            .ctrl = (struct interface_ctrl *) &uac_ctrl,
+            .dev.audio = &audio_device[0][5],
+        },
+        {
+            .ctrl = (struct interface_ctrl *) &uac_ctrl,
+            .dev.audio = &audio_device[0][6],
+        },
+        {
+            .ctrl = (struct interface_ctrl *) &uac_ctrl,
+            .dev.audio = &audio_device[0][7],
+        },
     },
 #if USB_MAX_HW_NUM > 1
     {
@@ -128,6 +145,22 @@ static const struct usb_interface_info _uac_if[USB_MAX_HW_NUM][MAX_HOST_INTERFAC
         {
             .ctrl = (struct interface_ctrl *) &uac_ctrl,
             .dev.audio = &audio_device[1][3],
+        },
+        {
+            .ctrl = (struct interface_ctrl *) &uac_ctrl,
+            .dev.audio = &audio_device[1][4],
+        },
+        {
+            .ctrl = (struct interface_ctrl *) &uac_ctrl,
+            .dev.audio = &audio_device[1][5],
+        },
+        {
+            .ctrl = (struct interface_ctrl *) &uac_ctrl,
+            .dev.audio = &audio_device[1][6],
+        },
+        {
+            .ctrl = (struct interface_ctrl *) &uac_ctrl,
+            .dev.audio = &audio_device[1][7],
         },
     }
 #endif
@@ -255,9 +288,28 @@ static struct audio_device_t *__find_headphone_interface(const struct usb_host_d
     return NULL;
 }
 
+static struct audio_device_t *__find_control_interface(const struct usb_host_device *host_dev)
+{
+    struct audio_device_t *audio = NULL;
+
+    for (u8 i = 0; i < MAX_HOST_INTERFACE; i++) {
+        const struct usb_interface_info *usb_if = host_dev->interface_info[i];
+        if (usb_if &&
+            (usb_if->ctrl->interface_class == USB_CLASS_AUDIO)) {
+            audio = usb_if->dev.audio;
+            if (audio->subclass == USB_SUBCLASS_AUDIOCONTROL) {
+                return audio;
+            }
+        }
+    }
+
+    return NULL;
+}
+
 static u32 play_vol_convert(u16 v)
 {
     //固定音量表,更换声卡需要修改音量表
+#if UAC_VOLUME_STANDARD_REQUEST
     const u16 vol_table[] = {
         //0-100
         0xd300, //0
@@ -272,6 +324,21 @@ static u32 play_vol_convert(u16 v)
         0xfcfc, 0xfd28, 0xfd55, 0xfd80, 0xfdab, 0xfdd6, 0xfe01, 0xfe2a, 0xfe54, 0xfe7d,
         0xfea5, 0xfece, 0xfef5, 0xff1d, 0xff43, 0xff6a, 0xff90, 0xffb6, 0xffdb, 0x0000,
     };
+#else
+    const u16 vol_table[] = {
+        0xe3a0, 0xe461, 0xe519, 0xe5c8, 0xe670, 0xe711, 0xe7ac, 0xe840, 0xe8cf, 0xe959,
+        0xe9df, 0xea60, 0xeadc, 0xeb55, 0xebca, 0xec3c, 0xecab, 0xed16, 0xed7f, 0xede5,
+        0xee48, 0xeea9, 0xef08, 0xef64, 0xefbe, 0xf016, 0xf06c, 0xf0c0, 0xf113, 0xf164,
+        0xf1b3, 0xf200, 0xf24c, 0xf297, 0xf2e0, 0xf328, 0xf36e, 0xf3b4, 0xf3f8, 0xf43a,
+        0xf47c, 0xf4bd, 0xf4fc, 0xf53b, 0xf579, 0xf5b5, 0xf5f1, 0xf62c, 0xf666, 0xf69f,
+        0xf6d7, 0xf70e, 0xf745, 0xf77b, 0xf7b0, 0xf7e5, 0xf818, 0xf84b, 0xf87e, 0xf8b0,
+        0xf8e1, 0xf911, 0xf941, 0xf970, 0xf99f, 0xf9cd, 0xf9fb, 0xfa28, 0xfa55, 0xfa81,
+        0xfaad, 0xfad8, 0xfb03, 0xfb2d, 0xfb56, 0xfb80, 0xfba9, 0xfbd1, 0xfbf9, 0xfc21,
+        0xfc48, 0xfc6f, 0xfc95, 0xfcbb, 0xfce1, 0xfd06, 0xfd2b, 0xfd50, 0xfd74, 0xfd98,
+        0xfdbc, 0xfddf, 0xfe02, 0xfe25, 0xfe47, 0xfe69, 0xfe8b, 0xfead, 0xfece, 0xfeef,
+        0xff0f,
+    };
+#endif
 
     if (v <= 100) {
         return vol_table[v];
@@ -289,18 +356,27 @@ static u32 play_vol_convert(u16 v)
 void set_usb_audio_play_volume(const usb_dev usb_id, u16 vol)
 {
     struct usb_host_device *host_dev = (struct usb_host_device *)host_id2device(usb_id);
+    u8 featureUnitID = 2;
+    struct audio_device_t *audio = __find_control_interface(host_dev);
+    if (!audio) {
+        log_error("no find control interface!");
+        return;
+    }
 
-    u8 featureUnitID = 6;
-    usb_audio_volume_control(host_dev, featureUnitID, 1, play_vol_convert(vol));
-    usb_audio_volume_control(host_dev, featureUnitID, 2, play_vol_convert(vol));
+    if (usb_audio_volume_control(host_dev, featureUnitID, 1, play_vol_convert(vol), audio->interface_num)) {
+        usb_audio_volume_control(host_dev, featureUnitID, 0, play_vol_convert(vol), audio->interface_num);
+    } else {
+        usb_audio_volume_control(host_dev, featureUnitID, 2, play_vol_convert(vol), audio->interface_num);
+    }
+
     if (vol == 0) {
         __this->player.mute = 1;
-        usb_audio_mute_control(host_dev, featureUnitID, __this->player.mute); //mute
+        usb_audio_mute_control(host_dev, featureUnitID, __this->player.mute, audio->interface_num);
     } else {
         if (__this->player.mute == 1) {
             __this->player.mute = 0;
-            usb_audio_mute_control(host_dev, featureUnitID, __this->player.mute);
         }
+        usb_audio_mute_control(host_dev, featureUnitID, __this->player.mute, audio->interface_num);
     }
 }
 
@@ -315,6 +391,8 @@ static const s16 sin_48k[] = {
 };
 #endif
 
+static u32 usb_audio_tx_len[USB_MAX_HW_NUM] = {0};
+
 static void usb_audio_tx_isr(struct usb_host_device *host_dev, u32 ep)
 {
     const usb_dev usb_id = host_device2id(host_dev);
@@ -323,7 +401,6 @@ static void usb_audio_tx_isr(struct usb_host_device *host_dev, u32 ep)
     u16 ep_max_packet_size = 0;
     u8 channel = 0;
     u32 rlen = 0;
-    static u32 usb_audio_tx_len[USB_MAX_HW_NUM] = {0};
 
     if (__this->player.play_state != AUDIO_PLAY_START) {
         return;
@@ -336,8 +413,7 @@ static void usb_audio_tx_isr(struct usb_host_device *host_dev, u32 ep)
     }
 
     as_t = &audio->as[__this->player.Cur_AlternateSetting - 1];
-    /* ep_max_packet_size = as_t->ep_max_packet_size; */
-    ep_max_packet_size = EP_MAX_PACKET_SIZE;
+    ep_max_packet_size = as_t->ep_max_packet_size;
     channel = as_t->bNrChannels;
 
     //iso send
@@ -374,11 +450,13 @@ static void usb_audio_tx_isr(struct usb_host_device *host_dev, u32 ep)
             if (!rlen) {
                 __this->player.usb_audio_remain_len = 0;
                 usb_audio_tx_len[usb_id] = 0;
-                putchar('C');
+                putchar('c');
                 usb_h_ep_write_async(usb_id, ep, ep_max_packet_size, as_t->ep, NULL, ep_max_packet_size, USB_ENDPOINT_XFER_ISOC, 1);
+                os_sem_set(&__this->player.sem, 0);
                 os_sem_post(&__this->player.sem);
                 return;
             }
+            os_sem_set(&__this->player.sem, 0);
             os_sem_post(&__this->player.sem);
         }
         u8 *send_buf = __this->player.send_buf;
@@ -387,7 +465,7 @@ static void usb_audio_tx_isr(struct usb_host_device *host_dev, u32 ep)
             if (__this->player.src_channel == 1) {
                 //源数据是单声道数据,转双声道输出
                 int j = 0;
-                for (u8 i = 0; i < ep_max_packet_size; i += 4) {
+                for (u32 i = 0; i < ep_max_packet_size; i += 4) {
                     //left
                     *(send_buf + i) = *(play_buf + (usb_audio_tx_len[usb_id] + j));
                     *(send_buf + i + 1) = *(play_buf + (usb_audio_tx_len[usb_id] + j + 1));
@@ -405,6 +483,22 @@ static void usb_audio_tx_isr(struct usb_host_device *host_dev, u32 ep)
                 usb_audio_tx_len[usb_id] += ep_max_packet_size;
             }
         } else if (channel == 1) {
+            if (__this->player.src_channel == 1) {
+                //源数据是单声道数据,直接单声道输出
+                usb_h_ep_write_async(usb_id, ep, ep_max_packet_size, as_t->ep, play_buf + usb_audio_tx_len[usb_id], ep_max_packet_size, USB_ENDPOINT_XFER_ISOC, 0);
+                usb_audio_tx_len[usb_id] += ep_max_packet_size;
+            } else if (__this->player.src_channel == 2) {
+                //源数据是双声道数据,转单声道输出
+                int j = 0;
+                for (u32 i = 0; i < ep_max_packet_size; i += 2) {
+                    //left
+                    *(send_buf + i) = *(play_buf + (usb_audio_tx_len[usb_id] + j));
+                    *(send_buf + i + 1) = *(play_buf + (usb_audio_tx_len[usb_id] + j + 1));
+                    j += 4;
+                }
+                usb_audio_tx_len[usb_id] += j;
+                usb_h_ep_write_async(usb_id, ep, ep_max_packet_size, as_t->ep, send_buf, ep_max_packet_size, USB_ENDPOINT_XFER_ISOC, 0);
+            }
         }
         if (usb_audio_tx_len[usb_id] >= __this->player.usb_audio_remain_len) {
             __this->player.usb_audio_remain_len = 0;
@@ -412,8 +506,10 @@ static void usb_audio_tx_isr(struct usb_host_device *host_dev, u32 ep)
         }
     } else {
         //audio buf null ,send null packet
-        putchar('E');
+        os_sem_set(&__this->player.sem, 0);
+        os_sem_post(&__this->player.sem);
         usb_h_ep_write_async(usb_id, ep, ep_max_packet_size, as_t->ep, NULL, ep_max_packet_size, USB_ENDPOINT_XFER_ISOC, 1);
+        putchar('d');
     }
 #endif
 }
@@ -426,47 +522,53 @@ static void audio_play_task(void *p)
     u8 *ptr = NULL;
     u32 wlen = 0;
     u32 ret = 0;
-    struct audio_device_t *audio = NULL;
-
-    audio = __find_headphone_interface(host_dev);
+    struct audio_device_t *audio = __find_headphone_interface(host_dev);
     struct audio_streaming_t *as_t = &audio->as[__this->player.Cur_AlternateSetting - 1];
-    /* u32 ep_max_packet_size = as_t->ep_max_packet_size; */
-    u32 ep_max_packet_size = EP_MAX_PACKET_SIZE;
-    log_info("ep max packet : %d\n", ep_max_packet_size);
-    if (__this->player.send_buf) {
-        free(__this->player.send_buf);
-        __this->player.send_buf = NULL;
-    }
-    __this->player.send_buf = zalloc(ep_max_packet_size);
-    u32 usb_audio_buf_size = ep_max_packet_size * 5; //预留5个包的缓存
+    u32 ep_max_packet_size = as_t->ep_max_packet_size;
+    u32 usb_audio_buf_size = ep_max_packet_size * 10; //预留10个包的缓存
 
-    /* sys_timer_add(host_dev,set_vol_test,5000); */
+    log_info("audio play ep max packet : %d\n", ep_max_packet_size);
+
+    if (__this->player.src_channel != as_t->bNrChannels && __this->player.src_channel == 1) {
+        usb_audio_buf_size >>= 1;
+    }
+
     os_sem_create(&__this->player.sem, 0);
-    u32 host_ep = as_t->host_ep;
-    __this->player.play_state = AUDIO_PLAY_START;
+
     //分配双缓存
     // 一个缓存保存读卡的数据,一个用于usb发送
-    if (!__this->player.usb_audio_play_buf) {
-        __this->player.usb_audio_play_buf = zalloc(usb_audio_buf_size);
-        cbuf_init(&__this->player.usb_audio_play_cbuf, __this->player.usb_audio_play_buf, usb_audio_buf_size);
-        usb_h_ep_write_async(usb_id, host_ep, ep_max_packet_size, as_t->ep, NULL, ep_max_packet_size, USB_ENDPOINT_XFER_ISOC, 1); //启动iso传输
-    }
     if (!__this->player.usb_audio_play_buf2) {
         __this->player.usb_audio_play_buf2 = zalloc(usb_audio_buf_size);
     }
+    if (!__this->player.send_buf) {
+        __this->player.send_buf = zalloc(ep_max_packet_size);
+    }
+    if (!__this->player.usb_audio_play_buf) {
+        __this->player.usb_audio_play_buf = zalloc(usb_audio_buf_size);
+        cbuf_init(&__this->player.usb_audio_play_cbuf, __this->player.usb_audio_play_buf, usb_audio_buf_size);
+    }
+
+    if (!__this->player.send_buf || !__this->player.usb_audio_play_buf || !__this->player.usb_audio_play_buf2) {
+        os_sem_pend(&__this->player.sem, 0);
+    }
+
+    __this->player.play_state = AUDIO_PLAY_START;
+
+    usb_h_ep_write_async(usb_id, as_t->host_ep, ep_max_packet_size, as_t->ep, NULL, ep_max_packet_size, USB_ENDPOINT_XFER_ISOC, 1); //启动iso传输
+
+    os_sem_post(__this->wait_sem);
+
     while (1) {
         if (__this->player.Cur_AlternateSetting == 0 || __this->player.play_state != AUDIO_PLAY_START) {
-            putchar('C');
             os_time_dly(50);
             continue;
         }
         ptr = cbuf_write_alloc(&__this->player.usb_audio_play_cbuf, &wlen);
         if (wlen) {
-            putchar('R');
+            /* putchar('a'); */
             if (__this->player.put_buf) {
-                ret = __this->player.put_buf(ptr, wlen);
+                ret = __this->player.put_buf(usb_id, ptr, wlen, __this->player.src_channel, __this->player.sample_rate);
                 if (ret != wlen) {
-                    __this->player.play_state = AUDIO_PLAY_STOP;
                     goto __task_exit;
                 }
             }
@@ -496,7 +598,12 @@ void usb_audio_start_play(const usb_dev usb_id, u8 channel, u8 bit_reso, u32 sam
         as_t = &audio->as[i];
         if (as_t->bBitResolution == bit_reso) {
             for (u8 j = 0; j < as_t->bSamFreqType; j++) {
-                if (as_t->tSamFreq[j] == sample_rate) {
+                if (sample_rate == 0 && as_t->tSamFreq[as_t->bSamFreqType - j - 1] && as_t->tSamFreq[as_t->bSamFreqType - j - 1] <= 48000) {
+                    sample_rate = as_t->tSamFreq[as_t->bSamFreqType - j - 1];
+                    find_alternatesetting = i + 1;
+                    break;
+                }
+                if (as_t->tSamFreq[as_t->bSamFreqType - j - 1] == sample_rate) {
                     find_alternatesetting = i + 1;
                     break;
                 }
@@ -509,40 +616,60 @@ void usb_audio_start_play(const usb_dev usb_id, u8 channel, u8 bit_reso, u32 sam
     }
 
     as_t = &audio->as[find_alternatesetting - 1];
+
+    u32 ep_max_packet_size = sample_rate * 2 * as_t->bNrChannels / 1000;
+
+    if (ep_max_packet_size > as_t->ep_max_packet_size) {
+        ep_max_packet_size = as_t->ep_max_packet_size;
+    } else {
+        as_t->ep_max_packet_size = ep_max_packet_size;
+    }
+
     //端点分配
     u32 host_ep = usb_get_ep_num(usb_id, USB_DIR_OUT, USB_ENDPOINT_XFER_ISOC);
     ASSERT(host_ep != -1, "ep not enough");
     ep_out_dma_buf[usb_id] = usb_h_alloc_ep_buffer(usb_id, host_ep, as_t->ep_max_packet_size);
     ASSERT(ep_out_dma_buf[usb_id] != NULL);
+    as_t->host_ep = host_ep;
+
+    if (channel == 0) {
+        channel = as_t->bNrChannels;
+    }
 
     __this->player.Cur_AlternateSetting = find_alternatesetting; //选择Alternatesetting
     __this->player.sample_rate = sample_rate;   //选择采样率
     __this->player.src_channel = channel;
-    u8 target_ep = as_t->ep;
-    u8 ep_interval = as_t->ep_Interval;
-    as_t->host_ep = host_ep;
 
     usb_set_interface(host_dev, audio->interface_num, find_alternatesetting); //interface   Alternatesetting
-    usb_audio_sampling_frequency_control(host_dev, target_ep, sample_rate);//设置采样率
-    //设置音量
-    /* usb_audio_volume_control(host_dev, 6, 1, vol_convert(5)); */
-    /* usb_audio_volume_control(host_dev, 6, 2, vol_convert(5)); */
+    usb_audio_sampling_frequency_control(host_dev, as_t->ep, sample_rate);//设置采样率
 
-    log_info("H2D ep: %x --> %x  interval: %d", host_ep, target_ep, ep_interval);
+    log_info("H2D ep: %x --> %x  interval: %d", host_ep, as_t->ep, as_t->ep_Interval);
+    usb_write_txfuncaddr(usb_id, as_t->host_ep, host_dev->private_data.devnum);
     usb_h_set_ep_isr(host_dev, host_ep, usb_audio_tx_isr, host_dev);
-    usb_h_ep_config(usb_id,  host_ep, USB_ENDPOINT_XFER_ISOC, 1, ep_interval, ep_out_dma_buf[usb_id], as_t->ep_max_packet_size);
+    usb_h_ep_config(usb_id, host_ep, USB_ENDPOINT_XFER_ISOC, 1, as_t->ep_Interval, ep_out_dma_buf[usb_id], as_t->ep_max_packet_size);
+
+    set_usb_audio_play_volume(usb_id, HOST_MIC_VOLUME);
+
+    OS_SEM sem;
+    os_sem_create(&sem, 0);
+    __this->wait_sem = &sem;
+
     if (usb_id == 0) {
         task_create(audio_play_task, host_dev, "uac_play0");
     } else {
         task_create(audio_play_task, host_dev, "uac_play1");
     }
+
+    os_sem_pend(&sem, 0);
+    __this->wait_sem = NULL;
 }
 
 void usb_audio_stop_play(const usb_dev usb_id)
 {
+    __this->player.play_state = AUDIO_PLAY_STOP;
     usb_h_set_ep_isr(NULL, 0, NULL, NULL);
     if (__this->player.put_buf) {
-        __this->player.put_buf(NULL, 0);
+        __this->player.put_buf(usb_id, NULL, 0, 0, 0);
     }
     __this->player.Cur_AlternateSetting = 0;
     if (usb_id == 0) {
@@ -580,13 +707,20 @@ void usb_audio_resume_play(const usb_dev usb_id)
     const struct usb_host_device *host_dev = host_id2device(usb_id);
     struct audio_device_t *audio = __find_headphone_interface(host_dev);
     struct audio_streaming_t *as_t = &audio->as[__this->player.Cur_AlternateSetting - 1];
-    __this->player.play_state = AUDIO_PLAY_START;
-    usb_h_ep_write_async(usb_id, as_t->host_ep, as_t->ep_max_packet_size, as_t->ep, NULL, as_t->ep_max_packet_size, USB_ENDPOINT_XFER_ISOC, 1); //重新启动传输
+
+    if (__this->player.usb_audio_play_buf) {
+        __this->player.usb_audio_remain_len = 0;
+        usb_audio_tx_len[usb_id] = 0;
+        cbuf_clear(&__this->player.usb_audio_play_cbuf);
+        __this->player.play_state = AUDIO_PLAY_START;
+        usb_h_ep_write_async(usb_id, as_t->host_ep, as_t->ep_max_packet_size, as_t->ep, NULL, as_t->ep_max_packet_size, USB_ENDPOINT_XFER_ISOC, 1); //重新启动传输
+    }
 }
 
 static u32 record_vol_convert(u16 v)
 {
     //固定音量表,更换声卡需要修改音量表
+#if UAC_VOLUME_STANDARD_REQUEST
     const u16 vol_table[] = {
         //0-100
         0xf400,
@@ -601,6 +735,21 @@ static u32 record_vol_convert(u16 v)
         0x0e77, 0x0f0a, 0x0fa2, 0x1041, 0x10e7, 0x1195, 0x124a, 0x1308, 0x13d0, 0x14a3,
         0x1582, 0x166e, 0x176a, 0x1877, 0x1998, 0x1ad0, 0x1c24, 0x1d98, 0x1f33, 0x2100,
     };
+#else
+    const u16 vol_table[] = {
+        0xe3a0, 0xe461, 0xe519, 0xe5c8, 0xe670, 0xe711, 0xe7ac, 0xe840, 0xe8cf, 0xe959,
+        0xe9df, 0xea60, 0xeadc, 0xeb55, 0xebca, 0xec3c, 0xecab, 0xed16, 0xed7f, 0xede5,
+        0xee48, 0xeea9, 0xef08, 0xef64, 0xefbe, 0xf016, 0xf06c, 0xf0c0, 0xf113, 0xf164,
+        0xf1b3, 0xf200, 0xf24c, 0xf297, 0xf2e0, 0xf328, 0xf36e, 0xf3b4, 0xf3f8, 0xf43a,
+        0xf47c, 0xf4bd, 0xf4fc, 0xf53b, 0xf579, 0xf5b5, 0xf5f1, 0xf62c, 0xf666, 0xf69f,
+        0xf6d7, 0xf70e, 0xf745, 0xf77b, 0xf7b0, 0xf7e5, 0xf818, 0xf84b, 0xf87e, 0xf8b0,
+        0xf8e1, 0xf911, 0xf941, 0xf970, 0xf99f, 0xf9cd, 0xf9fb, 0xfa28, 0xfa55, 0xfa81,
+        0xfaad, 0xfad8, 0xfb03, 0xfb2d, 0xfb56, 0xfb80, 0xfba9, 0xfbd1, 0xfbf9, 0xfc21,
+        0xfc48, 0xfc6f, 0xfc95, 0xfcbb, 0xfce1, 0xfd06, 0xfd2b, 0xfd50, 0xfd74, 0xfd98,
+        0xfdbc, 0xfddf, 0xfe02, 0xfe25, 0xfe47, 0xfe69, 0xfe8b, 0xfead, 0xfece, 0xfeef,
+        0xff0f,
+    };
+#endif
 
     if (v <= 100) {
         return vol_table[v];
@@ -619,51 +768,58 @@ void set_usb_audio_record_volume(const usb_dev usb_id, u16 vol)
 {
     struct usb_host_device *host_dev = (struct usb_host_device *)host_id2device(usb_id);
     u8 featureUnitID = 5;
-    usb_audio_volume_control(host_dev, featureUnitID, 0, record_vol_convert(vol));
+    struct audio_device_t *audio = __find_control_interface(host_dev);
+    if (!audio) {
+        log_error("no find control interface!");
+        return;
+    }
+
+    if (usb_audio_volume_control(host_dev, featureUnitID, 0, record_vol_convert(vol), audio->interface_num)) {
+        usb_audio_volume_control(host_dev, featureUnitID, 1, record_vol_convert(vol), audio->interface_num);
+        usb_audio_volume_control(host_dev, featureUnitID, 2, record_vol_convert(vol), audio->interface_num);
+    }
 }
 
 static u32 write_file_len[USB_MAX_HW_NUM];
 
 static void usb_audio_rx_isr(struct usb_host_device *host_dev, u32 ep)
 {
-    u8 buffer[192] = {0};
     u8 *ptr = NULL;
     u32 rlen, wlen = 0;
     usb_dev usb_id = host_device2id(host_dev);
     struct audio_device_t *audio = NULL;
     struct audio_streaming_t *as_t = NULL;
 
+    if (__this->microphone.record_state != AUDIO_RECORD_START) {
+        return;
+    }
+
     audio = __find_microphone_interface(host_dev);
     if (!audio) {
         log_error("no find microphone interface!");
         return;
     }
-    if (__this->microphone.record_state != AUDIO_RECORD_START) {
-        return;
-    }
     as_t = &audio->as[__this->microphone.Cur_AlternateSetting - 1];
-    u8 channel = as_t->bNrChannels;
 
-    u32 rx_len = usb_h_ep_read_async(usb_id, ep, as_t->ep, buffer, sizeof(buffer), USB_ENDPOINT_XFER_ISOC, 0);
-    /* g_printf("RX:%d\n",rx_len); */
-    /* printf_buf(buffer, rx_len); */
-    cbuf_write(&__this->microphone.usb_audio_record_cbuf, buffer, rx_len);
+    u32 rx_len = usb_h_ep_read_async(usb_id, ep, as_t->ep, __this->microphone.buffer, as_t->ep_max_packet_size, USB_ENDPOINT_XFER_ISOC, 0);
+    /* printf("rx len : %d %d\n", rx_len, ep); */
+    cbuf_write(&__this->microphone.usb_audio_record_cbuf, __this->microphone.buffer, rx_len);
     cbuf_write_alloc(&__this->microphone.usb_audio_record_cbuf, &wlen);
+
     if (wlen == 0) {
-        putchar('O');
         if (write_file_len[usb_id]) {
-            log_w("write againnnnn\n");
+            putchar('e');
         }
         /* [> printf("R:%d  W:%d\n", rx_len,wlen); <] */
         cbuf_read_alloc(&__this->microphone.usb_audio_record_cbuf, &rlen);
         cbuf_read(&__this->microphone.usb_audio_record_cbuf, __this->microphone.usb_audio_record_buf2, rlen);
         write_file_len[usb_id] = rlen;
+
         if (usb_id == 0) {
             os_taskq_post_msg("uac_record0", 2, 0x01, rlen);
         } else {
             os_taskq_post_msg("uac_record1", 2, 0x01, rlen);
         }
-        /* return; */
     }
 
     usb_h_ep_read_async(usb_id, ep, as_t->ep, NULL, 0, USB_ENDPOINT_XFER_ISOC, 1); //触发下一个接收中断
@@ -677,30 +833,38 @@ static void audio_record_task(void *p)
     u8 *ptr = NULL;
     u32 rlen = 0;
     u32 ret = 0;
-    int msg[16];
-    struct audio_device_t *audio = NULL;
-
-    audio = __find_microphone_interface(host_dev);
+    int msg[4];
+    struct audio_device_t *audio = __find_microphone_interface(host_dev);
     struct audio_streaming_t *as_t = &audio->as[__this->microphone.Cur_AlternateSetting - 1];
-    /* u32 ep_max_packet_size = as_t->ep_max_packet_size; */
-    u32 ep_max_packet_size = EP_MAX_PACKET_SIZE;
-    log_info("ep max packet : %d\n", ep_max_packet_size);
-    u32 usb_audio_buf_size = ep_max_packet_size * 50;
+    u32 ep_max_packet_size = as_t->ep_max_packet_size;
+    u32 usb_audio_buf_size = ep_max_packet_size * 10;
 
-    u32 host_ep = as_t->host_ep;
-    u8 target_ep = as_t->ep;
+    log_info("ep max packet : %d\n", ep_max_packet_size);
+
     //分配双缓存
     // 一个缓存写卡的数据,一个用于usb接收
     if (!__this->microphone.usb_audio_record_buf) {
         __this->microphone.usb_audio_record_buf = zalloc(usb_audio_buf_size);
         cbuf_init(&__this->microphone.usb_audio_record_cbuf, __this->microphone.usb_audio_record_buf, usb_audio_buf_size);
-
     }
     if (!__this->microphone.usb_audio_record_buf2) {
         __this->microphone.usb_audio_record_buf2 = zalloc(usb_audio_buf_size);
     }
+    if (!__this->microphone.buffer) {
+        __this->microphone.buffer = malloc(as_t->ep_max_packet_size);
+    }
 
-    usb_h_ep_read_async(usb_id, host_ep, target_ep, NULL, 0, USB_ENDPOINT_XFER_ISOC, 1); //启动iso
+    if (!__this->microphone.usb_audio_record_buf || !__this->microphone.usb_audio_record_buf2) {
+        os_taskq_pend(NULL, msg, ARRAY_SIZE(msg));
+    }
+
+    __this->microphone.record_state = AUDIO_RECORD_START;
+
+    __this->microphone.get_buf(usb_id, NULL, 0, __this->microphone.src_channel == as_t->bNrChannels ? __this->microphone.src_channel : __this->microphone.src_channel | BIT(7), __this->microphone.sample_rate);
+
+    usb_h_ep_read_async(usb_id, as_t->host_ep, as_t->ep, NULL, 0, USB_ENDPOINT_XFER_ISOC, 1); //启动iso
+
+    os_sem_post(__this->wait_sem);
 
     while (1) {
         ret = os_taskq_pend(NULL, msg, ARRAY_SIZE(msg));
@@ -709,9 +873,9 @@ static void audio_record_task(void *p)
             case 0x01:
                 ptr = __this->microphone.usb_audio_record_buf2;
                 rlen = msg[2];
-                putchar('W');
+                /* putchar('b'); */
                 if (__this->microphone.get_buf) {
-                    __this->microphone.get_buf(ptr, rlen);
+                    __this->microphone.get_buf(usb_id, ptr, rlen, __this->microphone.src_channel, __this->microphone.sample_rate);
                 }
                 write_file_len[usb_id] = 0;
                 break;
@@ -737,7 +901,12 @@ void usb_audio_start_record(const usb_dev usb_id, u8 channel, u8 bit_reso, u32 s
         as_t = &audio->as[i];
         if (as_t->bBitResolution == bit_reso) {
             for (u8 j = 0; j < as_t->bSamFreqType; j++) {
-                if (as_t->tSamFreq[j] == sample_rate) {
+                if (sample_rate == 0 && as_t->tSamFreq[as_t->bSamFreqType - j - 1] && as_t->tSamFreq[as_t->bSamFreqType - j - 1] <= 48000) {
+                    sample_rate = as_t->tSamFreq[as_t->bSamFreqType - j - 1];
+                    find_alternatesetting = i + 1;
+                    break;
+                }
+                if (as_t->tSamFreq[as_t->bSamFreqType - j - 1] == sample_rate) {
                     find_alternatesetting = i + 1;
                     break;
                 }
@@ -750,37 +919,57 @@ void usb_audio_start_record(const usb_dev usb_id, u8 channel, u8 bit_reso, u32 s
     }
 
     as_t = &audio->as[find_alternatesetting - 1];
+
+    u32 ep_max_packet_size = sample_rate * 2 * as_t->bNrChannels / 1000;
+
+    if (ep_max_packet_size > as_t->ep_max_packet_size) {
+        ep_max_packet_size = as_t->ep_max_packet_size;
+    } else {
+        as_t->ep_max_packet_size = ep_max_packet_size;
+    }
+
     //端点分配
     u32 host_ep = usb_get_ep_num(usb_id, USB_DIR_IN, USB_ENDPOINT_XFER_ISOC);
     ASSERT(host_ep != -1, "ep not enough");
     host_ep = host_ep | USB_DIR_IN;
     ep_in_dma_buf[usb_id] = usb_h_alloc_ep_buffer(usb_id, host_ep, as_t->ep_max_packet_size);
     ASSERT(ep_in_dma_buf[usb_id] != NULL);
+    as_t->host_ep = host_ep & 0x0f;
+
+    if (channel == 0) {
+        channel = as_t->bNrChannels;
+    }
 
     __this->microphone.Cur_AlternateSetting = find_alternatesetting; //选择Alternatesetting
     __this->microphone.sample_rate = sample_rate;   //选择采样率
-    u8 target_ep = as_t->ep;
-    u8 ep_interval = as_t->ep_Interval;
-    as_t->host_ep = host_ep;
+    __this->microphone.src_channel = channel;
 
     usb_set_interface(host_dev, audio->interface_num, find_alternatesetting); //interface 1  Alternatesetting 1
-    usb_audio_sampling_frequency_control(host_dev, target_ep, sample_rate);//设置采样率
+    usb_audio_sampling_frequency_control(host_dev, host_ep, sample_rate);//设置采样率
     //设置音量
-    /* usb_audio_volume_control(host_dev, 6, 1, vol_convert(5)); */
-    /* usb_audio_volume_control(host_dev, 6, 2, vol_convert(5)); */
-    log_info("D2H ep: %x --> %x", target_ep, host_ep);
+    log_info("D2H ep: %x --> %x  interval: %d", as_t->ep, host_ep, as_t->ep_Interval);
+    usb_write_rxfuncaddr(usb_id, as_t->host_ep, host_dev->private_data.devnum);
     usb_h_set_ep_isr(host_dev, host_ep, usb_audio_rx_isr, host_dev);
-    usb_h_ep_config(usb_id,  host_ep, USB_ENDPOINT_XFER_ISOC, 1, ep_interval, ep_in_dma_buf[usb_id], as_t->ep_max_packet_size);
+    usb_h_ep_config(usb_id, host_ep, USB_ENDPOINT_XFER_ISOC, 1, as_t->ep_Interval, ep_in_dma_buf[usb_id], as_t->ep_max_packet_size);
+    set_usb_audio_record_volume(usb_id, HOST_SPK_VOLUME);
+
+    OS_SEM sem;
+    os_sem_create(&sem, 0);
+    __this->wait_sem = &sem;
+
     if (usb_id == 0) {
         task_create(audio_record_task, host_dev, "uac_record0");
     } else {
         task_create(audio_record_task, host_dev, "uac_record1");
     }
-    __this->microphone.record_state = AUDIO_RECORD_START;
+
+    os_sem_pend(&sem, 0);
+    __this->wait_sem = NULL;
 }
 
 void usb_audio_stop_record(const usb_dev usb_id)
 {
+    __this->microphone.record_state = AUDIO_RECORD_STOP;
     usb_h_set_ep_isr(NULL, 0, NULL, NULL);
     if (usb_id == 0) {
         task_kill("uac_record0");
@@ -788,7 +977,7 @@ void usb_audio_stop_record(const usb_dev usb_id)
         task_kill("uac_record1");
     }
     if (__this->microphone.get_buf) {
-        __this->microphone.get_buf(NULL, 0);
+        __this->microphone.get_buf(usb_id, NULL, 0, 0, 0);
     }
     __this->microphone.Cur_AlternateSetting = 0;
     __this->microphone.sample_rate = 0;
@@ -799,6 +988,10 @@ void usb_audio_stop_record(const usb_dev usb_id)
     if (__this->microphone.usb_audio_record_buf2) {
         free(__this->microphone.usb_audio_record_buf2);
         __this->microphone.usb_audio_record_buf2 = NULL;
+    }
+    if (__this->microphone.buffer) {
+        free(__this->microphone.buffer);
+        __this->microphone.buffer = NULL;
     }
     if (ep_in_dma_buf[usb_id]) {
         usb_h_free_ep_buffer(usb_id, ep_in_dma_buf[usb_id]);
@@ -816,14 +1009,19 @@ void usb_audio_resume_record(const usb_dev usb_id)
     const struct usb_host_device *host_dev = host_id2device(usb_id);
     struct audio_device_t *audio = __find_microphone_interface(host_dev);
     struct audio_streaming_t *as_t = &audio->as[__this->microphone.Cur_AlternateSetting - 1];
-    __this->microphone.record_state = AUDIO_RECORD_START;
-    usb_h_ep_read_async(usb_id, as_t->host_ep, as_t->ep, NULL, 0, USB_ENDPOINT_XFER_ISOC, 1); //重新启动接收
+
+    if (__this->microphone.usb_audio_record_buf) {
+        cbuf_clear(&__this->microphone.usb_audio_record_cbuf);
+        write_file_len[usb_id] = 0;
+        __this->microphone.record_state = AUDIO_RECORD_START;
+        usb_h_ep_read_async(usb_id, as_t->host_ep, as_t->ep, NULL, 0, USB_ENDPOINT_XFER_ISOC, 1); //重新启动接收
+    }
 }
 
 void usb_audio_start_process(const usb_dev usb_id)
 {
-    usb_audio_start_play(usb_id, HOST_SPK_CHANNEL, HOST_SPK_AUDIO_RES, HOST_SPK_AUDIO_RATE); //开启headphone
-    usb_audio_start_record(usb_id, HOST_MIC_CHANNEL, HOST_MIC_AUDIO_RES, HOST_MIC_AUDIO_RATE); //开启microphone
+    usb_audio_start_play(usb_id, HOST_MIC_CHANNEL, HOST_MIC_AUDIO_RES, HOST_MIC_AUDIO_RATE); //开启主机的microphone
+    usb_audio_start_record(usb_id, HOST_SPK_CHANNEL, HOST_SPK_AUDIO_RES, HOST_SPK_AUDIO_RATE); //开启主机的speaker
 }
 
 void usb_audio_stop_process(const usb_dev usb_id)
@@ -832,7 +1030,7 @@ void usb_audio_stop_process(const usb_dev usb_id)
     usb_audio_stop_record(usb_id);
 }
 
-void usb_host_audio_init(const usb_dev usb_id, int (*put_buf)(void *ptr, u32 len), int (*get_buf)(void *ptr, u32 len))
+void usb_host_audio_init(const usb_dev usb_id, int (*put_buf)(const usb_dev usb_id, void *ptr, u32 len, u8 channel, u32 sample_rate), int (*get_buf)(const usb_dev usb_id, void *ptr, u32 len, u8 channel, u32 sample_rate))
 {
     memset(__this, 0, sizeof(struct usb_audio_info));
     __this->player.put_buf = put_buf;

@@ -56,7 +56,7 @@ int rtc_port_pr_pd(u8 port, bool on);
 
 int rtc_port_pr_die(u8 port, bool on);
 
-int rtc_early_init();
+int rtc_early_init(int en_osc_32k);
 
 int rtc_port_pr_wkup_clear_pnd(u8 port);
 

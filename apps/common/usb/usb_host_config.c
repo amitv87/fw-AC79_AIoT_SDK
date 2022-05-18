@@ -1,9 +1,9 @@
 #include "usb_config.h"
 #include "usb/scsi.h"
 #include "irq.h"
-#include "init.h"
-#include "gpio.h"
+#include "system/spinlock.h"
 #include "app_config.h"
+
 #define LOG_TAG_CONST       USB
 #define LOG_TAG             "[USB]"
 #define LOG_ERROR_ENABLE
@@ -30,15 +30,15 @@
 #endif
 
 struct host_var_t {
-    struct usb_ep_addr_t host_ep_addr ;
-    usb_h_interrupt usb_h_interrupt_rx[MAX_HOST_EP_RX] ;
-    usb_h_interrupt usb_h_interrupt_tx[MAX_HOST_EP_TX] ;
+    struct usb_ep_addr_t host_ep_addr;
+    usb_h_interrupt usb_h_interrupt_rx[MAX_HOST_EP_RX];
+    usb_h_interrupt usb_h_interrupt_tx[MAX_HOST_EP_TX];
     struct usb_host_device *dev_at_ep[MAX_HOST_EP_RX];
 };
 static struct host_var_t *host_var[USB_MAX_HW_NUM];// SEC(.usb_h_bss);
-static struct host_var_t __host_var[USB_MAX_HW_NUM];
+static spinlock_t lock[USB_MAX_HW_NUM];
 
-void usb_h_isr(const usb_dev usb_id)
+static void usb_h_isr(const usb_dev usb_id)
 {
     u32 intr_usb, intr_usbe;
     u32 intr_tx, intr_txe;
@@ -66,58 +66,86 @@ void usb_h_isr(const usb_dev usb_id)
     }
 
     if (intr_tx & BIT(0)) {
-        if (host_var[usb_id]->usb_h_interrupt_tx[0]) {
+        spin_lock(&lock[usb_id]);
+        if (host_var[usb_id] && host_var[usb_id]->usb_h_interrupt_tx[0]) {
             host_dev = host_var[usb_id]->dev_at_ep[0];
             host_var[usb_id]->usb_h_interrupt_tx[0](host_dev, 0);
         }
+        spin_unlock(&lock[usb_id]);
     }
 
     for (int i = 1; i < MAX_HOST_EP_TX; i++) {
         if (intr_tx & BIT(i)) {
-            if (host_var[usb_id]->usb_h_interrupt_tx[i]) {
+            spin_lock(&lock[usb_id]);
+            if (host_var[usb_id] && host_var[usb_id]->usb_h_interrupt_tx[i]) {
                 host_dev = host_var[usb_id]->dev_at_ep[i];
                 host_var[usb_id]->usb_h_interrupt_tx[i](host_dev, i);
             }
+            spin_unlock(&lock[usb_id]);
         }
     }
 
     for (int i = 1; i < MAX_HOST_EP_RX; i++) {
         if (intr_rx & BIT(i)) {
-            if (host_var[usb_id]->usb_h_interrupt_rx[i]) {
+            spin_lock(&lock[usb_id]);
+            if (host_var[usb_id] && host_var[usb_id]->usb_h_interrupt_rx[i]) {
                 host_dev = host_var[usb_id]->dev_at_ep[i];
                 host_var[usb_id]->usb_h_interrupt_rx[i](host_dev, i);
             }
+            spin_unlock(&lock[usb_id]);
         }
     }
+
     __asm__ volatile("csync");
 }
+
 SET_INTERRUPT
-void usb0_h_isr()
+static void usb0_h_isr(void)
 {
     usb_h_isr(0);
 }
+
 SET_INTERRUPT
-void usb1_h_isr()
+static void usb1_h_isr(void)
 {
     usb_h_isr(1);
 }
+
 __attribute__((always_inline_when_const_args))
 u32 usb_h_set_intr_hander(const usb_dev usb_id, u32 ep, usb_h_interrupt hander)
 {
+    spin_lock(&lock[usb_id]);
     if (ep & USB_DIR_IN) {
-        host_var[usb_id]->usb_h_interrupt_rx[ep & 0xf] = hander;
+        if (host_var[usb_id]) {
+            host_var[usb_id]->usb_h_interrupt_rx[ep & 0xf] = hander;
+        }
     } else {
-        host_var[usb_id]->usb_h_interrupt_tx[ep] = hander;
+        if (host_var[usb_id]) {
+            host_var[usb_id]->usb_h_interrupt_tx[ep] = hander;
+        }
     }
+    spin_unlock(&lock[usb_id]);
     return 0;
 }
+
 void usb_h_isr_reg(const usb_dev usb_id, u8 priority, u8 cpu_id)
 {
     if (usb_id == 0) {
-        request_irq(IRQ_USB_CTRL_IDX, priority, usb0_h_isr, cpu_id);
+        request_irq(IRQ_USB_CTRL_IDX, priority, usb0_h_isr, 0);
 #if USB_MAX_HW_NUM > 1
     } else if (usb_id == 1) {
-        request_irq(IRQ_USB1_CTRL_IDX, priority, usb1_h_isr, cpu_id);
+        request_irq(IRQ_USB1_CTRL_IDX, priority, usb1_h_isr, 1);
+#endif
+    }
+}
+
+void usb_h_isr_unreg(const usb_dev usb_id, u8 cpu_id)
+{
+    if (usb_id == 0) {
+        unrequest_irq(IRQ_USB_CTRL_IDX, 0);
+#if USB_MAX_HW_NUM > 1
+    } else if (usb_id == 1) {
+        unrequest_irq(IRQ_USB1_CTRL_IDX, 1);
 #endif
     }
 }
@@ -191,30 +219,45 @@ void usb_h_set_ep_isr(struct usb_host_device *host_dev, u32 ep, usb_h_interrupt 
 {
     if (host_dev) {
         usb_dev usb_id = host_device2id(host_dev);
-        host_var[usb_id]->dev_at_ep[ep & 0xf] = p;
+        spin_lock(&lock[usb_id]);
+        if (host_var[usb_id]) {
+            host_var[usb_id]->dev_at_ep[ep & 0xf] = p;
+        }
+        spin_unlock(&lock[usb_id]);
         usb_h_set_intr_hander(usb_id, ep, hander);
     }
 }
+
 void usb_host_config(usb_dev usb_id)
 {
-    /* host_var[usb_id] = zalloc(sizeof(struct host_var_t)); */
-    host_var[usb_id] = &__host_var[usb_id];
+    if (!host_var[usb_id]) {
+        host_var[usb_id] = zalloc(sizeof(struct host_var_t));
+    }
 
     ASSERT(host_var[usb_id], "host_var_t");
 
-    g_printf("%s() %x %x", __func__, host_var[usb_id], &(host_var[usb_id]->host_ep_addr));
+    /* g_printf("%s() %x %x", __func__, host_var[usb_id], &(host_var[usb_id]->host_ep_addr)); */
     usb_var_init(usb_id, &(host_var[usb_id]->host_ep_addr));
 }
+
 void usb_host_free(usb_dev usb_id)
 {
+    struct host_var_t *__host_var = NULL;
+
     g_printf("%s() %x", __func__, host_var[usb_id]);
-    CPU_CRITICAL_ENTER();
-    /* free(host_var[usb_id]); */
-    /* host_var[usb_id] = NULL; */
+
+    usb_h_isr_unreg(usb_id, 0);
+
+    spin_lock(&lock[usb_id]);
     if (host_var[usb_id]) {
         memset(host_var[usb_id]->usb_h_interrupt_rx, 0, sizeof(usb_h_interrupt) * MAX_HOST_EP_RX);
         memset(host_var[usb_id]->usb_h_interrupt_tx, 0, sizeof(usb_h_interrupt) * MAX_HOST_EP_TX);
+        __host_var = host_var[usb_id];
+        /* usb_var_release(usb_id); */	//释放可能有异步问题
+        /* host_var[usb_id] = NULL; */	//释放可能有异步问题
     }
-    CPU_CRITICAL_EXIT();
+    spin_unlock(&lock[usb_id]);
+
+    /* free(__host_var); */	//释放可能有异步问题
 }
 #endif

@@ -51,6 +51,21 @@
 <Add option="-DCONFIG_UPDATA_ENABLE" />
 <Add option="-DCONFIG_OTA_UPDATA_ENABLE" />
 <Add option="-DCONFIG_ITEM_FORMAT_VM" />
+<Add option="-fno-exceptions" />
+<Add option="-fno-rtti" />
+<Add option="-fno-unwind-tables" />
+<Add option="-ffunction-sections" />
+<Add option="-fdata-sections" />
+<Add option="-fmessage-length=0" />
+<Add option="-D_XOPEN_SOURCE=700" />
+<Add option="-D_LIBCPP_HAS_NO_THREADS" />
+<Add option="-D_LIBCPP_NO_EXCEPTIONS" />
+<Add option="-D_GNU_SOURCE" />
+<Add option="-U__STRICT_ANSI__" />
+<Add option="-D_LIBCPP_HAS_NO_ALIGNED_ALLOCATION" />
+<Add option="-D__ELF__" />
+<Add option="-DTF_LITE_DISABLE_X86_NEON" />
+<Add option="-DTF_LITE_STATIC_MEMORY" />
 <Add directory="../../../../../include_lib" />
 <Add directory="../../../../../include_lib/driver" />
 <Add directory="../../../../../include_lib/driver/device" />
@@ -66,6 +81,8 @@
 <Add directory="../../../../../include_lib/utils/syscfg" />
 <Add directory="../../../../../include_lib/utils/event" />
 <Add directory="../../../../../apps/demo/demo_hello/include" />
+<Add directory="../../../../../include_lib/c++" />
+<Add directory="../../../../../include_lib/c++/include" />
 </Compiler>
 <Linker>
 <Add option="--plugin-opt=-pi32v2-always-use-itblock=false" />
@@ -93,6 +110,8 @@
 <Add option="../../../../../cpu/wl80/liba/fs.a" />
 <Add option="../../../../../cpu/wl80/liba/common_lib.a" />
 <Add option="../../../../../cpu/wl80/liba/update.a" />
+<Add option="../../../../../include_lib/c++/libstdc++/libcxx.a" />
+<Add option="../../../../../include_lib/c++/libstdc++/libcxxabi.a" />
 <Add option="--end-group" />
 <Add option="-T../../../../../cpu/wl80/sdk.ld" />
 <Add option="-M=../../../../../cpu/wl80/tools/sdk.map" />
@@ -107,6 +126,11 @@
 </ExtraCommands>
 </Target>
 </Build>
+<Unit filename="../../../../../apps/common/c++/cpp_run_init.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../apps/common/c++/cxx_runtime.cpp">
+<Option compiler="pi32v2_r3_lto_compiler" use="1" buildCommand="$compiler $options -std=c++11 $includes -c $file -o $object" />
+</Unit>
+<Unit filename="../../../../../apps/common/c++/cxx_runtime.cpp" />
 <Unit filename="../../../../../apps/common/config/log_config/lib_driver_config.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/config/log_config/lib_system_config.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/config/log_config/lib_update_config.c"><Option compilerVer="CC"/></Unit>

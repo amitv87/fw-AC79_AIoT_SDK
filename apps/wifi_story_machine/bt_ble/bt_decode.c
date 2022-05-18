@@ -1034,7 +1034,7 @@ int a2dp_sbc_encoder_get_data(u8 *packet, u16 buf_len, int *frame_size)
         return 0;
     }
 
-    if (0 != os_sem_pend(&efs->sync_sem, -1)) {
+    if (0 != os_sem_accept(&efs->sync_sem)) {
         efs->suspend = 1;
         return 0;
     }

@@ -3,5 +3,5 @@
 .global lib_wolfssl_version
 
 lib_wolfssl_version:
-.long 199249884 
-.asciz "WOLFSSL-@20220425-$8374faf"
+.long 199618382 
+.asciz "WOLFSSL-@20220429-$7455586"

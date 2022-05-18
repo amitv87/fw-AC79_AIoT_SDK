@@ -190,7 +190,7 @@
 
 //speaker host
 #ifndef HOST_SPK_AUDIO_RATE
-#define HOST_SPK_AUDIO_RATE         48000
+#define HOST_SPK_AUDIO_RATE         0	//建议不要使用44100采样率，有点数对齐问题
 #endif
 #ifndef HOST_SPK_AUDIO_RES
 #define HOST_SPK_AUDIO_RES          16
@@ -198,10 +198,13 @@
 #ifndef HOST_SPK_CHANNEL
 #define HOST_SPK_CHANNEL            2
 #endif
+#ifndef HOST_SPK_VOLUME
+#define HOST_SPK_VOLUME             100
+#endif
 
 //mic host
-#ifndef HOST_MIC_AUDIO_RES
-#define HOST_MIC_AUDIO_RATE         48000
+#ifndef HOST_MIC_AUDIO_RATE
+#define HOST_MIC_AUDIO_RATE         0	//建议不要使用44100采样率，有点数对齐问题
 #endif
 #ifndef HOST_MIC_AUDIO_RES
 #define HOST_MIC_AUDIO_RES          16
@@ -209,6 +212,12 @@
 #ifndef HOST_MIC_CHANNEL
 #define HOST_MIC_CHANNEL            1
 #endif
+#ifndef HOST_MIC_VOLUME
+#define HOST_MIC_VOLUME             100
+#endif
 
+#ifndef UAC_VOLUME_STANDARD_REQUEST
+#define UAC_VOLUME_STANDARD_REQUEST 0
+#endif
 
 #endif

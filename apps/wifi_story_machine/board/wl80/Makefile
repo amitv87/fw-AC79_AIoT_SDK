@@ -320,7 +320,6 @@ c_SRC_FILES := \
 	../../../../apps/common/usb/host/aoa.c \
 	../../../../apps/common/usb/host/audio.c \
 	../../../../apps/common/usb/host/hid.c \
-	../../../../apps/common/usb/host/uac_host_demo.c \
 	../../../../apps/common/usb/host/usb_bulk_transfer.c \
 	../../../../apps/common/usb/host/usb_ctrl_transfer.c \
 	../../../../apps/common/usb/host/usb_host.c \

@@ -1757,6 +1757,14 @@
                 "CONFIG_UPDATA_ENABLE",
                 "CONFIG_OTA_UPDATA_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
+                "_XOPEN_SOURCE=700",
+                "_LIBCPP_HAS_NO_THREADS",
+                "_LIBCPP_NO_EXCEPTIONS",
+                "_GNU_SOURCE",
+                "_LIBCPP_HAS_NO_ALIGNED_ALLOCATION",
+                "__ELF__",
+                "TF_LITE_DISABLE_X86_NEON",
+                "TF_LITE_STATIC_MEMORY",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -1775,6 +1783,8 @@
                 "${workspaceFolder}/include_lib/utils/syscfg",
                 "${workspaceFolder}/include_lib/utils/event",
                 "${workspaceFolder}/apps/demo/demo_hello/include",
+                "${workspaceFolder}/include_lib/c++",
+                "${workspaceFolder}/include_lib/c++/include",
                 "C:/JL/pi32/pi32v2-include"
             ],
             "intelliSenseMode": "clang-x86",
@@ -1814,6 +1824,14 @@
                 "CONFIG_UPDATA_ENABLE",
                 "CONFIG_OTA_UPDATA_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
+                "_XOPEN_SOURCE=700",
+                "_LIBCPP_HAS_NO_THREADS",
+                "_LIBCPP_NO_EXCEPTIONS",
+                "_GNU_SOURCE",
+                "_LIBCPP_HAS_NO_ALIGNED_ALLOCATION",
+                "__ELF__",
+                "TF_LITE_DISABLE_X86_NEON",
+                "TF_LITE_STATIC_MEMORY",
                 "__LD__",
                 "__PI32V2__"
             ],
@@ -1837,6 +1855,8 @@
                 "${workspaceFolder}/include_lib/media/media_develop/media/cpu/wl82",
                 "${workspaceFolder}/include_lib/media/media_develop/media/cpu/wl82/asm",
                 "${workspaceFolder}/apps/demo/demo_hello/include",
+                "${workspaceFolder}/include_lib/c++",
+                "${workspaceFolder}/include_lib/c++/include",
                 "C:/JL/pi32/pi32v2-include"
             ],
             "intelliSenseMode": "clang-x86",

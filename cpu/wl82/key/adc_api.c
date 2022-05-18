@@ -211,7 +211,7 @@ static void adc_isr()
     ch = (JL_ADC->CON & 0xf00) >> 8;
     adc_io_reuse_exit(ch);
 
-    adc_pmu_detect_en(AD_CH_WVDD >> 16);
+    /* adc_pmu_detect_en(AD_CH_WVDD >> 16); */
     JL_ADC->CON = BIT(6);
     JL_ADC->CON = 0;
 }
@@ -235,9 +235,13 @@ static u32 adc_sample(u32 ch)
     adc_con |= BIT(5);//ie
 
     SFR(adc_con, 8, 4, ch & 0xf);
+    SFR(JL_ANA->WLA_CON0, 14, 1, 0);   //TEST_TO_ADC_EN_12v
 
     if ((ch & 0xffff) == AD_CH_PMU) {
         adc_pmu_detect_en(ch >> 16);
+        if (ch == AD_CH_PMU_VBG) {
+            SFR(JL_ANA->WLA_CON0, 14, 1, 1);    //TEST_TO_ADC_EN_12v
+        }
     } else if ((ch & 0xffff) == AD_CH_AUDIO) {
         adc_audio_ch_select(ch >> 16);
     }
@@ -317,6 +321,13 @@ u8 get_cur_total_ad_ch(void)
 
 static void __adc_init(void)
 {
+    SFR(JL_ANA->PLL_CON1, 16, 1, 0);   //SYSPLL1_TEST_EN_12v = 0
+    SFR(JL_ANA->WLA_CON0, 0, 1, 1);    //RWF_BIAS_EN_12v
+    SFR(JL_ANA->WLA_CON0, 1, 4, 0x2);  //RWF_BIAS_IGEN_SEL[3:0]_12v
+    SFR(JL_ANA->WLA_CON0, 5, 1, 0);    //RWF_BIAS_TEST_OE_12v
+    SFR(JL_ANA->WLA_CON0, 6, 2, 0);    //RWF_BIAS_TEST_SEL[1:0]_12v
+    SFR(JL_ANA->WLA_CON0, 15, 3, 0b100); //TEST_TO_ADC_S[2:0]_12v
+
     memset(adc_queue, 0xff, sizeof(adc_queue));
 
     JL_ADC->CON = 0;

@@ -36,6 +36,10 @@ static void hello_demo_task(void *p)
 
 void app_main()
 {
+#ifdef CONFIG_CXX_SUPPORT
+    void cpp_run_init(void);
+    cpp_run_init(); //使用c++时，必须先调用该接口进行初始化
+#endif
     printf("\r\n\r\n\r\n\r\n\r\n -----------hello demo run %s-------------\r\n\r\n\r\n\r\n\r\n", __TIME__);
     os_task_create(hello_demo_task, NULL, 10, 1000, 0, "hello_demo_task");
 }

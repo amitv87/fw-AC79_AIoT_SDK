@@ -53,6 +53,16 @@ SECTIONS
         KEEP(*(.sys.version))
          __VERSION_END = .;
 
+#if defined CONFIG_CXX_SUPPORT
+		. = ALIGN(4);
+        _ctors_begin = .;
+        PROVIDE(ctors_begin = .);
+        *(.ctors*)
+        _ctors_end = .;
+        PROVIDE(ctors_end = .);
+		. = ALIGN(4);
+#endif
+
         #include "driver/cpu/wl80/media_text.ld"
 
 #if defined CONFIG_ASR_ALGORITHM
@@ -132,6 +142,10 @@ SECTIONS
         _text_rodata_end = .;
         PROVIDE(text_rodata_end = .);
     } >rom
+
+#if defined CONFIG_CXX_SUPPORT
+	PROVIDE(ctors_count = _ctors_end - _ctors_begin);
+#endif
 
     . = ORIGIN(sdram);
     .data ALIGN(32):
@@ -218,6 +232,9 @@ SECTIONS
 #endif
 
         *(.bss)
+#if defined CONFIG_CXX_SUPPORT
+		*(.bss.*)
+#endif
         *(COMMON)
         *(.mem_heap)
 

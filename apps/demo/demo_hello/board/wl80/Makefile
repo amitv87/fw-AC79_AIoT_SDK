@@ -79,10 +79,18 @@ CFLAGS := \
 	-Wframe-larger-than=2560 \
 	-fms-extensions \
 	-w \
+	-fno-exceptions \
+	-fno-rtti \
+	-fno-unwind-tables \
+	-ffunction-sections \
+	-fdata-sections \
+	-fmessage-length=0 \
+	-U__STRICT_ANSI__ \
 
 
 # C++额外的编译参数
-CXXFLAGS :=
+CXXFLAGS := \
+	-std=c++11 \
 
 
 # 宏定义
@@ -114,6 +122,14 @@ DEFINES := \
 	-DCONFIG_UPDATA_ENABLE \
 	-DCONFIG_OTA_UPDATA_ENABLE \
 	-DCONFIG_ITEM_FORMAT_VM \
+	-D_XOPEN_SOURCE=700 \
+	-D_LIBCPP_HAS_NO_THREADS \
+	-D_LIBCPP_NO_EXCEPTIONS \
+	-D_GNU_SOURCE \
+	-D_LIBCPP_HAS_NO_ALIGNED_ALLOCATION \
+	-D__ELF__ \
+	-DTF_LITE_DISABLE_X86_NEON \
+	-DTF_LITE_STATIC_MEMORY \
 
 
 DEFINES += $(EXT_CFLAGS) # 额外的一些定义
@@ -135,11 +151,14 @@ INCLUDES := \
 	-I../../../../../include_lib/utils/syscfg \
 	-I../../../../../include_lib/utils/event \
 	-I../../../../../apps/demo/demo_hello/include \
+	-I../../../../../include_lib/c++ \
+	-I../../../../../include_lib/c++/include \
 	-I$(SYS_INC_DIR) \
 
 
 # 需要编译的 .c 文件
 c_SRC_FILES := \
+	../../../../../apps/common/c++/cpp_run_init.c \
 	../../../../../apps/common/config/log_config/lib_driver_config.c \
 	../../../../../apps/common/config/log_config/lib_system_config.c \
 	../../../../../apps/common/config/log_config/lib_update_config.c \
@@ -168,7 +187,9 @@ s_SRC_FILES :=
 
 
 # 需要编译的 .cpp 文件
-cpp_SRC_FILES :=
+cpp_SRC_FILES := \
+	../../../../../apps/common/c++/cxx_runtime.cpp \
+	../../../../../apps/common/c++/cxx_runtime.cpp \
 
 
 # 需要编译的 .cc 文件
@@ -206,6 +227,8 @@ LFLAGS := \
 	../../../../../cpu/wl80/liba/fs.a \
 	../../../../../cpu/wl80/liba/common_lib.a \
 	../../../../../cpu/wl80/liba/update.a \
+	../../../../../include_lib/c++/libstdc++/libcxx.a \
+	../../../../../include_lib/c++/libstdc++/libcxxabi.a \
 	--end-group \
 	-T../../../../../cpu/wl80/sdk.ld \
 	-M=../../../../../cpu/wl80/tools/sdk.map \

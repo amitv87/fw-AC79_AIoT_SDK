@@ -56,6 +56,15 @@ SECTIONS
         KEEP(*(.sys.version))
         __VERSION_END = .;
 
+#if defined CONFIG_CXX_SUPPORT
+		. = ALIGN(4);
+        _ctors_begin = .;
+        PROVIDE(ctors_begin = .);
+        *(.ctors*)
+        _ctors_end = .;
+        PROVIDE(ctors_end = .);
+		. = ALIGN(4);
+#endif
         #include "driver/cpu/wl80/media_text.ld"
 
 #if defined CONFIG_BT_ENABLE
@@ -129,6 +138,10 @@ SECTIONS
 	> sdram
 #endif
 
+#if defined CONFIG_CXX_SUPPORT
+	PROVIDE(ctors_count = _ctors_end - _ctors_begin);
+#endif
+
     .data ALIGN(32):
     {
 #if defined CONFIG_ASR_ALGORITHM && defined CONFIG_VIDEO_ENABLE
@@ -183,6 +196,9 @@ SECTIONS
     .bss ALIGN(32) (NOLOAD):
     {
         *(.bss)
+#if defined CONFIG_CXX_SUPPORT
+		*(.bss.*)
+#endif
         *(COMMON)
         *(.mem_heap)
         *(.memp_memory_x)

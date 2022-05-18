@@ -337,7 +337,7 @@ static int usb_descriptor_parser(struct usb_host_device *host_dev, const u8 *pBu
                     log_error("---%s %d---", __func__, __LINE__);
                     len = total_len;
                 } else {
-                    interface_num++;
+                    interface_num += 2;
                     len += i;
                     pBuf += i;
                 }
@@ -799,12 +799,13 @@ u32 usb_host_mount(const usb_dev id, u32 retry, u32 reset_delay, u32 mount_timeo
     memset(host_dev, 0, sizeof(*host_dev));
 
     host_dev->private_data.usb_id = id;
-    usb_otg_resume(usb_id);  //打开usb host之后恢复otg检测
 
     usb_sem_init(host_dev);
     usb_h_isr_reg(usb_id, 1, 0);
 
     ret = _usb_host_mount(usb_id, retry, reset_delay, mount_timeout);
+
+    usb_otg_resume(usb_id);  //打开usb host之后恢复otg检测，需要在host_mount之后
     if (ret) {
         goto __exit_fail;
     }

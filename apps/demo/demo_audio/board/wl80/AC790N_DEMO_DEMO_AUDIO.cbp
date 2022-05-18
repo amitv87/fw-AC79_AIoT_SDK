@@ -245,7 +245,6 @@
 <Unit filename="../../../../../apps/common/usb/host/aoa.h" />
 <Unit filename="../../../../../apps/common/usb/host/audio.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/usb/host/hid.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="../../../../../apps/common/usb/host/uac_host_demo.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/usb/host/usb_bulk_transfer.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/usb/host/usb_bulk_transfer.h" />
 <Unit filename="../../../../../apps/common/usb/host/usb_ctrl_transfer.c"><Option compilerVer="CC"/></Unit>

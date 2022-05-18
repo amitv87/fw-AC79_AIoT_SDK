@@ -589,7 +589,7 @@ int usb_set_interface(struct usb_host_device *host_dev, u8 interface, u8 alterna
 
 int usb_audio_sampling_frequency_control(struct usb_host_device *host_dev, u32 ep, u32 sampe_rate)
 {
-    log_info("%s ep:%d sampe_rate:%d", __func__, ep, sampe_rate);
+    log_info("%s ep:0x%x sampe_rate:%d", __func__, ep, sampe_rate);
     return usb_control_msg(host_dev,
                            1,
                            USB_TYPE_CLASS | USB_RECIP_ENDPOINT,
@@ -598,25 +598,25 @@ int usb_audio_sampling_frequency_control(struct usb_host_device *host_dev, u32 e
                            &sampe_rate,
                            3);
 }
-int usb_audio_volume_control(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u16 volume)
+int usb_audio_volume_control(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u16 volume, u8 interface_num)
 {
     log_info("%s featureID:%d vol:%x", __func__, feature_id, volume);
     return usb_control_msg(host_dev,
                            1,
                            USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                            (0x02 << 8) | channel_num,
-                           feature_id << 8,
+                           feature_id << 8 | interface_num,
                            &volume,
                            2);
 }
-int usb_audio_mute_control(struct usb_host_device *host_dev, u8 feature_id, u8 mute)
+int usb_audio_mute_control(struct usb_host_device *host_dev, u8 feature_id, u8 mute, u8 interface_num)
 {
     log_info("%s featureID:%d mute:%d", __func__, feature_id, mute);
     return usb_control_msg(host_dev,
                            1,
                            USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                            0x0100,
-                           feature_id << 8,
+                           feature_id << 8 | interface_num,
                            &mute,
                            1);
 }

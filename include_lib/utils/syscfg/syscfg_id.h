@@ -261,6 +261,7 @@ typedef enum JL_CONFIG_ERR_TABLE {
 
 //238-255可使用
 #define    CFG_UPDATE_VERSION_INFO      238
+#define    VM_RTC_LRC_TRIM_INDEX        244
 
 //=================================================================================//
 //                   只存于sys_cfg.bin的配置项[512 ~ 700]                		   //

@@ -81,6 +81,7 @@ struct mass_storage {
     u8 lun; ///<最大逻辑单元地址
     u8 curlun; ///<当前逻辑单元地址
 
+    u8 online; ///<插入状态
     u8 dev_status; ///<设备状态
     u8 suspend_cnt; ///<挂起状态计数器
     u8 read_only; ///<只读标志位

@@ -129,7 +129,13 @@ static int usb_h_mutex_post(struct usb_host_device *host_dev)
 static int set_stor_power(struct usb_host_device *host_dev, u32 value)
 {
     struct mass_storage *disk = host_device2disk(host_dev);
+
     log_debug("%s() %d ", __func__, disk->dev_status);
+
+    if (disk) {
+        disk->online = !!value;
+    }
+
     if (disk == NULL || disk->dev_status == DEV_IDLE) {
         return 0;
     }
@@ -153,6 +159,12 @@ static int set_stor_power(struct usb_host_device *host_dev, u32 value)
 }
 static int get_stor_power(struct usb_host_device *host_dev, u32 value)
 {
+    struct mass_storage *disk = host_device2disk(host_dev);
+
+    if (disk) {
+        return disk->online;
+    }
+
     return DEV_ERR_NONE;
 }
 
@@ -1813,7 +1825,7 @@ int usb_msd_parser(struct usb_host_device *host_dev, u8 interface_num, const u8 
 {
     struct usb_interface_descriptor *interface = (struct usb_interface_descriptor *)pBuf;
     pBuf += sizeof(struct usb_interface_descriptor);
-    int len = 0;
+    int len = sizeof(struct usb_interface_descriptor);
     const usb_dev usb_id = host_device2id(host_dev);
 
     udisk_device[usb_id].private_data = host_dev;
@@ -1990,7 +2002,8 @@ static bool usb_stor_online(const struct dev_node *node)
     }
     disk = host_device2disk(host_dev);
     if (disk) {
-        return true;//disk->media_sta_cur ? true : false;
+        return disk->online;
+        /* return true;//disk->media_sta_cur ? true : false; */
     }
     return false;
 }
