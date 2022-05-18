@@ -122,6 +122,7 @@ struct audio_ioctl {
 struct audio_dest_time_play_param {
     u32 start_time;	      /*!< 要跳转过去播放的起始时间。单位：ms。设置后跳到start_time开始播放 */
     u32 dest_time;	      /*!< 要跳转过去播放的目标时间。单位：ms。播放到dest_time后如果callback_func存在，则调用callback_func */
+    u32(*callback_func)(void *priv); /*!< 到达目标时间后回调 */
     void *callback_priv;  /*!< 回调参数，可以在callback_func回调中实现对应需要的动作 */
 };
 

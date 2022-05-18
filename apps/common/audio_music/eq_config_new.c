@@ -14,7 +14,7 @@
 #pragma code_seg (	".eq_app_codec_code" )
 #endif
 
-const u8 audio_eq_sdk_name[16] 		= "AC700N";
+const u8 audio_eq_sdk_name[16] 		= "AC791N";
 const u8 audio_eq_ver[4] 			= {0, 8, 0, 0};
 
 //eq_cfg_hw.bin中播歌eq曲线，当作用户自定义模式，参与效果切换.

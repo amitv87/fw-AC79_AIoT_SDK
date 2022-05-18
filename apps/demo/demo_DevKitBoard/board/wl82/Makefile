@@ -191,6 +191,11 @@ INCLUDES := \
 	-I../../../../../apps/common/example/third_party/FlashDB/port/fal/inc \
 	-I../../../../../apps/common/example/third_party/FlashDB/inc \
 	-I../../../../../apps/common/example/third_party/FlashDB/port/fal/samples/porting \
+	-I../../../../../include_lib/system/os/FreeRTOS \
+	-I../../../../../include_lib/system/os/FreeRTOS/pi32v2 \
+	-I../../../../../apps/common/example/third_party/nnom/inc \
+	-I../../../../../apps/common/example/third_party/nnom/port \
+	-I../../../../../apps/common/example/third_party/finsh \
 	-I../../../../../apps/common/usb \
 	-I../../../../../apps/common/usb/device \
 	-I../../../../../apps/common/usb/include/host \
@@ -349,6 +354,14 @@ c_SRC_FILES := \
 	../../../../../apps/common/example/third_party/finsh/msh_file.c \
 	../../../../../apps/common/example/third_party/finsh/shell.c \
 	../../../../../apps/common/example/third_party/finsh/symbol.c \
+	../../../../../apps/common/example/third_party/nnom/examples/mnist-simple/mcu/main.c \
+	../../../../../apps/common/example/third_party/nnom/src/nnom.c \
+	../../../../../apps/common/example/third_party/nnom/src/nnom_activations.c \
+	../../../../../apps/common/example/third_party/nnom/src/nnom_layers.c \
+	../../../../../apps/common/example/third_party/nnom/src/nnom_local.c \
+	../../../../../apps/common/example/third_party/nnom/src/nnom_out_shape.c \
+	../../../../../apps/common/example/third_party/nnom/src/nnom_run.c \
+	../../../../../apps/common/example/third_party/nnom/src/nnom_utils.c \
 	../../../../../apps/common/example/ui/ui_touch_demo.c \
 	../../../../../apps/common/example/update/ftp_upgrade/main.c \
 	../../../../../apps/common/example/update/http_upgrade/example1/main.c \

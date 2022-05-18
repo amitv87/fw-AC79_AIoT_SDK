@@ -98,7 +98,7 @@ static int lcd_TE_wakeup_send_data_init(void)//TE初始化
 
     int *ret = NULL;
     /*=====TE中断配置=====*/
-    ret = port_wakeup_reg(EVENT_IO_1, pdata->te_pin, EDGE_NEGATIVE, TE_interrupt);
+    ret = port_wakeup_reg(EVENT_IO_1, pdata->te_pin, EDGE_POSITIVE, TE_interrupt);
     if (ret) {
         printf("port_wakeup_reg success.\n");
     } else {

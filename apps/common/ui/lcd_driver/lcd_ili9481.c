@@ -7,6 +7,10 @@
 #include "lcd_drive.h"
 #include "lcd_te_driver.h"
 #include "lcd_config.h"
+#include "uart.h"
+#include "system/includes.h"
+#include "gpio.h"
+#include "app_config.h"
 
 #if TCFG_LCD_ILI9481_ENABLE
 
@@ -145,7 +149,6 @@ void ili9481_clear_screen(u32 color)
 void ili9481_Fill(u8 *img, u16 len)
 {
     WriteCOM(0x2c);
-    lcd_delay(10); //Delay 120ms
     WriteDAT_DMA(img, len);
 }
 
@@ -171,10 +174,9 @@ static void ili9481_set_direction(u8 dir)
 {
     WriteCOM(0x36);    //扫描方向控制
 
-
     if (dir == ROTATE_DEGREE_0) { //正向
 #if HORIZONTAL_SCREEN
-        WriteDAT_8(0xc8);
+        WriteDAT_8(0x48);
 #else
         WriteDAT_8(0x48);
 #endif
@@ -227,25 +229,31 @@ static const InitCode code1[] = {
     {0x11, 0},
     {REGFLAG_DELAY, 280},
 
+    /*#if HORIZONTAL_SCREEN      //1为使能横屏配置*/
     {0x35, 1, {0x00}},//开TE 关TE 0x34
-    {0x44, 2, {0x01, 0Xe0}}, //有关TE时间控制
-
+    {0x44, 2, {0x01, 0X50}}, //有关TE时间控制
+    /*{0xc6, 1, {0xf0}},//解决屏条纹  控制屏幕刷新速度 值越小刷新越快*/
     {0xc5, 1, {0x07}},
-    {0xc0, 5, {0x00, 0x3b, 0x00, 0x02, 0x11}},
+    /*#else*/
+    /*{0x34, 1, {0x00}},//开TE 关TE 0x34*/
+    /*#endif*/
 
+    /*{0x35, 1, {0x00}},//开TE 关TE 0x34*/
+    /*{0xc5, 1, {0x07}},*/
+    /*{0x44, 2, {0x00, 0X00}}, //有关TE时间控制*/
     {0xE4, 1, {0xA0}},
     {0xf3, 2, {0x02, 0x1a}},
-
     {0xd0, 3, {0x07, 0x41, 0x16}},
-
-    /*{0xd1, 3, {0x00, 0x04, 0x1f}},*/
-    {0xd1, 3, {0x01, 0x6f, 0xff}},
+    {0xd1, 3, {0x00, 0x04, 0x1f}},
     {0xd2, 2, {0x01, 0x00}},
-    {0xC8, 12, {0X00, 0x01, 0x47, 0x60, 0x04, 0x16, 0x03, 0x67, 0x67, 0x06, 0x0f, 0x00}},
+    {0xc0, 5, {0x00, 0x3b, 0x00, 0x02, 0x11}},
+    /*{0xC8, 12, {0X00, 0x01, 0x47, 0x60, 0x04, 0x16, 0x03, 0x67, 0x67, 0x06, 0x0f, 0x00}},*/
     /*{0xC8,12, {0x00, 0x37, 0x25, 0x06, 0x04, 0x1e, 0x26, 0x42, 0x77, 0x44, 0x0f, 0x12}},*/
-    /*{0xC8, 12, {0X00, 0x26, 0x21, 0x00, 0x00, 0x1f, 0x65, 0x23, 0x77, 0x00, 0x0f, 0x00}}, */
+    {0xC8, 12, {0X00, 0x26, 0x21, 0x00, 0x00, 0x1f, 0x65, 0x23, 0x77, 0x00, 0x0f, 0x00}},
     /*{0xc8, 12, {0x00, 0x30, 0x36, 0x45, 0x04, 0x16, 0x37, 0x75, 0x77, 0x54, 0x0f, 0x00}},*/
     {0x3A, 1, {0x55}},
+    {0x2A, 4, {0X00, 0x00, 0x01, 0x3F}},
+    {0x2B, 4, {0X00, 0x00, 0x01, 0xDF}},
 
     {REGFLAG_DELAY, 200},
 
@@ -271,39 +279,34 @@ static void ili9481_init_code(const InitCode *code, u8 cnt)
 static void ili9481_led_ctrl(u8 status)
 {
     //背光控制以及放在//lcd_te_driver.c 优化开机显示
-    /*lcd_bl_pinstate(status);*/
+    lcd_bl_pinstate(status);
 }
 
 void ili9481_test(void)
 {
     lcd_bl_pinstate(BL_ON);
-
-    while (1) {
-        os_time_dly(100);
-        ILI9341_clear_screen(BLUE);
-        printf("LCD_ILI9341_TSET_BLUE\n");
-        os_time_dly(100);
-        ILI9341_clear_screen(GRED);
-        printf("LCD_ILI9341_TSET_GRED\n");
-        os_time_dly(100);
-        ILI9341_clear_screen(BRRED);
-        printf("LCD_ILI9341_TSET_BRRED\n");
-        os_time_dly(100);
-        ILI9341_clear_screen(YELLOW);
-        printf("LCD_ILI9341_TSET_YELLOW\n");
-    }
+    os_time_dly(100);
+    ili9481_clear_screen(BLUE);
+    printf("LCD_ILI9481_TSET_BLUE\n");
+    os_time_dly(100);
+    ili9481_clear_screen(GRED);
+    printf("LCD_ILI9481_TSET_GRED\n");
+    os_time_dly(100);
+    ili9481_clear_screen(BRRED);
+    printf("LCD_ILI9481_TSET_BRRED\n");
+    os_time_dly(100);
+    ili9481_clear_screen(YELLOW);
+    printf("LCD_ILI9481_TSET_YELLOW\n");
 }
 
 static int ili9481_init(void)
 {
     printf("LCD_ili9481 init_start\n");
     lcd_bl_pinstate(BL_ON);
-    ili9481_reset();
     ili9481_init_code(code1, sizeof(code1) / sizeof(code1[0]));
     ili9481_set_direction(ROTATE_DEGREE_0);
     init_TE(ili9481_Fill);
     /*ili9481_test();*/
-    ili9481_SetRange_1(0, LCD_W - 1, 0, LCD_H - 1);
     printf("LCD_ili9481 config succes\n");
 
     return 0;

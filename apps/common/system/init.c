@@ -446,9 +446,12 @@ int cpu_in_irq(void)
 }
 
 __attribute__((always_inline))
-int cpu_irq_disabled()
+int cpu_irq_disabled(void)
 {
-    return __local_irq_lock_cnt();
+    int flag;
+    __asm__ volatile("%0 = icfg" : "=r"(flag));
+    return ((flag & 0x300) != 0x300) || (q32DSP(current_cpu_id())->IPMASK == 7);//不可屏蔽中断
+    /* return __local_irq_lock_cnt(); */
 }
 #endif
 

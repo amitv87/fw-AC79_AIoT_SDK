@@ -28,6 +28,46 @@ static struct lbuf_test_head {
     u8 data[0];
 };
 
+static void Calculation_frame(void)
+{
+    static u32 tstart = 0, tdiff = 0;
+    static u8 fps_cnt = 0;
+
+    fps_cnt++ ;
+
+    if (!tstart) {
+        tstart = timer_get_ms();
+    } else {
+        tdiff = timer_get_ms() - tstart;
+
+        if (tdiff >= 1000) {
+            printf("\n [get_yuv]fps_count = %d\n", fps_cnt *  1000 / tdiff);
+            tstart = 0;
+            fps_cnt = 0;
+        }
+    }
+}
+
+static void Calculation_frame1(void)
+{
+    static u32 tstart = 0, tdiff = 0;
+    static u8 fps_cnt = 0;
+
+    fps_cnt++ ;
+
+    if (!tstart) {
+        tstart = timer_get_ms();
+    } else {
+        tdiff = timer_get_ms() - tstart;
+
+        if (tdiff >= 1000) {
+            printf("\n [yuv_soft]fps_count = %d\n", fps_cnt *  1000 / tdiff);
+            tstart = 0;
+            fps_cnt = 0;
+        }
+    }
+}
+
 static void *lbuf_ptr = NULL;
 struct lbuff_head *yuv_lbuf_hdl = NULL;
 static struct lbuff_head *lib_system_lbuf_test_init(u32 buf_size)
@@ -50,50 +90,12 @@ int isc_log_en()//如果定义该函数丢帧信息屏蔽
 {
     return 0;
 }
-
-static void Calculation_frame1(void)
-{
-    static u32 tstart = 0, tdiff = 0;
-    static u8 fps_cnt = 0;
-
-    fps_cnt++ ;
-
-    if (!tstart) {
-        tstart = timer_get_ms();
-    } else {
-        tdiff = timer_get_ms() - tstart;
-
-        if (tdiff >= 1000) {
-            printf("\n [yuv_soft]fps_count = %d\n", fps_cnt *  1000 / tdiff);
-            tstart = 0;
-            fps_cnt = 0;
-        }
-    }
-}
-static void Calculation_frame(void)
-{
-    static u32 tstart = 0, tdiff = 0;
-    static u8 fps_cnt = 0;
-
-    fps_cnt++ ;
-
-    if (!tstart) {
-        tstart = timer_get_ms();
-    } else {
-        tdiff = timer_get_ms() - tstart;
-
-        if (tdiff >= 1000) {
-            printf("\n [MSG]fps_count = %d\n", fps_cnt *  1000 / tdiff);
-            tstart = 0;
-            fps_cnt = 0;
-        }
-    }
-}
 /******数据流程******************/
 /******yuv回调出数据后转为对应屏幕大小YUV交给下一个线程处理***********/
 /******这样显示和yuv资源占用差不多才能同步均匀*************************************/
 static void get_yuv(u8 *yuv_buf, u32 len, int yuv_in_w, int yuv_in_h)//YUV数据回调线程
 {
+    Calculation_frame();
     struct lbuf_test_head *wbuf = NULL;
 
     if (lbuf_free_space(yuv_lbuf_hdl) < (CAMERA_YUV420_BUF_LEN)) { //查询LBUF空闲数据块是否有足够长度
@@ -109,7 +111,6 @@ static void get_yuv(u8 *yuv_buf, u32 len, int yuv_in_w, int yuv_in_h)//YUV数据
         printf("%s >>>lbuf no buf\r\n", __func__);
         return ;
     }
-    Calculation_frame();
 }
 
 static void yuv_soft_task(void)
@@ -126,8 +127,8 @@ static void yuv_soft_task(void)
                 printf("%s >>>note lbuf rbuf == NULL\r\n", __func__);
             } else {
                 YUV420p_Soft_Scaling(rbuf->data, NULL, CONFIG_VIDEO_IMAGE_W, CONFIG_VIDEO_IMAGE_H, LCD_W, LCD_H);
-                lbuf_free(rbuf);
                 lcd_show_frame(rbuf->data, LCD_YUV420_DATA_SIZE); //这里输出的是对应屏幕大小的YUV数据 发送到TE线程处理数据
+                lbuf_free(rbuf);
             }
         }
     }

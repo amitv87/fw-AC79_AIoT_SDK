@@ -123,7 +123,9 @@
 // #define USE_HC_SR04_DEMO //超声波传感器测试
 
 /****第三方库*****/
-// #define USE_FLASHDB_TEST_DEMO
-// #define USE_FINSH_TEST_DEMO
+//#define USE_FLASHDB_TEST_DEMO
+//#define USE_FINSH_TEST_DEMO
+//#define USE_NNOM_TEST_DEMO
+
 
 #endif //DEMO_COFNIG_H

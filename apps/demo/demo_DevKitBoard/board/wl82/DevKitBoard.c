@@ -568,7 +568,7 @@ static const struct otg_dev_data otg_data = {
 //*********************************************************************************//
 #ifdef CONFIG_UI_ENABLE //注意使用UI不能使用SD卡D口 建议使用A口 io冲突问题
 #if TCFG_LCD_ILI9481_ENABLE
-#define EMI_BAUD		EMI_BAUD_DIV64
+#define EMI_BAUD		EMI_BAUD_DIV8
 #endif
 #if TCFG_LCD_ILI9341_ENABLE
 #define EMI_BAUD  		EMI_BAUD_DIV8

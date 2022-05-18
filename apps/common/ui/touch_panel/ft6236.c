@@ -67,10 +67,6 @@ static void *iic = NULL;
 #define FT_REG_NUM_FINGER       0x02		//触摸状态寄存器
 
 #define FT_TP1_REG 				0X03	  	//第一个触摸点数据地址
-#define FT_TP2_REG 				0X09		//第二个触摸点数据地址
-#define FT_TP3_REG 				0X0F		//第三个触摸点数据地址
-#define FT_TP4_REG 				0X15		//第四个触摸点数据地址
-#define FT_TP5_REG 				0X1B	    //第五个触摸点数据地址
 
 
 #define	FT_ID_G_LIB_VERSION		0xA1		//版本
@@ -101,19 +97,19 @@ static unsigned char wrFT6236Reg(u8 regID, unsigned char regDat)
         log_info("iic write err!!! line : %d \n", __LINE__);
         goto exit;
     }
-    delay(1000);
+    delay(100);
     if (dev_ioctl(iic, IIC_IOCTL_TX, regID & 0xff)) {
         ret = 0;
         log_info("iic write err!!! line : %d \n", __LINE__);
         goto exit;
     }
-    delay(1000);
+    delay(100);
     if (dev_ioctl(iic, IIC_IOCTL_TX_WITH_STOP_BIT, regDat)) {
         ret = 0;
         log_info("iic write err!!! line : %d \n", __LINE__);
         goto exit;
     }
-    delay(1000);
+    delay(100);
 
 exit:
     dev_ioctl(iic, IIC_IOCTL_STOP, 0);
@@ -151,7 +147,7 @@ int get_FT6236_pid(void)
 {
     u8 temp = 0;
     rdFT6236Reg(FTS_REG_CHIP_ID, &temp);
-    if (temp != 84) { // 9
+    if (temp != 100) {
         return 1;
     }
     log_info(">>>>>>>>>>>hell touch FT6236<<<<<<<<<<<");
@@ -164,7 +160,7 @@ static void get_FT6236_xy(u16 addr, u16 *x, u16 *y)
     for (u8 i = 0; i < 4; i++) {
         rdFT6236Reg((addr + i), &buf[i]);	//读取XY坐标值
     }
-    *y = 480 - (((u16)(buf[2] & 0X0F) << 8) + buf[3]);
+    *y = (((u16)(buf[2] & 0X0F) << 8) + buf[3]);
     *x = ((u16)(buf[0] & 0X0F) << 8) + buf[1];
 }
 
@@ -317,7 +313,7 @@ static void FT6236_interrupt(void)
     status = 0;
 }
 
-static int FT6236_init(void)
+int FT6236_init(void)
 {
     iic = dev_open("iic0", NULL);
 
@@ -325,22 +321,22 @@ static int FT6236_init(void)
     static const struct ui_lcd_platform_data *pdata;
     pdata = (struct ui_lcd_platform_data *)ui_cfg_data.private_data;
 
+    gpio_set_pull_up(pdata->touch_reset_pin, 0);
     gpio_direction_output(pdata->touch_reset_pin, 0);
-    os_time_dly(5);
+    os_time_dly(50);
     gpio_direction_output(pdata->touch_reset_pin, 1);
     os_time_dly(10);
     //注册中断注意触摸用的事件0 屏幕TE用的事件1
     port_wakeup_reg(EVENT_IO_0, pdata->touch_int_pin, EDGE_NEGATIVE, FT6236_interrupt);
 
     wrFT6236Reg(FT_DEVIDE_MODE, 0);
-    wrFT6236Reg(FT_ID_G_THGROUP, 50);
-    wrFT6236Reg(FT_ID_G_PERIODACTIVE, 15);
+    wrFT6236Reg(FT_ID_G_THGROUP, 15);
+    wrFT6236Reg(FT_ID_G_PERIODACTIVE, 10);
 
     if (get_FT6236_pid()) {
         log_info("[err]>>>>>FT6236 err!!!");
         return 1;
     }
-
     return 0;
 }
 
