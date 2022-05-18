@@ -186,6 +186,7 @@
 <Unit filename="../../../../../apps/demo/demo_ble/include/app_config.h" />
 <Unit filename="../../../../../cpu/wl82/debug.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../cpu/wl82/key/adc_api.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../cpu/wl82/port_waked_up.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../cpu/wl82/setup.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../include_lib/btctrler/adapter/include/common/sys_timer.h" />
 <Unit filename="../../../../../include_lib/btctrler/ble/hci_ll.h" />

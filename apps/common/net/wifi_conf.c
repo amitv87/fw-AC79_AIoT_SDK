@@ -18,6 +18,8 @@ Debug information verbosity: lower values indicate higher urgency
 */
 const u8 RTDebugLevel = 2;
 
+const u8 RxReorderEnable = 0; //过滤wifi 重复数据帧，0为关闭，1为开启
+
 const u16 MAX_CHANNEL_TIME_BSS_INFRA = 200;//扫描每个信道停留时间,单位ms,最小20ms, 200-400ms最佳
 
 #if defined  CONFIG_NO_SDRAM_ENABLE

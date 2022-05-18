@@ -118,6 +118,7 @@
 <Unit filename="../../../../../apps/demo/demo_hello/include/app_config.h" />
 <Unit filename="../../../../../cpu/wl80/debug.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../cpu/wl80/key/adc_api.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../cpu/wl80/port_waked_up.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../cpu/wl80/setup.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../include_lib/driver/cpu/wl80/asm/WL80.h" />
 <Unit filename="../../../../../include_lib/driver/cpu/wl80/asm/adc_api.h" />

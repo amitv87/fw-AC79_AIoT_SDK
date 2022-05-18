@@ -319,6 +319,7 @@
 <Unit filename="../../../../apps/wifi_ipc/wifi/wifi_app_task.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../cpu/wl82/debug.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../cpu/wl82/key/adc_api.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../cpu/wl82/port_waked_up.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../cpu/wl82/setup.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../include_lib/btctrler/ble/hci_ll.h" />
 <Unit filename="../../../../include_lib/btctrler/btcontroller_mode.h" />

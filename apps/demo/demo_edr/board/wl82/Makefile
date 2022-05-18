@@ -183,6 +183,7 @@ c_SRC_FILES := \
 	../../../../../apps/demo/demo_edr/spp_trans_data.c \
 	../../../../../cpu/wl82/debug.c \
 	../../../../../cpu/wl82/key/adc_api.c \
+	../../../../../cpu/wl82/port_waked_up.c \
 	../../../../../cpu/wl82/setup.c \
 
 

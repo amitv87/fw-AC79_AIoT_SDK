@@ -157,6 +157,7 @@
 <Unit filename="../../../../../apps/demo/demo_edr/spp_trans_data.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../cpu/wl80/debug.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../cpu/wl80/key/adc_api.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../cpu/wl80/port_waked_up.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../cpu/wl80/setup.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../include_lib/btctrler/ble/hci_ll.h" />
 <Unit filename="../../../../../include_lib/btctrler/ble/ll_config.h" />

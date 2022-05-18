@@ -478,6 +478,7 @@
 <Unit filename="../../../../apps/wifi_story_machine/wifi/wifi_app_task.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../cpu/wl80/debug.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../cpu/wl80/key/adc_api.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../cpu/wl80/port_waked_up.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../cpu/wl80/setup.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../include_lib/btctrler/adapter/include/common/sys_timer.h" />
 <Unit filename="../../../../include_lib/btctrler/ble/hci_ll.h" />

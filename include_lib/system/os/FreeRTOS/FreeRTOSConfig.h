@@ -191,7 +191,8 @@ static inline  void vAssertCalled(const char *str, unsigned int ulLine)
     }*/
     local_irq_disable();
     printf("%s %d\n", str, ulLine) ;
-    while (1);
+    ASSERT(0);
+    /*while (1);*/
 
 }
 #define configASSERT( x ) if( ( x ) == 0 ) vAssertCalled(__func__, __LINE__)

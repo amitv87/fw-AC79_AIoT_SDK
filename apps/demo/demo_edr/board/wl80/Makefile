@@ -176,6 +176,7 @@ c_SRC_FILES := \
 	../../../../../apps/demo/demo_edr/spp_trans_data.c \
 	../../../../../cpu/wl80/debug.c \
 	../../../../../cpu/wl80/key/adc_api.c \
+	../../../../../cpu/wl80/port_waked_up.c \
 	../../../../../cpu/wl80/setup.c \
 
 

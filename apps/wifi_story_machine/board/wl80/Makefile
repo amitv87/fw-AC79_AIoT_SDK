@@ -342,6 +342,7 @@ c_SRC_FILES := \
 	../../../../apps/wifi_story_machine/wifi/wifi_app_task.c \
 	../../../../cpu/wl80/debug.c \
 	../../../../cpu/wl80/key/adc_api.c \
+	../../../../cpu/wl80/port_waked_up.c \
 	../../../../cpu/wl80/setup.c \
 
 
