@@ -205,7 +205,7 @@ static void lib_system_lbuf_task2(void *priv)
     struct lbuf_test_head *rbuf = NULL;
 
     while (1) {
-        os_sem_pend(&sem1, portMAX_DELAY);
+        os_sem_pend(&sem1, 0);
         while (1) {
             rbuf = (struct lbuf_test_head *)lbuf_pop(lbuf_handle_test, BIT(0));//从lbuf的通道0读取数据块
             if (rbuf == NULL) {
@@ -232,7 +232,7 @@ static void lib_system_lbuf_task3(void *priv)
     struct lbuf_test_head *rbuf = NULL;
 
     while (1) {
-        os_sem_pend(&sem2, portMAX_DELAY);
+        os_sem_pend(&sem2, 0);
         while (1) {
             rbuf = (struct lbuf_test_head *)lbuf_pop(lbuf_handle_test, BIT(1));//从lbuf的通道1读取数据块
             if (rbuf == NULL) {

@@ -89,7 +89,7 @@ enum {
 struct low_power_param {
     u8 osc_type;
     u32 osc_hz;
-    u16  delay_us;
+    u16 delay_us;
     u8  config;
     u8  btosc_disable;
 
@@ -101,6 +101,8 @@ struct low_power_param {
     u8 pd_wdvdd_lev;
     u8 vlvd_value;
     u8 vlvd_enable;
+
+    u32 sys_sleep_internal_us;
 };
 
 #define BLUETOOTH_RESUME    BIT(1)
