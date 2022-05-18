@@ -291,6 +291,12 @@
 <Unit filename="../../../../../apps/common/config/user_cfg.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/debug/debug.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/debug/debug_user.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../apps/common/example/Devkitboard_test/key.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../apps/common/example/Devkitboard_test/main.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../apps/common/example/Devkitboard_test/mic_test.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../apps/common/example/Devkitboard_test/mp3_play.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../apps/common/example/Devkitboard_test/ui_main.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../apps/common/example/Devkitboard_test/wifi_music.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/example/audio/audio_demo/ai_speaker.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/example/audio/audio_demo/local_music.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/example/audio/audio_demo/main.c"><Option compilerVer="CC"/></Unit>
@@ -501,12 +507,14 @@
 <Unit filename="../../../../../apps/common/ui/lcd_driver/lcd_drive.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/ui/lcd_driver/lcd_hx8357.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/ui/lcd_driver/lcd_ili9341.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../apps/common/ui/lcd_driver/lcd_ili9481.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/ui/lcd_driver/lcd_ili9488.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/ui/lcd_driver/lcd_st7735s.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/ui/lcd_driver/lcd_st7789s.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/ui/lcd_driver/lcd_st7789v.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/ui/lcd_driver/te_driver/lcd_data_driver.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/ui/lcd_driver/te_driver/lcd_te_driver.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../apps/common/ui/touch_panel/ft6236.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/ui/touch_panel/gt911.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/ui/ui_action_video.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/ui/ui_driver/interface/ui_platform.c"><Option compilerVer="CC"/></Unit>
@@ -561,6 +569,7 @@
 <Unit filename="../../../../../apps/demo/demo_DevKitBoard/include/app_config.h" />
 <Unit filename="../../../../../apps/demo/demo_DevKitBoard/include/bt_emitter.h" />
 <Unit filename="../../../../../apps/demo/demo_DevKitBoard/include/demo_config.h" />
+<Unit filename="../../../../../apps/demo/demo_DevKitBoard/include/ename.h" />
 <Unit filename="../../../../../apps/demo/demo_DevKitBoard/include/get_yuv_data.h" />
 <Unit filename="../../../../../apps/demo/demo_DevKitBoard/include/reverb_deal.h" />
 <Unit filename="../../../../../apps/demo/demo_DevKitBoard/include/simple_avi_unpkg.h" />

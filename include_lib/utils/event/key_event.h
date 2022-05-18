@@ -39,6 +39,15 @@
 #define 	KEY_8 				38
 #define 	KEY_9 				39
 
+#define 	KEY_K1 			    13
+#define 	KEY_K2 			    6
+#define 	KEY_K3 			    4
+#define 	KEY_K4 			    5
+#define 	KEY_K5 		        12
+#define 	KEY_K6 			    10
+#define 	KEY_K7 			    8
+#define 	KEY_K8 			    0
+
 #define     NO_KEY              255
 
 

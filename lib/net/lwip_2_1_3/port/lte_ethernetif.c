@@ -16,6 +16,8 @@
 #define IFNAME1 'T'
 
 extern void lte_ethernetif_input(struct netif *netif);
+static void lte_ethernetif_exit(struct netif *netif);
+
 /* void lte_ethernetif_input(void *param, void *data, int len); */
 //6字节的目的MAC＋6字节的源MAC＋2字节的帧类型＋最大数据包(1500)
 //unsigned char Rx_Data_Buf[1514];
@@ -60,7 +62,13 @@ static void lte_rx_task(void *p_arg)
 
 static int create_lte_rx_task(void *p_arg, u8 prio)
 {
-    return os_task_create(lte_rx_task, (void *)p_arg, prio, 0x2000, 0, "lte_rx_task");
+    return os_task_create(lte_rx_task, (void *)p_arg, prio, 0x100, 0, "lte_rx_task");
+}
+
+
+static int delete_lte_rx_task(void)
+{
+    return os_task_del("lte_rx_task");
 }
 
 /**
@@ -327,6 +335,19 @@ lte_ethernetif_init(struct netif *netif)
 
     /* initialize the hardware */
     wired_low_level_init(netif);
+
+#if LWIP_NETIF_REMOVE_CALLBACK
+    netif->remove_callback = lte_ethernetif_exit;
+#endif /* LWIP_NETIF_REMOVE_CALLBACK */
+
     return ERR_OK;
 }
+
+
+static void lte_ethernetif_exit(struct netif *netif)
+{
+    delete_lte_rx_task();
+    netif->input = NULL;
+}
+
 

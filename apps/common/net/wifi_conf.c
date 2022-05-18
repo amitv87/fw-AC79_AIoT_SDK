@@ -18,6 +18,8 @@ Debug information verbosity: lower values indicate higher urgency
 */
 const u8 RTDebugLevel = 2;
 
+const u8 RxReorderEnable = 0; //过滤wifi 重复数据帧，0为关闭， 1为开启
+
 const u16 MAX_CHANNEL_TIME_BSS_INFRA = 200;//扫描每个信道停留时间,单位ms,最小20ms, 200-400ms最佳
 
 const  char WIFI_CHANNEL_QUALITY_INDICATION_BAD = 5; //STA模式下的信道通信质量差阈值,一旦低于这个值就断线重连,如果配置为-1则信号质量再差也不通知断线,但是太久不重连会被路由器认为死亡踢掉的风险
@@ -37,6 +39,8 @@ const u16 MAX_PACKETS_IN_PS_QUEUE	= 16; //配置WiFi驱动最大发送power-save
 #endif
 
 const u8 RFIinitUseTrimValue = 1;//记忆wifi rf 初始化使用vm记忆的trim的值,可大大降低wifi初始化时间
+
+const u8 ntp_get_time_init = 1;	//连上网后调用ntp向ntp_host列表所有服务器获取时间, 0为关闭, 1为开启
 
 #if 0
 WirelessMode:

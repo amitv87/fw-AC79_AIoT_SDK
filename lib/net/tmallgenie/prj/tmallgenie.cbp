@@ -7,7 +7,7 @@
 		<Option compiler="pi32" />
 		<Build>
 			<Target title="Release">
-				<Option output="../../../../include_lib/liba/WL80/tmallgenie2.a" prefix_auto="0" extension_auto="0" />
+				<Option output="../../../../include_lib/liba/WL82/tmallgenie2.a" prefix_auto="0" extension_auto="0" />
 				<Option working_dir="" />
 				<Option object_output="obj/Release/" />
 				<Option type="2" />
@@ -36,6 +36,13 @@
 					<Add directory="../include" />
 					<Add directory="../../../../include_lib/net/mbedtls" />
 					<Add directory="../../../../include_lib/net/mbedtls/configs" />
+					<Add directory="../../../../include_lib/net/mbedtls_2_26_0" />
+					<Add directory="../../../../include_lib/net/lwip_2_1_3/lwip/src/include" />
+					<Add directory="../../../../include_lib/net/lwip_2_1_3/lwip/port" />
+					<Add directory="../../../../include_lib/system/os/FreeRTOS/pi32v2" />
+					<Add directory="../../../../include_lib/utils" />
+					<Add directory="../../../../include_lib/driver" />
+					<Add directory="../../../../include_lib/net/lwip_2_1_3/lwip/app" />
 				</Compiler>
 				<Linker>
 					<Add option="-flto" />
@@ -45,18 +52,6 @@
 		<Compiler>
 			<Add directory="./" />
 		</Compiler>
-		<Unit filename="../deps/aligenie_audio.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="../deps/aligenie_notify.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="../deps/aligenie_os.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="../deps/aligenie_ws.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="../include/aligenie_audio.h" />
 		<Unit filename="../include/aligenie_libs.h" />
 		<Unit filename="../include/aligenie_notify.h" />
@@ -65,6 +60,18 @@
 		<Unit filename="../include/aligenie_ws.h" />
 		<Unit filename="../include/auth.h" />
 		<Unit filename="../include/sdk.h" />
+		<Unit filename="../src/aligenie_audio.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../src/aligenie_notify.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../src/aligenie_os.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../src/aligenie_ws.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="../src/auth.c">
 			<Option compilerVar="CC" />
 		</Unit>

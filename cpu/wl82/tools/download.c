@@ -23,7 +23,10 @@ echo "%OBJCOPY% -O binary -j .cache_ram_data  %ELFFILE% cache_ram_data.bin" >> $
 echo "%OBJDUMP% -section-headers -address-mask=0x1ffffff %ELFFILE%" >> ${PROJ_BUILD}
 echo "%OBJDUMP% -t %ELFFILE% > symbol_tbl.txt" >> ${PROJ_BUILD}
 echo "copy /b text.bin+data.bin+ram0_data.bin+cache_ram_data.bin app.bin" >> ${PROJ_BUILD}
-echo "isd_download.exe isd_config.ini -tonorflash -dev wl82 -boot 0x1c02000 -div1 -wait 300 -uboot uboot.boot -app app.bin cfg_tool.bin -res audlogo cfg -reboot 500 -update_files normal" >> ${PROJ_BUILD}
+#if defined CONFIG_UI_ENABLE
+echo "set UI_RES=ui_res" >> ${PROJ_BUILD}
+#endif
+echo "isd_download.exe isd_config.ini -tonorflash -dev wl82 -boot 0x1c02000 -div1 -wait 300 -uboot uboot.boot -app app.bin cfg_tool.bin -res audlogo cfg  %UI_RES% -reboot 500 -update_files normal" >> ${PROJ_BUILD}
 
 
 #if 0

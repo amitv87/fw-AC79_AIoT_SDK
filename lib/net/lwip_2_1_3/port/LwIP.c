@@ -22,9 +22,10 @@
 #include "printf.h"
 #include "sys_arch.h"
 #include "eth/eth_phy.h"
+#include "wifi/wifi_connect.h"
 
 /*#define HAVE_ETH_WIRE_NETIF*/
-/*#define HAVE_LTE_NETIF*/
+//#define HAVE_LTE_NETIF
 #ifdef LIWP_USE_BT
 #define HAVE_BT_NETIF
 #endif
@@ -35,9 +36,15 @@ extern err_t wireless_ethernetif_init(struct netif *netif);
 extern err_t wired_ethernetif_init(struct netif *netif);
 extern err_t bt_ethernetif_init(struct netif *netif);
 extern err_t lte_ethernetif_init(struct netif *netif);
+extern void ntp_client_get_time(const char *host);
 int set_phy_stats_cb(u8 id, void (*f)(enum phy_state));
 
 int  __attribute__((weak)) lwip_event_cb(void *lwip_ctx, enum LWIP_EVENT event)
+{
+    return 0;
+}
+
+int  __attribute__((weak)) lte_lwip_event_cb(void *lwip_ctx, enum LWIP_EVENT event)
 {
     return 0;
 }
@@ -90,6 +97,8 @@ static struct lan_setting lan_setting_info = {
 };
 
 static struct netif wireless_netif;
+static u8 lwip_inited;
+static u8 lwip_static_ip_renew;
 
 #ifdef HAVE_LTE_NETIF
 static struct netif lte_netif;
@@ -110,6 +119,8 @@ static u32 bt_dhcp_timeout_cnt;
 #define DHCP_TMR_INTERVAL 100  //mill_sec
 static int dhcp_timeout_msec = 15 * 1000;
 static u32 wireless_dhcp_timeout_cnt;
+static u8 get_time_init;
+extern const u8 ntp_get_time_init;
 
 struct lan_setting *net_get_lan_info(void)
 {
@@ -233,7 +244,7 @@ static void network_is_dhcp_bound(struct netif *netif)
         }
 #ifdef HAVE_LTE_NETIF
         else if (netif == &lte_netif) {
-            lwip_event_cb(NULL, LWIP_LTE_DHCP_BOUND_TIMEOUT);
+            lte_lwip_event_cb(NULL, LWIP_LTE_DHCP_BOUND_TIMEOUT);
             parm = LTE_NETIF;
         }
 #endif
@@ -268,9 +279,9 @@ static void network_is_dhcp_bound(struct netif *netif)
             }
 #ifdef HAVE_LTE_NETIF
             else if (netif == &lte_netif) {
-                dns_local_removehost(LOCAL_WIRELESS_HOST_NAME, &lte_netif.ip_addr);
+                dns_local_removehost(LOCAL_LTE_HOST_NAME, &lte_netif.ip_addr);
 
-                if (dns_local_addhost(LOCAL_WIRELESS_HOST_NAME, &lte_netif.ip_addr) != ERR_OK) {
+                if (dns_local_addhost(LOCAL_LTE_HOST_NAME, &lte_netif.ip_addr) != ERR_OK) {
                     puts("dns_local_addhost err`.\n");
                 }
             }
@@ -299,11 +310,15 @@ static void network_is_dhcp_bound(struct netif *netif)
             }
 #ifdef HAVE_LTE_NETIF
             else if (netif == &lte_netif) {
-                lwip_event_cb(NULL, LWIP_LTE_DHCP_BOUND_SUCC);
+                lte_lwip_event_cb(NULL, LWIP_LTE_DHCP_BOUND_SUCC);
             }
 #endif
             else {
                 lwip_event_cb(NULL, LWIP_WIRE_DHCP_BOUND_SUCC);
+            }
+            if (ntp_get_time_init && !get_time_init) {
+                get_time_init = 1;
+                thread_fork("ntp_client_get_time", 10, 1024, 0, 0, ntp_client_get_time, NULL);
             }
         } else {
             tcpip_untimeout((sys_timeout_handler)network_is_dhcp_bound, netif);//减缓network_is_dhcp_bound 刚好被lwip_renew装载的情况
@@ -421,6 +436,61 @@ static void TcpipInitDone(void *arg)
 }
 
 
+void lwip_set_default_netif(u8_t lwip_netif)
+{
+    if (lwip_netif == WIFI_NETIF) {
+        netif_set_default(&wireless_netif);
+    }
+#ifdef HAVE_LTE_NETIF
+    else if (lwip_netif == LTE_NETIF) {
+        netif_set_default(&lte_netif);
+    }
+#endif
+
+#ifdef HAVE_ETH_WIRE_NETIF
+    else {
+        netif_set_default(&wire_netif);
+    }
+#elif defined HAVE_BT_NETIF
+    else {
+        netif_set_default(&bt_netif);
+    }
+#endif
+}
+
+
+void lwip_netif_remove(u8_t lwip_netif)
+{
+    struct ip4_addr ipaddr;
+    char host_name[32] = {0};
+
+    if (lwip_netif == WIFI_NETIF) {
+        netif_remove(&wireless_netif);
+    }
+#ifdef HAVE_LTE_NETIF
+    else if (lwip_netif == LTE_NETIF) {
+
+        dhcp_cleanup(&lte_netif);
+        IP4_ADDR(&ipaddr, lan_setting_info.WIRELESS_IP_ADDR0, lan_setting_info.WIRELESS_IP_ADDR1, lan_setting_info.WIRELESS_IP_ADDR2, lan_setting_info.WIRELESS_IP_ADDR3);
+        sprintf(host_name, "%s", LOCAL_LTE_HOST_NAME);
+        dns_local_removehost(host_name, &ipaddr);
+        dns_local_removehost(host_name, &lte_netif.ip_addr);
+        netif_remove(&lte_netif);
+    }
+#endif
+
+#ifdef HAVE_ETH_WIRE_NETIF
+    else {
+        netif_remove(&wire_netif);
+    }
+#elif defined HAVE_BT_NETIF
+    else {
+        netif_remove(&bt_netif);
+    }
+#endif
+}
+
+
 void lwip_netif_set_up(u8_t lwip_netif)
 {
     if (lwip_netif == WIFI_NETIF) {
@@ -479,6 +549,16 @@ void __lwip_renew(unsigned short parm)
                     printf("etharp_request failed!");
                 }
             }
+            struct wifi_mode_info info;
+            info.mode = NONE_MODE;
+            wifi_get_mode_cur_info(&info);
+            if (info.mode == STA_MODE) {
+                lwip_static_ip_renew = 1;
+            }
+            if (ntp_get_time_init && !get_time_init && info.mode == STA_MODE) {
+                get_time_init = 1;
+                thread_fork("ntp_client_get_time", 10, 1024, 0, 0, ntp_client_get_time, NULL);
+            }
         }
     }
 #ifdef HAVE_LTE_NETIF
@@ -536,8 +616,29 @@ void lwip_renew(u8_t lwip_netif, u8_t dhcp)
 
 void lwip_dhcp_release_and_stop(u8_t lwip_netif)
 {
+    lwip_static_ip_renew = 0;
+
     int err;
-    err = tcpip_callback((tcpip_callback_fn)dhcp_release_and_stop, (void *)&wireless_netif);
+    struct netif *netif;
+
+    if (lwip_netif == WIFI_NETIF) {
+        netif = &wireless_netif;
+    }
+#ifdef HAVE_LTE_NETIF
+    else if (lwip_netif == LTE_NETIF) {
+        netif = &lte_netif;
+    }
+#endif
+#ifdef HAVE_ETH_WIRE_NETIF
+    else {
+        netif = &wire_netif;
+    }
+#elif defined HAVE_BT_NETIF
+    else {
+        netif = &bt_netif;
+    }
+#endif
+    err = tcpip_callback((tcpip_callback_fn)dhcp_release_and_stop, (void *)netif);
     LWIP_ASSERT("failed to dhcp_release_and_stop tcpip_callback", err == 0);
 }
 
@@ -591,7 +692,7 @@ void Init_LwIP(u8_t lwip_netif)
     case LTE_NETIF:
         netif = &lte_netif;
         ethernetif_init = lte_ethernetif_init;
-        sprintf(host_name, "%s", LOCAL_WIRELESS_HOST_NAME);
+        sprintf(host_name, "%s", LOCAL_LTE_HOST_NAME);
         break;
 #endif
 
@@ -607,14 +708,17 @@ void Init_LwIP(u8_t lwip_netif)
 
     printf("|Init_LwIP [%d]\n", lwip_netif);
 
-    if (sys_sem_new(&sem, 0) != ERR_OK) {
-        LWIP_ASSERT("failed to create sem", 0);
-    }
+    if (!lwip_inited) {
+        if (sys_sem_new(&sem, 0) != ERR_OK) {
+            LWIP_ASSERT("failed to create sem", 0);
+        }
 
-    tcpip_init(TcpipInitDone, &sem);
-    sys_sem_wait(&sem);
-    sys_sem_free(&sem);
-    LWIP_DEBUGF(TCPIP_DEBUG, ("tcpip_init: initialized\n"));
+        tcpip_init(TcpipInitDone, &sem);
+        sys_sem_wait(&sem);
+        sys_sem_free(&sem);
+        LWIP_DEBUGF(TCPIP_DEBUG, ("tcpip_init: initialized\n"));
+        lwip_inited = 1;
+    }
 
     IP4_ADDR(&ipaddr, lan_setting_info.WIRELESS_IP_ADDR0, lan_setting_info.WIRELESS_IP_ADDR1, lan_setting_info.WIRELESS_IP_ADDR2, lan_setting_info.WIRELESS_IP_ADDR3);
     IP4_ADDR(&netmask, lan_setting_info.WIRELESS_NETMASK0, lan_setting_info.WIRELESS_NETMASK1, lan_setting_info.WIRELESS_NETMASK2, lan_setting_info.WIRELESS_NETMASK3);
@@ -632,8 +736,10 @@ void Init_LwIP(u8_t lwip_netif)
 #endif
     /*  When the dev_netif is fully configured this function must be called.*/
 
+#ifndef LWIP_HOOK_IP4_ROUTE_SRC
     /*设置默认网卡 .*/
     netif_set_default(netif);
+#endif
 
     /*设置多播网卡*/
     //ip4_set_default_multicast_netif(&wire_netif);
@@ -653,7 +759,7 @@ static void wired_event_handler(struct sys_event *event)
     switch (event->u.dev.event) {
     case DEVICE_EVENT_IN:
         if (use_dhcp) {
-            Init_LwIP(ETH_NETIF, 1);
+            Init_LwIP(ETH_NETIF);
         }
         break;
     case DEVICE_EVENT_OUT:
@@ -687,7 +793,7 @@ int gethostname(char *name, int namelen)
     }
 #ifdef HAVE_LTE_NETIF
     else if (lte_netif.flags) {
-        strncpy(name, LOCAL_WIRELESS_HOST_NAME, namelen);
+        strncpy(name, LOCAL_LTE_HOST_NAME, namelen);
     }
 #endif
 #ifdef HAVE_ETH_WIRE_NETIF
@@ -712,7 +818,7 @@ int getdomainname(char *name, int namelen)
     }
 #ifdef HAVE_LTE_NETIF
     else if (lte_netif.flags) {
-        strncpy(name, "www."LOCAL_WIRELESS_HOST_NAME".com", namelen);
+        strncpy(name, "www."LOCAL_LTE_HOST_NAME".com", namelen);
     }
 #endif
 #ifdef HAVE_ETH_WIRE_NETIF
@@ -788,7 +894,7 @@ ip4_route2(const ip4_addr_t *src, const ip4_addr_t *dest)
 
     struct netif *netif;
 
-#if LWIP_MULTICAST_TX_OPTIONS
+#if 0//LWIP_MULTICAST_TX_OPTIONS
 
     /* Use administratively selected interface for multicast by default */
     if (ip4_addr_ismulticast(dest) && ip4_default_multicast_netif) {
@@ -807,14 +913,14 @@ ip4_route2(const ip4_addr_t *src, const ip4_addr_t *dest)
         if (netif_is_up(netif) && netif_is_link_up(netif) && !ip4_addr_isany_val(*netif_ip4_addr(netif))) {
             //          printf("%s   ::::: %d \n\n", __func__, __LINE__);
             /* network mask matches? */
-            /*           printf("src %s \n\n", inet_ntoa(*src));                     */
-            /* printf("dest %s \n\n", inet_ntoa(*dest));                           */
-            /* printf("netif %s \n\n", inet_ntoa(*netif_ip4_addr(netif)));         */
+            /* printf("src %s \n\n", ip4addr_ntoa(src));                     */
+            /* printf("dest %s \n\n", ip4addr_ntoa(dest));                           */
+            /* printf("netif %s \n\n", ip4addr_ntoa(netif_ip4_addr(netif)));         */
 
 
             //这里拿源来匹配
             //在之前的函数中，目标地址如果不在同一网关中时，往下走，会使用默认网卡。
-            if (ip_addr_isany_val(*src)) {
+            if (ip_addr_isany_val(*src) || ip_addr_isbroadcast(src, netif)) {
                 if (ip4_addr_netcmp(dest, netif_ip4_addr(netif), netif_ip4_netmask(netif))) {
                     /*         printf("src %s \n\n", inet_ntoa(*src));                     */
                     /* printf("dest %s \n\n", inet_ntoa(*dest));                           */
@@ -826,7 +932,8 @@ ip4_route2(const ip4_addr_t *src, const ip4_addr_t *dest)
                 }
 
             } else {
-                if (ip4_addr_cmp(src, netif_ip4_addr(netif))) {
+                if (ip4_addr_netcmp(src, netif_ip4_addr(netif), netif_ip4_netmask(netif))) {
+                    /* if (ip4_addr_cmp(src, netif_ip4_addr(netif))) { */
                     //              printf("%s   ::::: %d \n\n", __func__, __LINE__);
                     /* return netif on which to forward IP packet */
                     return netif;
@@ -974,6 +1081,10 @@ int lwip_dhcp_bound(void)
     struct netif *wireless_netif = netif_find("wl0");
     if (wireless_netif == NULL) { //lwip 未初始化
         return 0;
+    }
+
+    if (lwip_static_ip_renew) { //静态IP情况下,可以直接通信
+        return 1;
     }
 
     struct dhcp *dhcp = (struct dhcp *)netif_get_client_data(wireless_netif, LWIP_NETIF_CLIENT_DATA_INDEX_DHCP);

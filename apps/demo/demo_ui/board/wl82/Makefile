@@ -209,12 +209,14 @@ c_SRC_FILES := \
 	../../../../../apps/common/ui/lcd_driver/lcd_drive.c \
 	../../../../../apps/common/ui/lcd_driver/lcd_hx8357.c \
 	../../../../../apps/common/ui/lcd_driver/lcd_ili9341.c \
+	../../../../../apps/common/ui/lcd_driver/lcd_ili9481.c \
 	../../../../../apps/common/ui/lcd_driver/lcd_ili9488.c \
 	../../../../../apps/common/ui/lcd_driver/lcd_st7735s.c \
 	../../../../../apps/common/ui/lcd_driver/lcd_st7789s.c \
 	../../../../../apps/common/ui/lcd_driver/lcd_st7789v.c \
 	../../../../../apps/common/ui/lcd_driver/te_driver/lcd_data_driver.c \
 	../../../../../apps/common/ui/lcd_driver/te_driver/lcd_te_driver.c \
+	../../../../../apps/common/ui/touch_panel/ft6236.c \
 	../../../../../apps/common/ui/touch_panel/gt911.c \
 	../../../../../apps/common/ui/ui_action_video.c \
 	../../../../../apps/common/ui/ui_driver/interface/ui_platform.c \

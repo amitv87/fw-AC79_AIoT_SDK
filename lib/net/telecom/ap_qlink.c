@@ -264,6 +264,43 @@ void aplink_cfg_start(void)
     iot_device_enter_ap_mode();
 }
 
+static void wifi_set_lan_setting_info(void)
+{
+    struct lan_setting lan_setting_info = {
+
+        .WIRELESS_IP_ADDR0  = 192,
+        .WIRELESS_IP_ADDR1  = 168,
+        .WIRELESS_IP_ADDR2  = 1,
+        .WIRELESS_IP_ADDR3  = 1,
+
+        .WIRELESS_NETMASK0  = 255,
+        .WIRELESS_NETMASK1  = 255,
+        .WIRELESS_NETMASK2  = 255,
+        .WIRELESS_NETMASK3  = 0,
+
+        .WIRELESS_GATEWAY0  = 192,
+        .WIRELESS_GATEWAY1  = 168,
+        .WIRELESS_GATEWAY2  = 1,
+        .WIRELESS_GATEWAY3  = 1,
+
+        .SERVER_IPADDR1  = 192,
+        .SERVER_IPADDR2  = 168,
+        .SERVER_IPADDR3  = 1,
+        .SERVER_IPADDR4  = 1,
+
+        .CLIENT_IPADDR1  = 192,
+        .CLIENT_IPADDR2  = 168,
+        .CLIENT_IPADDR3  = 1,
+        .CLIENT_IPADDR4  = 2,
+
+        .SUB_NET_MASK1   = 255,
+        .SUB_NET_MASK2   = 255,
+        .SUB_NET_MASK3   = 255,
+        .SUB_NET_MASK4   = 0,
+    };
+    net_set_lan_info(&lan_setting_info);
+}
+
 static void iot_device_enter_ap_mode(void)
 {
     u8 mac[6];
@@ -275,6 +312,7 @@ static void iot_device_enter_ap_mode(void)
 
     log_info("aplink ssid: %s", device_mac);
 
+    wifi_set_lan_setting_info(); //STA转AP模式,需要重新配置一下IP信息和DHCP池起始分配地址
     wifi_enter_ap_mode(device_mac, IOT_PWD);
 
     ap_elink_start();

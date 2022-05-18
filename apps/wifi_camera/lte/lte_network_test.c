@@ -7,9 +7,9 @@
 #define log_err(x, ...)     printf("[LTE_TEST][ERR]" x " ", ## __VA_ARGS__)
 
 /* #define PING_TEST */
-#define TCP_TEST
+/* #define TCP_TEST */
 /* #define DNS_TEST */
-/* #define HTTP_TEST */
+#define HTTP_TEST
 
 
 #ifdef TCP_TEST
@@ -123,7 +123,7 @@ static void tcp_client_test(void)
 
 #ifdef  HTTP_TEST
 
-#define DOWNLOAD_BUF_SIZE   (8 * 1024)
+#define DOWNLOAD_BUF_SIZE   (512)
 
 
 static int __httpcli_cb(void *ctx, void *buf, unsigned int size, void *priv, httpin_status status)
@@ -142,13 +142,13 @@ static s32 http_download(const char *url)
     buf = (u8 *)malloc(DOWNLOAD_BUF_SIZE);
     if (!buf) {
         log_err("buf malloc err\n");
-        return -1;
+        goto _download_exit_;
     }
 
     httpcli_ctx *ctx = (httpcli_ctx *)calloc(1, sizeof(httpcli_ctx));
     if (NULL == ctx) {
         log_err("calloc err\n");
-        return -1;
+        goto _download_exit_;
     }
 
     ctx->url = url;
@@ -159,8 +159,8 @@ static s32 http_download(const char *url)
     log_info("URL : %s\n", url);
 
     if (ops->init(ctx) != HERROR_OK) {
-        log_err("http init err");
-        return -1;
+        log_err("http init err\n");
+        goto _download_exit_;
     }
 
     total_len = ctx->content_length;
@@ -179,7 +179,7 @@ static s32 http_download(const char *url)
             ret = ops->read(ctx, buf + offset, remain - offset);
             if (ret < 0) {
                 log_err("http download err\n");
-                return -1;
+                goto _download_exit_;
             }
             offset += ret;
         } while (remain != offset);
@@ -188,7 +188,17 @@ static s32 http_download(const char *url)
         putchar('.');
     }
 
-    log_info("%s, succ\n");
+    ops->close(ctx);
+    log_info("%s, succ\n", __FUNCTION__);
+
+_download_exit_:
+    if (buf) {
+        free(buf);
+    }
+
+    if (ctx) {
+        free(ctx);
+    }
     return 0;
 }
 #endif
@@ -215,7 +225,8 @@ static void lte_network_test_task(void *priv)
 #endif
 
 #ifdef  HTTP_TEST
-    http_download("https://profile.jieliapp.com/license/v1/fileupdate/download/4e8a7fbb-d432-4090-9966-b1c6a1f37bf3");
+    /* http_download("https://profile.jieliapp.com/license/v1/fileupdate/download/4e8a7fbb-d432-4090-9966-b1c6a1f37bf3"); */
+    http_download("https://profile.jieliapp.com/license/v1/fileupdate/download/92bb2c13-4360-4cc4-b7c2-75a57c82e8a9");
     /* http_download("https://profile.jieliapp.com/license/v1/fileupdate/download/d07f3202-4da0-4c96-8ba3-bb80960097dd"); */
 #endif
 

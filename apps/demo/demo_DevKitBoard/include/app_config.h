@@ -19,7 +19,7 @@
 #define CONFIG_LOW_POWER_ENABLE                   //软关机/睡眠开关
 #define RTOS_STACK_CHECK_ENABLE                   //是否启用定时检查任务栈
 #define CONFIG_AUDIO_MIX_ENABLE                   //打开叠音功能，蓝牙同步需要打开此功能
-#define CONFIG_DOUBLE_BANK_ENABLE                 1//双备份方式升级
+#define CONFIG_DOUBLE_BANK_ENABLE                 0//双备份方式升级
 #define CONFIG_IPERF_ENABLE       			      // iperf测试
 #define CONFIG_AIRKISS_NET_CFG                    //AIRKISS配网
 //#define MEM_LEAK_CHECK_ENABLE	                  //是否启用内存泄漏检查(需要包含mem_leak_test.h头文件)
@@ -288,9 +288,21 @@
 #ifdef CONFIG_UI_ENABLE
 #define CONFIG_VIDEO_DEC_ENABLE             	  1  //打开视频解码器
 #define TCFG_USE_SD_ADD_UI_FILE             	  0  //使用SD卡加载资源文件
+
+#define USE_LCD_240X320_ILI9341                   0
+#define USE_LCD_320X480_ILI9481                   1
+
+#if USE_LCD_240X320_ILI9341
 #define TCFG_TOUCH_GT911_ENABLE             	  1
 #define TCFG_LCD_ILI9341_ENABLE	    	    	  1
-#define HORIZONTAL_SCREEN                   	  1//0为使用竖屏  //1为使能横屏配置
+#endif //USE_LCD_240X320_ILI9341
+
+#if USE_LCD_320X480_ILI9481
+#define TCFG_TOUCH_FT6236_ENABLE                  1
+#define TCFG_LCD_ILI9481_ENABLE	    	    	  1
+#endif //USE_LCD_320X480_ILI9481
+
+#define HORIZONTAL_SCREEN                   	  0//0为使用竖屏  //1为使能横屏配置
 #define USE_LCD_TE                          	  1
 #endif//CONFIG_UI_ENABLE
 //**********************************END*******************************************//

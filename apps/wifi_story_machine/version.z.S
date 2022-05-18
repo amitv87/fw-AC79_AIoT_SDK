@@ -3,7 +3,7 @@
 .global app_wifi_story_machine_version
 
 app_wifi_story_machine_version:
-.long 197713197 
-.asciz "WIFI_STORY_MACHINE-@20220407-$21defcc"
+.long 199249921 
+.asciz "WIFI_STORY_MACHINE-@20220425-$ca575c2"
 
 

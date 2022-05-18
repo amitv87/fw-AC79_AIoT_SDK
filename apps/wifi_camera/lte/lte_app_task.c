@@ -8,13 +8,31 @@
 
 #define     __LOG_LEVEL     __LOG_DEBUG
 
+/*
+ *
+ *******************************************多网卡使用说明*******************************************
+ *
+ *      1.需要配置：
+ *          a)使能LwIP.c文件中的宏，HAVE_LTE_NETIF;
+ *          b)使能LWIP配置文件(lwipopts_sfc.h/lwipopts.h)中的宏，LWIP_HOOK_IP4_ROUTE_SRC;
+ *
+ *      2.IP层根据目标IP地址在网卡列表中选择一个网卡。匹配条件：目标IP地址与网卡在同一个
+ *      网段内，即匹配;否则将使用默认网卡;
+ *
+ *      3.可通过 lwip_set_default_netif函数切换默认网卡。
+ *
+ ****************************************************************************************************
+ *
+ * */
+
+
 static char ip_addr[32];
 static char gw_addr[32];
 static void *dev = NULL;
 static int lte_app_task_pid;
 
 
-int lwip_event_cb(void *lwip_ctx, enum LWIP_EVENT event)
+int lte_lwip_event_cb(void *lwip_ctx, enum LWIP_EVENT event)
 {
     switch (event) {
     case LWIP_LTE_DHCP_BOUND_TIMEOUT:
@@ -24,8 +42,11 @@ int lwip_event_cb(void *lwip_ctx, enum LWIP_EVENT event)
         Get_IPAddress(LTE_NETIF, ip_addr);
         get_gateway(LTE_NETIF, gw_addr);
         log_i("LTE DHCP SUCC, IP:[%s] \r\n, GW:[%s]", ip_addr, gw_addr);
-        /* log_i("PBUF_POOL_BUFSIZE = %d\n", PBUF_POOL_BUFSIZE); */
-        void lte_network_test(void);
+
+        //此处4G网络已连通
+
+        lwip_set_default_netif(LTE_NETIF);   //设置4G网卡为默认模块
+        void lte_network_test(void);         //4G网络测试
         lte_network_test();
         break;
 
@@ -43,30 +64,14 @@ char *get_lte_ip(void)
 }
 
 
-static void lte_app_task(void *arg)
-{
-    //添加网络应用程序在这里
-
-    while (1) {
-        msleep(10 * 1000);
-
-        extern u32 lte_get_upload_rate(void);
-        extern u32 lte_get_download_rate(void);
-        log_d("ETH U= %d KB/s, D= %d KB/s\r\n", lte_get_upload_rate() / 1024, lte_get_download_rate() / 1024);
-    }
-}
-
-
 static int lte_state_cb(void *priv, int on)
 {
     if (on) {
-        log_i("lte on \r\n");
+        log_i("lte on\r\n");
         dev_ioctl(dev, LTE_NETWORK_START, NULL);
-        if (lte_app_task_pid == 0) {
-            thread_fork("lte_app_task", 20, 0x1000, 0, &lte_app_task_pid, lte_app_task, NULL);
-        }
     } else {
-        log_i("lte off \r\n");
+        log_i("lte off\r\n");
+        dev_ioctl(dev, LTE_NETWORK_STOP, NULL);
     }
     return 0;
 }

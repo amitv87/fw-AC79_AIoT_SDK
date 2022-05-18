@@ -405,7 +405,12 @@ static int wifi_event_callback(void *network_ctx, enum WIFI_EVENT event)
     case WIFI_EVENT_STA_NETWORK_STACK_DHCP_SUCC:
         puts("|network_user_callback->WIFI_EVENT_STA_NETWPRK_STACK_DHCP_SUCC\n");
 
+        //有些使用了加密的路由器刚获取IP地址后前几个包都会没响应，怀疑路由器没转发成功
+        void connect_broadcast(void);
+        connect_broadcast();
+
         wifi_sta_save_ssid(); //确认获取IP成功再真正去考虑要不要保存配置, 否则如果配置有误就保存的情况下导致下次连不上WIFI
+
 
 #ifdef CONFIG_ASSIGN_MACADDR_ENABLE
 

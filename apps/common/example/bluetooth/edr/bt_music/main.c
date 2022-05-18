@@ -1226,10 +1226,15 @@ static int main_dev_event_handler(struct device_event *event)
  * 默认的系统事件处理函数
  * 当所有活动的app的事件处理函数都返回false时此函数会被调用
  */
+extern void post_msg_play_flash_mp3(char *file_name, u8 dec_volume);
 void app_default_event_handler(struct sys_event *event)
 {
     switch (event->type) {
     case SYS_KEY_EVENT:
+#ifdef USE_DevKitBoard_TEST_DEMO
+        post_msg_play_flash_mp3("Volume.mp3", 100); //开机提示音
+        main_key_event_handler((struct key_event *)event->payload);
+#endif
         extern int bt_music_key_event_handler(struct key_event * key);
         bt_music_key_event_handler((struct key_event *)event->payload);
         break;

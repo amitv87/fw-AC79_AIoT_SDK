@@ -1,0 +1,7 @@
+.section .sys.version, "ax"
+
+.global lib_dui_version
+
+lib_dui_version:
+.long __TIMESTAMPNUM__
+.asciz "DUI-@{DATE}-${COMMID}"

@@ -24,7 +24,7 @@ static void *fd;
 
 static OS_MUTEX virfat_flash_mutex;
 #define virfat_mutex_init() 	os_mutex_create(&virfat_flash_mutex)
-#define virfat_mutex_pend() 	os_mutex_pend(&virfat_flash_mutex, portMAX_DELAY)
+#define virfat_mutex_pend() 	os_mutex_pend(&virfat_flash_mutex, 0)
 #define virfat_mutex_post() 	os_mutex_post(&virfat_flash_mutex)
 
 #define FATFS_IN_FLASH_NAME "FATFSI"

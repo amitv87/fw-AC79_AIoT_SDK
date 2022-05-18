@@ -2,8 +2,12 @@
 #define DEMO_COFNIG_H
 
 //对应测试例子放在apps/common/example文件夹下
-/*****综合测试类******/
-//#define USE_WIFI_MUSIC_PLAY
+/****综合测试类*****/
+#define USE_DevKitBoard_TEST_DEMO
+#ifdef USE_DevKitBoard_TEST_DEMO
+#define USE_DEMO_WIFI_TEST
+#define USE_EDR_DEMO
+#endif //USE_DevKitBoard_TEST_DEMO
 
 /*****UI,LCD类******/
 //#define USE_UI_TOUCH_DEMO
@@ -90,6 +94,7 @@
 //#define USE_WIFI_IPERF_TEST
 //#define USE_WIFI_SCAN_TEST
 //#define USE_LOW_POWER_TEST
+//#define USE_WIFI_MUSIC_PLAY
 
 /**外设类**/
 // #define USE_GPIO_TEST_DEMO

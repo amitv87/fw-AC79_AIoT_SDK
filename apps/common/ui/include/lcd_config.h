@@ -58,6 +58,16 @@
 #endif
 #endif
 
+#if TCFG_LCD_ILI9481_ENABLE
+#if HORIZONTAL_SCREEN
+#define LCD_W     480
+#define LCD_H     320
+#else
+#define LCD_W     320
+#define LCD_H     480
+#endif
+#endif
+
 #define LCD_RGB565_DATA_SIZE  LCD_W * LCD_H * 2
 #define LCD_RGB888_DATA_SIZE  LCD_W * LCD_H * 3
 #define LCD_YUV420_DATA_SIZE  LCD_W * LCD_H * 3 / 2

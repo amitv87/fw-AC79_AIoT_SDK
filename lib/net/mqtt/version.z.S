@@ -3,5 +3,5 @@
 .global lib_mqtt_version
 
 lib_mqtt_version:
-.long 197126651 
-.asciz "MQTT-@20220331-$8ff1c5a"
+.long 199249876 
+.asciz "MQTT-@20220425-$8374faf"

@@ -208,6 +208,7 @@ extern unsigned char __attribute__((aligned(4)))  __attribute__((section(".memp_
 #define MEMP_NUM_LOCALHOSTLIST          8   //2
 #define LOCAL_WIRELESS_HOST_NAME "lwip_wireless_host"
 #define LOCAL_WIRE_HOST_NAME "lwip_wire_host"
+#define LOCAL_LTE_HOST_NAME "lwip_lte_host"
 //#define DNS_LOCAL_HOSTLIST_INIT {{LOCAL_WIRELESS_HOST_NAME, 0x0101a8c0},{LOCAL_WIRE_HOST_NAME, 0x0201a8c0},}
 
 extern void dns_set_server(unsigned int *dnsserver);

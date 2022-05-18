@@ -34,6 +34,7 @@ const u8  IPV4_ADDR_CONFLICT_DETECT = 0;
 #endif
 
 extern char get_MassProduction(void);
+static void wifi_set_lan_setting_info(void);
 
 static struct server *ctp = NULL;
 static struct ctp_server_info server_info = {
@@ -85,6 +86,7 @@ static void wifi_sta_to_ap_mode_change(void)//用在STA模式密码不对或者�
         info.pwd = WIFI_CAM_WIFI_PWD;
     }
 
+    wifi_set_lan_setting_info(); //STA转AP模式,需要重新配置一下IP信息和DHCP池起始分配地址
     wifi_enter_ap_mode(info.ssid, info.pwd);
     wifi_store_mode_info(AP_MODE, info.ssid, info.pwd);
 }
@@ -245,6 +247,11 @@ static int wifi_event_callback(void *network_ctx, enum WIFI_EVENT event)
 
     case WIFI_EVENT_STA_NETWORK_STACK_DHCP_SUCC:
         puts("|network_user_callback->WIFI_EVENT_STA_NETWPRK_STACK_DHCP_SUCC\n");
+
+        //有些使用了加密的路由器刚获取IP地址后前几个包都会没响应，怀疑路由器没转发成功
+        void connect_broadcast(void);
+        connect_broadcast();
+
 #ifdef CONFIG_MASS_PRODUCTION_ENABLE
         void network_mssdp_init(void);
         network_mssdp_init();

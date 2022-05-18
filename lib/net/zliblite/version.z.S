@@ -3,5 +3,5 @@
 .global lib_zliblite_version
 
 lib_zliblite_version:
-.long 197126660 
-.asciz "ZLIBLITE-@20220331-$8ff1c5a"
+.long 199249885 
+.asciz "ZLIBLITE-@20220425-$8374faf"

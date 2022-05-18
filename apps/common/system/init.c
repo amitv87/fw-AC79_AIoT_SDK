@@ -116,10 +116,9 @@ void cpu_assert_debug()
 #ifdef CONFIG_DEBUG_ENABLE
     log_flush();
     local_irq_disable();
-    while (1);
-#else
-    cpu_reset();
 #endif
+    /*while (1);*/
+    cpu_reset();
 }
 
 #ifdef RTOS_STACK_CHECK_ENABLE

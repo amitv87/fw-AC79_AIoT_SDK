@@ -491,7 +491,7 @@ EXIT:
 }
 #endif
 
-static void connect_broadcast(void)
+void connect_broadcast(void)
 {
     int i, ret;
     int onOff = 1;

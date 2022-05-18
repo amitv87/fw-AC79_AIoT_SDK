@@ -200,7 +200,12 @@ static int wifi_event_callback(void *network_ctx, enum WIFI_EVENT event)
     case WIFI_EVENT_STA_NETWORK_STACK_DHCP_SUCC:
         puts("|network_user_callback->WIFI_EVENT_STA_NETWPRK_STACK_DHCP_SUCC\n");
 
+        //有些使用了加密的路由器刚获取IP地址后前几个包都会没响应，怀疑路由器没转发成功
+        void connect_broadcast(void);
+        connect_broadcast();
+
         wifi_sta_save_ssid();
+
 
 #ifdef CONFIG_ASSIGN_MACADDR_ENABLE
         if (!is_server_assign_macaddr_ok()) { //如果使用服务器分配MAC地址的情况,需要确认MAC地址有效才发送连接成功事件到APP层,否则先访问服务器分配mac地址

@@ -33,6 +33,9 @@ ENTRY=0x2000120; [程序入口地址 SFC模式地址]//程序入口地址
 PID=AC791N_STORY;//长度16byte,示例：芯片封装_应用方向_方案名称
 VID=0.01;
 RESERVED_OPT=0;//入口地址为0x1E00120需要定义该配置项
+
+FORCE_4K_ALIGN=YES;//用于烧写器烧写预留区文件, 需要定义该配置项
+SPECIAL_OPT=0;//用于烧写器烧写预留区文件, 需要定义该配置项
 //DOWNLOAD_MODEL=SERIAL;//usb
 DOWNLOAD_MODEL=usb;//
 SERIAL_DEVICE_NAME=JlVirtualJtagSerial;

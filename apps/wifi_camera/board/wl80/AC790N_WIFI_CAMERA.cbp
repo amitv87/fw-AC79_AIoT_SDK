@@ -259,12 +259,14 @@
 <Unit filename="../../../../apps/common/ui/lcd_driver/lcd_drive.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/ui/lcd_driver/lcd_hx8357.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/ui/lcd_driver/lcd_ili9341.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/common/ui/lcd_driver/lcd_ili9481.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/ui/lcd_driver/lcd_ili9488.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/ui/lcd_driver/lcd_st7735s.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/ui/lcd_driver/lcd_st7789s.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/ui/lcd_driver/lcd_st7789v.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/ui/lcd_driver/te_driver/lcd_data_driver.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/ui/lcd_driver/te_driver/lcd_te_driver.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/common/ui/touch_panel/ft6236.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/ui/touch_panel/gt911.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/ui/ui_action_video.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/ui/ui_driver/interface/ui_platform.c"><Option compilerVer="CC"/></Unit>
