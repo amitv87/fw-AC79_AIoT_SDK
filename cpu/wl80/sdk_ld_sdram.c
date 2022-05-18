@@ -307,6 +307,14 @@ SECTIONS
         . = ALIGN(4); // must at tail, make ram0_data size align 4
     } > ram0
 
+    _RAM_HEAP_BEGIN = ( . + 31 ) / 32 * 32;
+    PROVIDE(RAM_HEAP_BEGIN = (. + 31) / 32 * 32);
+    _RAM_HEAP_END = 0x1c00000 + TLB_SIZE + RAM0_SIZE - 32;
+    PROVIDE(RAM_HEAP_END = 0x1c00000 + TLB_SIZE + RAM0_SIZE - 32);
+    _RAM_MALLOC_SIZE = _RAM_HEAP_END - _RAM_HEAP_BEGIN;
+    PROVIDE(RAM_MALLOC_SIZE = _RAM_HEAP_END - _RAM_HEAP_BEGIN);
+
+
     . =ORIGIN(boot_info);
     .boot_info ALIGN(4):
     {
@@ -380,6 +388,8 @@ SECTIONS
 EXTERN(
     lib_audio_server_version
     lib_system_version
+    lib_btstack_version
+    lib_btctler_version
     lib_btmesh_version
     lib_cfg_tool_version
     lib_common_version

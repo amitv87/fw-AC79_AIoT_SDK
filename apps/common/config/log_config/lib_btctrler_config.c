@@ -79,6 +79,12 @@ const int config_btctler_le_roles    = (LE_ADV | LE_SCAN | LE_INIT | LE_SLAVE | 
 // Master AFH
 const int config_btctler_le_afh_en = 0;
 // LE RAM Control
+#ifdef CONFIG_NO_SDRAM_ENABLE
+const int config_btctler_le_hw_ram_use_static = 0;
+#else
+const int config_btctler_le_hw_ram_use_static = 1;
+#endif
+
 #if CONFIG_BLE_MESH_ENABLE
 const int config_btctler_le_hw_nums = 3;
 const int config_btctler_le_rx_nums = 10;	//3

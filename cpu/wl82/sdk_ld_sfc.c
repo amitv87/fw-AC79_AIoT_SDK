@@ -348,6 +348,8 @@ SECTIONS
 EXTERN(
     lib_audio_server_version
     lib_system_version
+    lib_btstack_version
+    lib_btctler_version
     lib_btmesh_version
     lib_cfg_tool_version
     lib_common_version

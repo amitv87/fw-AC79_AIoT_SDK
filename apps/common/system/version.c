@@ -7,7 +7,7 @@ extern char __VERSION_END[];
 
 const char *sdk_version(void)
 {
-    return "1.0.2.4";
+    return "1.0.2.5";
 }
 
 static int app_version_check()
