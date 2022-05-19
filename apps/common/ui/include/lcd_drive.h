@@ -39,8 +39,13 @@ enum LCD_COLOR {
 };
 
 enum LCD_BL {
+#if TCFG_LCD_ILI9481_ENABLE
+    BL_ON,
+    BL_OFF,
+#else
     BL_OFF,
     BL_ON,
+#endif
 };
 
 //LCD接口类型

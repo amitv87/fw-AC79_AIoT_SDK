@@ -82,7 +82,7 @@ static void TE_wakeup_send_data_task(void *priv)//TE发送数据线程
         os_sem_post(&send_ok_sem);
         if (!time) {
             time = 1;
-            lcd_bl_pinstate(1);
+            lcd_bl_pinstate(BL_ON);
         }
     }
 }
@@ -127,7 +127,7 @@ static void no_te_send_data_task(void *priv)//发送数据线程
         os_sem_post(&send_ok_sem);
         if (!time) {
             time = 1;
-            lcd_bl_pinstate(1);
+            lcd_bl_pinstate(BL_ON);
         }
     }
 }

@@ -154,8 +154,8 @@ static int camera_to_lcd_fps_task_init(void)
     os_sem_create(&yuv_soft_sem, 0);
 
     yuv_lbuf_hdl = lib_system_lbuf_test_init(CAMERA_YUV420_BUF_LEN * 2 + 128);
-    thread_fork("yuv_soft_task", 9, 512, 32, 0, yuv_soft_task, NULL);
-    thread_fork("camera_to_lcd_fps_task", 22, 512, 32, 0, camera_to_lcd_fps_task, NULL);
+    thread_fork("yuv_soft_task", 9, 1024, 32, 0, yuv_soft_task, NULL);
+    thread_fork("camera_to_lcd_fps_task", 22, 1024, 32, 0, camera_to_lcd_fps_task, NULL);
     return 0;
 }
 late_initcall(camera_to_lcd_fps_task_init);
