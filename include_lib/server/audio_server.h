@@ -248,6 +248,7 @@ struct audio_enc_req {
     u16 frame_size;                           /*!< 编码器输出的每一帧帧长大小，只有pcm格式编码时才有效 */
     u16 frame_head_reserve_len;               /*!< 编码输出的帧预留头部的大小 */
     u32 bitrate;                              /*!< 编码码率大小 */
+    u32 delay_ms;                             /*!< 当编码器读写不到数据后的延时等待 */
     u32 output_buf_len;                       /*!< 编码buffer大小 */
     u32 sample_rate;                          /*!< 编码采样率 */
     u32 msec;                                 /*!< 编码时长，填0表示一直编码，单位ms，编码结束会回调AUDIO_SERVER_EVENT_END消息 */

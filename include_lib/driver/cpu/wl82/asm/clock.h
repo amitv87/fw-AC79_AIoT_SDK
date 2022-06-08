@@ -6,6 +6,41 @@
 
 int clk_early_init();
 
+enum sys_vdd_index {
+    SYSVDD_VOL_SEL_INDEX = 0,
+    VDC14_VOL_SEL_INDEX,
+    VDDIOM_VOL_SEL_INDEX,
+    SYS_VDD_NUM,
+};
+enum sys_clock_index {
+    SYS_CLK_SEL_INDEX = 0,
+    HSB_CLK_SEL_INDEX,
+    SFC_CLK_SEL_INDEX,
+    LSB_CLK_SEL_INDEX,
+    P33_CLK_SEL_INDEX,
+    SDRAM_CLK_SEL_INDEX,
+    SYS_CLK_NUM,
+};
+enum pc0_clock_out_index {
+    BT_OSC_CLK_OUT = 1,
+    RTC_OSL_OUT,
+    CTM_IN_OUT,
+    LSB_CLK_OUT,
+    HSB_CLK_OUT,
+    SFC_CLK_OUT,
+    HCO_CLK_OUT,
+};
+enum pa0_clock_out_index {
+    RC_CLK_OUT = 1,//16M 250K
+    LRC_CLK_OUT,//32K或200K
+    WL_RCCL_CLK_OUT,
+    DMC_CLK_OUT,//sdram clock
+    RING_CLK_OUT,
+    OSC_CLK_OUT,
+    PLL_SYS_CLK_OUT,
+};
+
+#define 	MHZ_UNIT		1000000L
 #define     SYS_CLK_320M	320000000L
 #define     SYS_CLK_240M	240000000L
 #define     SYS_CLK_192M	192000000L
@@ -18,7 +53,7 @@ int clk_early_init();
 #define     SYS_CLK_12M		12000000L
 #define     SYS_CLK_8M		8000000L
 #define     SYS_CLK_4M	    4800000L
-#define     SDRAM_CLK_MIN	16000000L
+#define     SDRAM_CLK_MIN	96000000L
 
 /*
  * system enter critical and exit critical handle
@@ -43,26 +78,31 @@ int clk_get(const char *name);
 
 int clk_set(const char *name, int clk);
 
+void clk_out_pc0(enum pc0_clock_out_index index);
+void clk_out_pa0(enum pa0_clock_out_index index);
 int sys_clk_source_set(char *name);//"BT_OSC" "RTC_SOC" "PLL_OSC" "RC_16M" "RC_250K"
 void sys_clk_source_resume(int value);
 void sys_clk_source_rc_clk_on(int is_16M);//RC_16M / RC_250K
 void sys_clk_source_rc_clk_off(void);
 u32 clk_get_osc_cap();
 
-//系统空闲模式时钟切换函数
-void system_clock_set_idle(void);
+//**********************应用层使用API****************************//
+//系统空闲模式时钟切换函数：系统24M和Sdram时钟固定在120M
+int system_clock_set_idle(void);
 
-//系统时钟切换函数
-void system_clock_set(u32 clock);
+//系统时钟切换函数：时钟参数，clk范围：24000000 - 396000000 （24M-396M）
+int system_clock_set(u32 clk);
 
-//系统时钟+sdram时钟切换
-void system_sdram_clock_set(u32 sys_clk, u32 sdram_clk);
+//系统时钟+sdram时钟切换sys_clk时钟参数，范围：24000000 - 396000000 （24M-396M）；sdram_clk时钟参数，范围：96000000 - 244000000 （96M-244M）
+int system_sdram_clock_set(u32 sys_clk, u32 sdram_clk);
 
-//sdram时钟切换
-void sdram_clock_set(u32 clock);
+//sdram时钟切换：clk时钟参数，范围：96000000 - 244000000 （96M-244M）
+int sdram_clock_set(u32 clk);
 
-//恢复SDK默认系统+sdram时钟
-void system_clock_set_default(void);
+//恢复SDK默认系统+sdram时钟：恢复到系统上电的初始值
+int system_clock_set_default(void);
 
+//自定义VDD和CLOCK等级
+int system_vdd_clock_set(char index);
 #endif
 

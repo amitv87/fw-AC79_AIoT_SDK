@@ -646,6 +646,7 @@ void board_early_init()
 
 void board_init()
 {
+	rtc_set_power_inside();
     rtc_early_init(0);
 
     board_power_init();

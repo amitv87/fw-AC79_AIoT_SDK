@@ -22,6 +22,7 @@
 <Add option="-fprefer-gnu-section" />
 <Add option="-Wno-shift-negative-value" />
 <Add option="-Wframe-larger-than=2560" />
+<Add option="-mllvm -pi32v2-large-program=true" />
 <Add option="-fms-extensions" />
 <Add option="-DSUPPORT_MS_EXTENSIONS" />
 <Add option="-w" />
@@ -197,6 +198,7 @@
 <Add option="../../../../../cpu/wl82/liba/aisIntlib_single_xiaoai.a" />
 <Add option="../../../../../cpu/wl82/liba/cJSON.a" />
 <Add option="../../../../../cpu/wl82/liba/update.a" />
+<Add option="../../../../../cpu/wl82/liba/enc_qr_code.a" />
 <Add option="../../../../../cpu/wl82/liba/video_dec_server.a" />
 <Add option="../../../../../cpu/wl82/liba/net_server.a" />
 <Add option="../../../../../cpu/wl82/liba/libcompressor.a" />
@@ -457,6 +459,7 @@
 <Unit filename="../../../../../apps/common/example/video/camera/dvp/main.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/example/video/image/avi/main.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/example/video/image/gif/main.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../apps/common/example/video/image/qr_enc/main.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/example/wifi/low_power/main.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/example/wifi/wifi_music/main.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/gsensor/da380.c"><Option compilerVer="CC"/></Unit>
@@ -592,6 +595,7 @@
 <Unit filename="../../../../../apps/demo/demo_DevKitBoard/include/bt_emitter.h" />
 <Unit filename="../../../../../apps/demo/demo_DevKitBoard/include/demo_config.h" />
 <Unit filename="../../../../../apps/demo/demo_DevKitBoard/include/ename.h" />
+<Unit filename="../../../../../apps/demo/demo_DevKitBoard/include/enc_qr_code.h" />
 <Unit filename="../../../../../apps/demo/demo_DevKitBoard/include/get_yuv_data.h" />
 <Unit filename="../../../../../apps/demo/demo_DevKitBoard/include/reverb_deal.h" />
 <Unit filename="../../../../../apps/demo/demo_DevKitBoard/include/simple_avi_unpkg.h" />

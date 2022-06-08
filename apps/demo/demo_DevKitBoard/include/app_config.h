@@ -6,12 +6,6 @@
 #define __FLASH_SIZE__    (8 * 1024 * 1024)
 #define __SDRAM_SIZE__    (8 * 1024 * 1024)
 
-#define TCFG_ADKEY_ENABLE             1      //AD按键
-
-// #define FINSH_ENABLE                      //FINSH功能开启
-
-
-#define CONFIG_OSC_RTC_ENABLE                           //RTC时钟开关
 
 //*********************************************************************************//
 //                             功能模块使能配置                                    //
@@ -23,9 +17,10 @@
 #define CONFIG_IPERF_ENABLE       			      // iperf测试
 #define CONFIG_AIRKISS_NET_CFG                    //AIRKISS配网
 //#define MEM_LEAK_CHECK_ENABLE	                  //是否启用内存泄漏检查(需要包含mem_leak_test.h头文件)
+//#define FINSH_ENABLE                            //FINSH功能开启
 //#define CONFIG_ASSIGN_MACADDR_ENABLE            //第一次开机连上外网后，使用杰理服务器分配WIFI模块的MAC地址, 关闭则使用<蓝牙地址更新工具*.exe>或者随机数作为MAC地址
 //#define SDTAP_DEBUG
-// #define CONFIG_STATIC_IPADDR_ENABLE          //记忆路由器分配的IP,下次直接使用记忆IP节省DHCP时间
+//#define CONFIG_STATIC_IPADDR_ENABLE            //记忆路由器分配的IP,下次直接使用记忆IP节省DHCP时间
 //**********************************END********************************************//
 
 
@@ -40,6 +35,7 @@
 #define CONFIG_KEY_ENABLE                         /* 按键开关   */
 #define CONFIG_PWM_ENABLE                         /* PWM开关   	*/
 #define CONFIG_IIC_ENABLE                         /* IIC开关   	*/
+#define CONFIG_OSC_RTC_ENABLE                     /* RTC时钟开关*/
 //**********************************END********************************************//
 
 
@@ -50,11 +46,11 @@
 #define CONFIG_UART2_ENABLE                	      0
 #define CONFIG_DEBUG_ENABLE                	      1
 #ifdef CONFIG_RELEASE_ENABLE
-#define LIB_DEBUG    0
+#define LIB_DEBUG                                 0
 #else
-#define LIB_DEBUG    1
+#define LIB_DEBUG                                 1
 #endif
-#define CONFIG_DEBUG_LIB(x)         (x & LIB_DEBUG)
+#define CONFIG_DEBUG_LIB(x)                       (x & LIB_DEBUG)
 //#define SDTAP_DEBUG
 //**********************************END********************************************//
 
@@ -81,12 +77,12 @@
 //                            按键配置                                             //
 //*********************************************************************************//
 #ifdef CONFIG_KEY_ENABLE
-#define TCFG_IRKEY_ENABLE       				  1//红外接收头
-#define TCFG_RDEC_KEY_ENABLE    				  0//旋转编码器
-#define TCFG_IOKEY_ENABLE       				  0//io按键
-#define TCFG_TOUCH_KEY_ENABLE   				  0//触摸按键
-#define TCFG_CTMU_TOUCH_KEY_ENABLE  			  0//触摸按键
-#define TCFG_ADKEY_ENABLE           			  1//AD按键
+#define TCFG_IRKEY_ENABLE       				  1 //红外接收头
+#define TCFG_RDEC_KEY_ENABLE    				  0 //旋转编码器
+#define TCFG_IOKEY_ENABLE       				  0 //io按键
+#define TCFG_TOUCH_KEY_ENABLE   				  0 //触摸按键
+#define TCFG_CTMU_TOUCH_KEY_ENABLE  			  0 //触摸按键
+#define TCFG_ADKEY_ENABLE           			  1 //AD按键
 #endif
 //**********************************END*******************************************//
 
@@ -96,15 +92,15 @@
 #ifdef CONFIG_NET_ENABLE
 
 #ifdef CONFIG_NET_MUSIC_MODE_ENABLE
-#define CONFIG_DLNA_SDK_ENABLE              //打开DLNA音乐播放功能
+#define CONFIG_DLNA_SDK_ENABLE                      //打开DLNA音乐播放功能
 #endif
 
 #ifdef CONFIG_ASR_ALGORITHM_ENABLE
-#define AISP_ALGORITHM 1 //思必驰双mic唤醒,未授权版本只支持运行10分钟
-#define ROOBO_ALGORITHM 2 //ROOBO 单/双MIC唤醒 ROOBO_DUAL_MIC_ALGORITHM ,,,测试版本只支持运行10分钟
-#define WANSON_ALGORITHM 3 //华镇算法,测试版只能够正确识别1000次
-#define TEST_ALGORITHM 4
-#define CONFIG_ASR_ALGORITHM  AISP_ALGORITHM //本地打断唤醒算法选择
+#define AISP_ALGORITHM                            1 //思必驰双mic唤醒,未授权版本只支持运行10分钟
+#define ROOBO_ALGORITHM                           2 //ROOBO 单/双MIC唤醒 ROOBO_DUAL_MIC_ALGORITHM ,,,测试版本只支持运行10分钟
+#define WANSON_ALGORITHM                          3 //华镇算法,测试版只能够正确识别1000次
+#define TEST_ALGORITHM                            4
+#define CONFIG_ASR_ALGORITHM  AISP_ALGORITHM        //本地打断唤醒算法选择
 #endif
 #endif
 
@@ -142,18 +138,18 @@
 #define CONFIG_CVSD_ENC_ENABLE
 #define CONFIG_NEW_M4A_DEC_ENABLE
 
-#define AUDIO_ENC_SAMPLE_SOURCE_MIC         0  //录音输入源：MIC
-#define AUDIO_ENC_SAMPLE_SOURCE_PLNK0       1  //录音输入源：数字麦PLNK0
-#define AUDIO_ENC_SAMPLE_SOURCE_PLNK1       2  //录音输入源：数字麦PLNK1
-#define AUDIO_ENC_SAMPLE_SOURCE_IIS0        3  //录音输入源：IIS0
-#define AUDIO_ENC_SAMPLE_SOURCE_IIS1        4  //录音输入源：IIS1
-#define AUDIO_ENC_SAMPLE_SOURCE_LINEIN      5  //录音输入源：LINEIN
+#define AUDIO_ENC_SAMPLE_SOURCE_MIC               0     //录音输入源：MIC
+#define AUDIO_ENC_SAMPLE_SOURCE_PLNK0             1     //录音输入源：数字麦PLNK0
+#define AUDIO_ENC_SAMPLE_SOURCE_PLNK1             2     //录音输入源：数字麦PLNK1
+#define AUDIO_ENC_SAMPLE_SOURCE_IIS0              3     //录音输入源：IIS0
+#define AUDIO_ENC_SAMPLE_SOURCE_IIS1              4     //录音输入源：IIS1
+#define AUDIO_ENC_SAMPLE_SOURCE_LINEIN            5     //录音输入源：LINEIN
 
-#define CONFIG_AUDIO_ENC_SAMPLE_SOURCE      AUDIO_ENC_SAMPLE_SOURCE_MIC    //录音输入源选择
-#define CONFIG_AUDIO_DEC_PLAY_SOURCE        "dac"                          //播放输出源选择
-#define CONFIG_AUDIO_RECORDER_SAMPLERATE    16000                          //录音采样率
-#define CONFIG_AUDIO_RECORDER_CHANNEL       1                              //录音通道数
-#define CONFIG_AUDIO_RECORDER_DURATION      (30 * 1000)                    //录音时长ms
+#define CONFIG_AUDIO_ENC_SAMPLE_SOURCE            AUDIO_ENC_SAMPLE_SOURCE_MIC    //录音输入源选择
+#define CONFIG_AUDIO_DEC_PLAY_SOURCE              "dac"                          //播放输出源选择
+#define CONFIG_AUDIO_RECORDER_SAMPLERATE          16000                          //录音采样率
+#define CONFIG_AUDIO_RECORDER_CHANNEL             1                              //录音通道数
+#define CONFIG_AUDIO_RECORDER_DURATION            (30 * 1000)                    //录音时长ms
 
 #define CONFIG_ALL_ADC_CHANNEL_OPEN_ENABLE              //四路ADC硬件全开
 #define CONFIG_AUDIO_ADC_CHANNEL_L          	  1     //左mic通道
@@ -162,19 +158,19 @@
 #define CONFIG_AEC_ADC_CHANNEL              	  0     //回采通道
 #define CONFIG_AEC_AUDIO_ADC_GAIN           	  80    //回采通道增益
 
-#define CONFIG_AUDIO_ADC_GAIN               100      //mic/aux增益
+#define CONFIG_AUDIO_ADC_GAIN                     100   //mic/aux增益
 
-#define CONFIG_AISP_DIFFER_MIC_REPLACE_LINEIN       //用差分mic代替aec回采
-#define CONFIG_ASR_CLOUD_ADC_CHANNEL        1		//云端识别mic通道
-#define CONFIG_VOICE_NET_CFG_ADC_CHANNEL    1		//声波配网mic通道
-#define CONFIG_AISP_MIC0_ADC_CHANNEL        1		//本地唤醒左mic通道
-#define CONFIG_AISP_MIC_ADC_GAIN            80		//本地唤醒mic增益
-#define CONFIG_AISP_LINEIN_ADC_CHANNEL      3		//本地唤醒LINEIN回采DAC通道
-#define CONFIG_AISP_MIC1_ADC_CHANNEL        0		//本地唤醒右mic通道
-#define CONFIG_REVERB_ADC_CHANNEL           1		//混响mic通道
-#define CONFIG_PHONE_CALL_ADC_CHANNEL       1		//通话mic通道
-#define CONFIG_UAC_MIC_ADC_CHANNEL          1		//UAC mic通道
-#define CONFIG_AISP_LINEIN_ADC_GAIN         10		//本地唤醒LINEIN增益
+#define CONFIG_AISP_DIFFER_MIC_REPLACE_LINEIN           //用差分mic代替aec回采
+#define CONFIG_ASR_CLOUD_ADC_CHANNEL        	  1		//云端识别mic通道
+#define CONFIG_VOICE_NET_CFG_ADC_CHANNEL    	  1		//声波配网mic通道
+#define CONFIG_AISP_MIC0_ADC_CHANNEL        	  1		//本地唤醒左mic通道
+#define CONFIG_AISP_MIC_ADC_GAIN            	  80    //本地唤醒mic增益
+#define CONFIG_AISP_LINEIN_ADC_CHANNEL      	  3		//本地唤醒LINEIN回采DAC通道
+#define CONFIG_AISP_MIC1_ADC_CHANNEL        	  0		//本地唤醒右mic通道
+#define CONFIG_REVERB_ADC_CHANNEL           	  1		//混响mic通道
+#define CONFIG_PHONE_CALL_ADC_CHANNEL       	  1		//通话mic通道
+#define CONFIG_UAC_MIC_ADC_CHANNEL          	  1		//UAC mic通道
+#define CONFIG_AISP_LINEIN_ADC_GAIN         	  10    //本地唤醒LINEIN增益
 
 //**********************************END*******************************************//
 
@@ -183,9 +179,9 @@
 //*********************************************************************************//
 #ifdef CONFIG_SD_ENABLE
 #define TCFG_SD_PORTS                     	     'A'
-#define TCFG_SD_DAT_WIDTH                 	      1			//开发板只接了一线 所有只能为一线模式
+#define TCFG_SD_DAT_WIDTH                 	      1		//开发板只接了一线 所有只能为一线模式
 #define TCFG_SD_DET_MODE                  	      SD_CMD_DECT	//CMD模式
-#define TCFG_SD_DET_IO_LEVEL              	      0			//IO检卡上线的电平(0/1),SD_DET_MODE为SD_IO_DECT时有效
+#define TCFG_SD_DET_IO_LEVEL              	      0		//IO检卡上线的电平(0/1),SD_DET_MODE为SD_IO_DECT时有效
 #define TCFG_SD_CLK                       	      20000000		//SD时钟
 #endif
 //**********************************END********************************************//
@@ -208,27 +204,27 @@
 //*********************************************************************************//
 //                                    电源配置                                     //
 //*********************************************************************************//
-#define TCFG_LOWPOWER_BTOSC_DISABLE			0
+#define TCFG_LOWPOWER_BTOSC_DISABLE			      0
 #ifdef CONFIG_LOW_POWER_ENABLE
-#define TCFG_LOWPOWER_LOWPOWER_SEL			RF_SLEEP_EN
+#define TCFG_LOWPOWER_LOWPOWER_SEL			      RF_SLEEP_EN
 #else
-#define TCFG_LOWPOWER_LOWPOWER_SEL			0
+#define TCFG_LOWPOWER_LOWPOWER_SEL			      0
 #endif
-#define TCFG_LOWPOWER_VDDIOM_LEVEL			VDDIOM_VOL_32V       //强VDDIO电压档位，不要高于外部DCDC的电压
-#define TCFG_LOWPOWER_VDDIOW_LEVEL			VDDIOW_VOL_21V       //弱VDDIO电压档位
-#define VDC14_VOL_SEL_LEVEL			        VDC14_VOL_SEL_140V   //RF1.4V电压档位
-#define SYSVDD_VOL_SEL_LEVEL				SYSVDD_VOL_SEL_126V  //内核电压档位值
+#define TCFG_LOWPOWER_VDDIOM_LEVEL			      VDDIOM_VOL_32V       //强VDDIO电压档位，不要高于外部DCDC的电压
+#define TCFG_LOWPOWER_VDDIOW_LEVEL			      VDDIOW_VOL_21V       //弱VDDIO电压档位
+#define VDC14_VOL_SEL_LEVEL			              VDC14_VOL_SEL_140V   //RF1.4V电压档位
+#define SYSVDD_VOL_SEL_LEVEL				      SYSVDD_VOL_SEL_126V  //内核电压档位值
 //**********************************END*******************************************//
 
 
 //*********************************************************************************//
 //                                  BT_BLE配置                                     //
 //*********************************************************************************//
-#define BT_EMITTER_EN     1
-#define BT_RECEIVER_EN    2
+#define BT_EMITTER_EN                             1
+#define BT_RECEIVER_EN                            2
 
-#define CONFIG_BT_RX_BUFF_SIZE  (12 * 1024)
-#define CONFIG_BT_TX_BUFF_SIZE  (6 * 1024)
+#define CONFIG_BT_RX_BUFF_SIZE                    (12 * 1024)
+#define CONFIG_BT_TX_BUFF_SIZE                    (6 * 1024)
 
 #define CONFIG_POWER_ON_ENABLE_BT                 1     //开机自动打开经典蓝牙
 #define TCFG_USER_BT_CLASSIC_ENABLE               1     //经典蓝牙功能
@@ -302,7 +298,13 @@
 #define TCFG_LCD_ILI9481_ENABLE	    	    	  1
 #endif //USE_LCD_320X480_ILI9481
 
+
+#ifdef USE_CAMERA_DVP_SHOW_TO_LCD_DEMO
+#define HORIZONTAL_SCREEN                   	  1//0为使用竖屏  //1为使能横屏配置
+#else
 #define HORIZONTAL_SCREEN                   	  0//0为使用竖屏  //1为使能横屏配置
+#endif
+
 #define USE_LCD_TE                          	  1
 #endif//CONFIG_UI_ENABLE
 //**********************************END*******************************************//

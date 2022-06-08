@@ -40,6 +40,8 @@
 /*****VDIEO类******/
 //#define USE_SD_PLAY_AVI_DEMO
 //#define USE_CAMERA_DVP_SHOW_TO_LCD_DEMO
+//#define USE_ENC_QR_CODE_DEMO
+
 
 /*****网络协议栈类******/
 //#define USE_TCP_CLIENT_TEST

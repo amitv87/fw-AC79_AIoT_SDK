@@ -129,9 +129,9 @@ static void picture_compose(u8 *ui_in, u8 *camera_in, u16 in_LCD_W, u16 in_LCD_H
     case 3://指定坐标开始 告知 长宽 //任意位置覆盖处理
         for (int j = 0; j < aim_compose_h; j++) {//Y
             for (int i = 0; i < aim_compose_w * 2; i += 2) { //X
-                n = start_x * 2 + start_y * 320 * 2 + i + j * 320 * 2;
-                ui_in[n] = camera_in[i + j * aim_compose_w];
-                ui_in[n + 1] = camera_in[i + j * aim_compose_w + 1];
+                n = start_x * 2 + start_y * LCD_W * 2 + i + j * LCD_W * 2;
+                ui_in[n] = camera_in[i + j * aim_compose_w * 2 ];
+                ui_in[n + 1] = camera_in[i + j * aim_compose_w * 2 + 1];
             }
         }
         break;

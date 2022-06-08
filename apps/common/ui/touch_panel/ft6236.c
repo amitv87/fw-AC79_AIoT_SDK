@@ -24,6 +24,7 @@
 #define log_info(...)
 #endif
 
+static OS_SEM touch_sem;
 
 extern int ui_touch_msg_post(struct touch_event *event);
 
@@ -290,54 +291,57 @@ static void tpd_up(int x, int y)
     ui_touch_msg_post(&t);
 }
 
-
 static void FT6236_interrupt(void)
 {
-    u8 status = 0;
+    os_sem_post(&touch_sem);
+}
+
+void FT6236_init(void)
+{
+    static u8 status = 0;
     static int x, y;
     static u16 touch_x = 0;
     static u16 touch_y = 0;
     static u8 touch_status = 0;
 
-    rdFT6236Reg(FT_REG_NUM_FINGER, &status);	//读取触摸点的状态   // BIT7表示有数据 ,bit0-3 表示触摸点个数
-    if (status) { //有触摸值
-        get_FT6236_xy(FT_TP1_REG, &touch_x, &touch_y);
-        tpd_down(touch_x, touch_y);//做触摸运算
-        touch_status = 1;//标记触摸按下
-    } else {
-        if (touch_status) { //这样做的目的是使得发消息做处理只有一次
-            tpd_up(touch_x, touch_y);//做触摸运算
-        }
-        touch_status = 0;//标记触摸抬起
-    }
-    status = 0;
-}
-
-int FT6236_init(void)
-{
-    iic = dev_open("iic0", NULL);
+    os_sem_create(&touch_sem, 0);
 
     extern const struct ui_devices_cfg ui_cfg_data;
     static const struct ui_lcd_platform_data *pdata;
     pdata = (struct ui_lcd_platform_data *)ui_cfg_data.private_data;
 
-    gpio_set_pull_up(pdata->touch_reset_pin, 0);
     gpio_direction_output(pdata->touch_reset_pin, 0);
-    os_time_dly(50);
+    os_time_dly(100);
     gpio_direction_output(pdata->touch_reset_pin, 1);
-    os_time_dly(10);
+    os_time_dly(100);
+    iic = dev_open("iic0", NULL);
+
     //注册中断注意触摸用的事件0 屏幕TE用的事件1
     port_wakeup_reg(EVENT_IO_0, pdata->touch_int_pin, EDGE_NEGATIVE, FT6236_interrupt);
 
-    wrFT6236Reg(FT_DEVIDE_MODE, 0);
-    wrFT6236Reg(FT_ID_G_THGROUP, 15);
-    wrFT6236Reg(FT_ID_G_PERIODACTIVE, 10);
-
+    /*wrFT6236Reg(FT_DEVIDE_MODE, 0);*/
+    /*wrFT6236Reg(FT_ID_G_THGROUP, 25);*/
+    /*wrFT6236Reg(FT_ID_G_PERIODACTIVE, 20);*/
     if (get_FT6236_pid()) {
         log_info("[err]>>>>>FT6236 err!!!");
-        return 1;
     }
-    return 0;
+
+    while (1) {
+        os_sem_pend(&touch_sem, 0);
+
+        rdFT6236Reg(FT_REG_NUM_FINGER, &status);	//读取触摸点的状态   // BIT7表示有数据 ,bit0-3 表示触摸点个数
+        if (status) { //有触摸值
+            get_FT6236_xy(FT_TP1_REG, &touch_x, &touch_y);
+            tpd_down(touch_x, touch_y);//做触摸运算
+            touch_status = 1;//标记触摸按下
+        } else {
+            if (touch_status) { //这样做的目的是使得发消息做处理只有一次
+                tpd_up(touch_x, touch_y);//做触摸运算
+            }
+            touch_status = 0;//标记触摸抬起
+        }
+        status = 0;
+    }
 }
 
 static void my_touch_test_task(void *priv)

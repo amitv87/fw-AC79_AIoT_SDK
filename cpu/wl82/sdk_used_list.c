@@ -164,6 +164,9 @@ dts_decoder
 opus_decoder
 #endif
 #ifdef CONFIG_OPUS_ENC_ENABLE
+subdev_ogg_enc
+ogg_package_ops
+
 subdev_opus_enc
 opus_package_ops
 #endif

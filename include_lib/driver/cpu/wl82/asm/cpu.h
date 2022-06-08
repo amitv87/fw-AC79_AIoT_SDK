@@ -54,6 +54,10 @@ typedef unsigned long long      u64, uint64_t;
         wdt_clear(); \
     } while (0)
 
+#define SFC_WAIT() __asm_csync();\
+				  		while (JL_SFC->CON & BIT(31));
+#define CACHE_WAIT() __asm_csync();\
+    					while (!(corex2(0)->CACHE_CON & BIT(14)));
 
 #define  CPU_INT_NESTING 	2
 

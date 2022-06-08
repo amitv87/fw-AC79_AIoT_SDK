@@ -14,7 +14,7 @@
 
 #if TCFG_LCD_ILI9481_ENABLE
 
-#define ROTATE_DEGREE_0  	0
+#define ROTATE_DEGREE_0      	0
 #define ROTATE_DEGREE_180       1
 
 #define WHITE         	 0xFFFF
@@ -30,8 +30,8 @@
 #define YELLOW        	 0xFFE0
 #define BROWN 			 0XBC40 //棕色
 #define BRRED 			 0XF803 //棕红色
-/*#define BRRED 			 0XFC07 //棕红色*/
-#define GRAY  			 0X8430 //灰色i
+#define BRRED 			 0XFC07 //棕红色
+#define GRAY  			 0X8430 //灰色
 
 #define REGFLAG_DELAY 0x45
 
@@ -182,9 +182,9 @@ static void ili9481_set_direction(u8 dir)
 #endif
     } else if (dir == ROTATE_DEGREE_180) { //翻转180
 #if HORIZONTAL_SCREEN
-        WriteDAT_8(0x08);
+        WriteDAT_8(0x48);
 #else
-        WriteDAT_8(0x88);
+        WriteDAT_8(0x48);
 #endif
     }
 
@@ -229,18 +229,13 @@ static const InitCode code1[] = {
     {0x11, 0},
     {REGFLAG_DELAY, 280},
 
-    /*#if HORIZONTAL_SCREEN      //1为使能横屏配置*/
     {0x35, 1, {0x00}},//开TE 关TE 0x34
     {0x44, 2, {0x01, 0X50}}, //有关TE时间控制
-    /*{0xc6, 1, {0xf0}},//解决屏条纹  控制屏幕刷新速度 值越小刷新越快*/
+#ifdef USE_DevKitBoard_TEST_DEMO
+    {0xc5, 1, {0x04}},
+#else
     {0xc5, 1, {0x07}},
-    /*#else*/
-    /*{0x34, 1, {0x00}},//开TE 关TE 0x34*/
-    /*#endif*/
-
-    /*{0x35, 1, {0x00}},//开TE 关TE 0x34*/
-    /*{0xc5, 1, {0x07}},*/
-    /*{0x44, 2, {0x00, 0X00}}, //有关TE时间控制*/
+#endif
     {0xE4, 1, {0xA0}},
     {0xf3, 2, {0x02, 0x1a}},
     {0xd0, 3, {0x07, 0x41, 0x16}},

@@ -73,10 +73,11 @@ struct audio_capability {
 #define AUDIO_FMT_MP2          0x0a
 #define AUDIO_FMT_MP3          0x0b
 #define AUDIO_FMT_LC3          0x0c
+#define AUDIO_FMT_OGG          0x0d
 
-#define AUDIO_FMT_DNS          0x0d
-#define AUDIO_FMT_AEC          0x0e
-#define AUDIO_FMT_VAD          0x0f
+#define AUDIO_FMT_DNS          0xfd
+#define AUDIO_FMT_AEC          0xfe
+#define AUDIO_FMT_VAD          0xff
 
 struct audio_format {
     u8 index;
@@ -106,6 +107,7 @@ struct audio_format {
     u16 frame_head_reserve_len;
     int sample_rate;
     u32 bitrate;
+    u32 delay_ms;
     const char *format;
     const char *sample_source;
     u32(*read_input)(u8 *buf, u32 len);

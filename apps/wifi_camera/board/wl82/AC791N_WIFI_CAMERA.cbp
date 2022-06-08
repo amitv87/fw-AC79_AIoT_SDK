@@ -22,6 +22,7 @@
 <Add option="-fprefer-gnu-section" />
 <Add option="-Wno-shift-negative-value" />
 <Add option="-Wframe-larger-than=2560" />
+<Add option="-mllvm -pi32v2-large-program=true" />
 <Add option="-fms-extensions" />
 <Add option="-DSUPPORT_MS_EXTENSIONS" />
 <Add option="-w" />

@@ -25,6 +25,7 @@ RM    := rm -rf
 SYS_LIB_DIR := C:/JL/pi32/pi32v2-lib/r3
 SYS_INC_DIR := C:/JL/pi32/pi32v2-include
 EXT_CFLAGS  := # Windows 下不需要 -D__SHELL__
+export PATH:=$(TOOL_DIR);$(PATH)
 
 ## 后处理脚本
 FIXBAT          := ..\..\..\..\..\tools\utils\fixbat.exe # 用于处理 utf8->gbk 编码问题
@@ -39,10 +40,14 @@ LD    := lto-wrapper
 AR    := lto-ar
 MKDIR := mkdir -p
 RM    := rm -rf
+export OBJDUMP := $(TOOL_DIR)/objdump
+export OBJCOPY := $(TOOL_DIR)/objcopy
+export OBJSIZEDUMP := $(TOOL_DIR)/objsizedump
 
 SYS_LIB_DIR := $(TOOL_DIR)/../lib/r3
 SYS_INC_DIR := $(TOOL_DIR)/../include
 EXT_CFLAGS  := -D__SHELL__ # Linux 下需要这个保证正确处理 download.c
+export PATH:=$(TOOL_DIR):$(PATH)
 
 ## 后处理脚本
 FIXBAT          := touch # Linux下不需要处理 bat 编码问题
@@ -79,6 +84,7 @@ CFLAGS := \
 	-fprefer-gnu-section \
 	-Wno-shift-negative-value \
 	-Wframe-larger-than=2560 \
+	-mllvm -pi32v2-large-program=true \
 	-fms-extensions \
 	-w \
 
@@ -370,6 +376,7 @@ c_SRC_FILES := \
 	../../../../../apps/common/example/video/camera/dvp/main.c \
 	../../../../../apps/common/example/video/image/avi/main.c \
 	../../../../../apps/common/example/video/image/gif/main.c \
+	../../../../../apps/common/example/video/image/qr_enc/main.c \
 	../../../../../apps/common/example/wifi/low_power/main.c \
 	../../../../../apps/common/example/wifi/wifi_music/main.c \
 	../../../../../apps/common/gsensor/da380.c \
@@ -559,6 +566,7 @@ LFLAGS := \
 	../../../../../cpu/wl82/liba/aisIntlib_single_xiaoai.a \
 	../../../../../cpu/wl82/liba/cJSON.a \
 	../../../../../cpu/wl82/liba/update.a \
+	../../../../../cpu/wl82/liba/enc_qr_code.a \
 	../../../../../cpu/wl82/liba/video_dec_server.a \
 	../../../../../cpu/wl82/liba/net_server.a \
 	../../../../../cpu/wl82/liba/libcompressor.a \
