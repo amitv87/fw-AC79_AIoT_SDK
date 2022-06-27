@@ -93,7 +93,8 @@ typedef enum {
     /** Connection closed.       */
     ERR_CLSD       = -15,
     /** Illegal argument.        */
-    ERR_ARG        = -16
+    ERR_ARG        = -16,
+    ERR_IF_BUSY        = -17
 } err_enum_t;
 
 /**

@@ -34,64 +34,41 @@
 
 // *INDENT-OFF*
 UART0_PLATFORM_DATA_BEGIN(uart0_data)
-	.baudrate = 460800,
-	.port = PORT_REMAP,
-	.output_channel = OUTPUT_CHANNEL0,
-	.input_channel  = INPUT_CHANNEL0,
-	.tx_pin = IO_PORTA_02,
-	.rx_pin = -1,
+    .baudrate = 1000000,
+    .port = PORTA_5_6,
+	.tx_pin = IO_PORTA_05,
+	.rx_pin = IO_PORTA_06,
 	.max_continue_recv_cnt = 1024,
 	.idle_sys_clk_cnt = 500000,
 	.clk_src = PLL_48M,
 	.flags = UART_DEBUG,
 UART0_PLATFORM_DATA_END();
 
-
-UART1_PLATFORM_DATA_BEGIN(uart1_data)
-	.baudrate = 460800,
-	.port = PORT_REMAP,
-	/* .port = PORTH_6_7, */
-	/* .port = PORTC_3_4, */
-	/* .port = PORTUSB_B, */
-	/* .port = PORTUSB_A, */
-	/* .tx_pin = IO_PORTH_06, */
-	/* .rx_pin = IO_PORTH_07, */
-	/* .tx_pin = IO_PORTC_03, */
-	/* .rx_pin = IO_PORTC_04, */
-	/* .tx_pin = IO_PORT_USB_DPB, */
-	/* .rx_pin = IO_PORT_USB_DMB, */
-	/* .tx_pin = IO_PORT_USB_DPA, */
-	/* .rx_pin = IO_PORT_USB_DMA, */
-	.tx_pin = IO_PORTB_00,
-	.rx_pin = IO_PORTB_01,
-	.output_channel = OUTPUT_CHANNEL3,
-	.input_channel  = INPUT_CHANNEL3,
-	.max_continue_recv_cnt = 1024,
-	.idle_sys_clk_cnt = 500000,
-	.clk_src = PLL_48M,
-	.flags = UART_DEBUG,
+UART1_PLATFORM_DATA_BEGIN(uart1_data)//打印串口
+    .baudrate = 1000000,//
+    .port = PORT_REMAP,//任意IO通道
+#if CONFIG_AUDIO_ENC_SAMPLE_SOURCE == AUDIO_ENC_SAMPLE_SOURCE_PLNK0
+    .output_channel = OUTPUT_CHANNEL3,//选择映射输出通道
+#else
+    .output_channel = OUTPUT_CHANNEL0,
+#endif
+    .tx_pin = IO_PORTB_03,
+    .rx_pin = -1,
+    .max_continue_recv_cnt = 1024,
+    .idle_sys_clk_cnt = 500000,
+    .clk_src = PLL_48M,
+    .flags = UART_DEBUG,
 UART1_PLATFORM_DATA_END();
 
-
 UART2_PLATFORM_DATA_BEGIN(uart2_data)
-	.baudrate = 460800,
-	/*.tx_pin = IO_PORTH_02,*/
-	/*.rx_pin = IO_PORTH_03,*/
-	.port = PORT_REMAP,
-	.tx_pin = TCFG_DEBUG_PORT,
-	.rx_pin = -1,
-	/* .tx_pin = IO_PORTC_09, */
-	/* .rx_pin = IO_PORTC_10, */
-	/* .tx_pin = IO_PORTB_06, */
-	/* .rx_pin = IO_PORTB_07, */
-	/* .tx_pin = IO_PORTE_00,*/
-	/* .rx_pin = IO_PORTE_01,*/
-	.output_channel = OUTPUT_CHANNEL2,
-	.input_channel  = INPUT_CHANNEL2,
-	.max_continue_recv_cnt = 1024,
-	.idle_sys_clk_cnt = 500000,
-	.clk_src = PLL_48M,
-	.flags = UART_DEBUG,
+    .baudrate = 1000000,
+    .port = PORTH_2_3,
+	.tx_pin = IO_PORTH_02,
+	.rx_pin = IO_PORTH_03,
+    .max_continue_recv_cnt = 1024,
+    .idle_sys_clk_cnt = 500000,
+    .clk_src = PLL_48M,
+    .flags = UART_DEBUG,
 UART2_PLATFORM_DATA_END();
 
 
@@ -306,69 +283,37 @@ static const struct spiflash_platform_data spiflash_data = {
 };
 
 #ifdef CONFIG_UI_ENABLE //注意使用UI不能使用SD卡D口 建议使用A口 io冲突问题
-#define EMI_BAUD_DIV	EMI_BAUD_DIV8
 static const struct emi_platform_data emi_data = {
     .bits_mode      = EMI_8BITS_MODE,
-    .baudrate       = EMI_BAUD_DIV,			//clock = HSB_CLK / (baudrate + 1) , HSB分频
+    .baudrate       = EMI_BAUD_DIV5,			//clock = HSB_CLK / (baudrate + 1) , HSB分频
     .colection      = EMI_FALLING_COLT,		//EMI_FALLING_COLT / EMI_RISING_COLT : 下降沿 上升沿 采集数据
-    .time_out       = 1*1000,				//最大写超时时间ms
+    .time_out       = 1 * 1000,				//最大写超时时间ms
     .th             = EMI_TWIDTH_NO_HALF,
     .ts             = 0,
-    .tw             = (EMI_BAUD_DIV > 1) ? EMI_BAUD_DIV / 2 : 1,
+    .tw             = EMI_BAUD_DIV5 / 2,
     .data_bit_en    = 0,					//0默认根据bits_mode数据位来配置
 };
-
-static const struct pap_info pap_data = {
-    .datawidth 		= PAP_PORT_8BITS,
-    .endian    		= PAP_BE,				//数据输出大小端
-    .cycle     		= PAP_CYCLE_ONE,		//1/2字节发送次数
-    .pre			= PAP_READ_LOW,			//读取rd有效电平
-    .pwe			= PAP_WRITE_LOW,		//写wr有效电平
-    .use_sem		= TRUE,					//使用信号等待
-    .rd_en			= FALSE,				//不使用rd读信号
-    .port_sel		= PAP_PORT_A,			//PAP_PORT_A PAP_PORT_B
-    .timing_setup 	= 1,					//具体看pap.h
-    .timing_hold  	= 1,					//具体看pap.h
-    .timing_width 	= 2,					//具体看pap.h
-};
-#if TCFG_LCD_ST7735S_ENABLE || TCFG_LCD_ST7789V_ENABLE
-SPI2_PLATFORM_DATA_BEGIN(spi2_data)   //pc8 pc9 pc10
-    .clk    = 80000000,               //di  clk  do
-    .mode   = SPI_1WIRE_MODE,
-    .port   = 'A',
-    .attr	= SPI_SCLK_L_UPL_SMPH | SPI_UNIDIR_MODE,//主机，CLK低 更新数据低，单向模式
-SPI2_PLATFORM_DATA_END()
-#endif
 static const struct ui_lcd_platform_data pdata = {
-#if TCFG_LCD_ST7735S_ENABLE || TCFG_LCD_ST7789V_ENABLEU /*MCU*/
-    .spi_id  = "spi2",
-	.rs_pin  = IO_PORTH_02,
-	.te_pin  = IO_PORTH_03,
-	.rst_pin = IO_PORTH_04,
-	.cs_pin  = IO_PORTH_07,
-	.lcd_if  = LCD_SPI,
-#else
-	.rs_pin  = IO_PORTH_02,
-	.te_pin  = IO_PORTH_03,
-	.rst_pin = IO_PORTH_04,
-	.cs_pin  = IO_PORTH_07,
-	.lcd_if  = LCD_EMI,//屏幕接口类型还有 PAP , SPI
-#endif
-#if TCFG_LCD_480x272_8BITS /*RGB*/
-     .lcd_if  = LCD_IMD,
-#endif
+    .rst_pin = -1,
+    .cs_pin = -1,
+    .rs_pin = IO_PORTC_09,
+    .bl_pin = IO_PORTB_08,
+    .te_pin = IO_PORTC_00,
+    .touch_int_pin = IO_PORTB_04,
+   	.touch_reset_pin = IO_PORTB_00,
+    .lcd_if  = LCD_EMI,//屏幕接口类型还有 PAP , SPI
 };
 const struct ui_devices_cfg ui_cfg_data = {
     .type = TFT_LCD,
-    .private_data = (void *)&pdata,
+    .private_data = (void *) &pdata,
 };
-#endif //CONFIG_UI_ENABLE
+#endif
 
 static const struct dac_platform_data dac_data = {
     .sw_differ = 1,
     .pa_auto_mute = 1,
-    .pa_mute_port = TCFG_DAC_MUTE_PORT,
-    .pa_mute_value = TCFG_DAC_MUTE_VALUE,
+    .pa_mute_port = IO_PORTB_02,
+    .pa_mute_value = 0,
     .differ_output = 0,
     .hw_channel = 0x05,
     .ch_num = 4,
@@ -459,26 +404,19 @@ static const struct audio_platform_data audio_data = {
 #define CAMERA_GROUP_PORT	ISC_GROUPA
  /*#define CAMERA_GROUP_PORT	ISC_GROUPC */
 static const struct camera_platform_data camera0_data = {
-    .xclk_gpio      = -1,//注意： 如果硬件xclk接到芯片IO，则会占用OUTPUT_CHANNEL1
-    .reset_gpio     = -1,
+	.xclk_gpio      = IO_PORTH_02,//注意： 如果硬件xclk接到芯片IO，则会占用OUTPUT_CHANNEL1
+    .reset_gpio     = IO_PORTH_03,
     .online_detect  = NULL,
     .pwdn_gpio      = -1,
     .power_value    = 0,
     .interface      = SEN_INTERFACE0,//SEN_INTERFACE_CSI2,
     .dvp={
-#if (CAMERA_GROUP_PORT == ISC_GROUPA)
         .pclk_gpio   = IO_PORTA_08,
         .hsync_gpio  = IO_PORTA_09,
         .vsync_gpio  = IO_PORTA_10,
-#else
-        .pclk_gpio   = IO_PORTC_08,
-        .hsync_gpio  = IO_PORTC_09,
-        .vsync_gpio  = IO_PORTC_10,
-#endif
-        .group_port  = CAMERA_GROUP_PORT,
+        .group_port  = ISC_GROUPA,
         .data_gpio   = {
-#if (CAMERA_GROUP_PORT == ISC_GROUPA)
-                IO_PORTA_07,
+				IO_PORTA_07,
                 IO_PORTA_06,
                 IO_PORTA_05,
                 IO_PORTA_04,
@@ -488,18 +426,6 @@ static const struct camera_platform_data camera0_data = {
                 IO_PORTA_00,
                 -1,
                 -1,
-#else
-                IO_PORTC_07,
-                IO_PORTC_06,
-                IO_PORTC_05,
-                IO_PORTC_04,
-                IO_PORTC_03,
-                IO_PORTC_02,
-                IO_PORTC_01,
-                IO_PORTC_00,
-                -1,
-                -1,
-#endif
         },
     }
 };
@@ -612,11 +538,20 @@ const struct wifi_calibration_param wifi_calibration_param = {
 };
 #endif
 
+#ifdef CONFIG_RTC_ENABLE
+const struct rtc_init_config rtc_init_data = {
+#if 1//使用内部RTC时钟
+	.rtc_clk_sel = RTC_CLK_SEL_INSIDE,
+#else//使用外部32.768k时钟
+	.rtc_clk_sel = RTC_CLK_SEL_OUTSIDE,
+#endif
+	.rtc_power_sel = RTCVDD_SUPPLY_OUTSIDE,
+};
+#endif
+
 REGISTER_DEVICES(device_table) = {
 #ifdef CONFIG_UI_ENABLE
-    { "pap",   &pap_dev_ops, (void *)&pap_data },
     { "emi",   &emi_dev_ops, (void *)&emi_data },
-    { "imd",   &imd_dev_ops, NULL },
 #endif
     { "pwm0",   &pwm_dev_ops,  (void *)&pwm_data0},
     { "pwm1",   &pwm_dev_ops,  (void *)&pwm_data1},
@@ -652,10 +587,6 @@ REGISTER_DEVICES(device_table) = {
     { "video2.*",  &video_dev_ops, NULL },
 #endif
 
-#ifndef CONFIG_SFC_ENABLE
-    { "spi0", &spi_dev_ops, (void *)&spi0_data },
-    { "spiflash", &spiflash_dev_ops, (void *)&spiflash_data },
-#endif
     { "spi1", &spi_dev_ops, (void *)&spi1_data },
 #if TCFG_LCD_ST7735S_ENABLE || TCFG_LCD_ST7789V_ENABLE
     { "spi2", &spi_dev_ops, (void *)&spi2_data },
@@ -831,7 +762,7 @@ static void board_power_init(void)
 
     power_keep_state(POWER_KEEP_RESET);//0, POWER_KEEP_DACVDD | POWER_KEEP_RTC | POWER_KEEP_RESET
 
-#ifdef CONFIG_OSC_RTC_ENABLE
+#ifdef CONFIG_RTC_ENABLE
     power_keep_state(POWER_KEEP_RTC);//0, POWER_KEEP_DACVDD | POWER_KEEP_RTC | POWER_KEEP_RESET
 #endif
 
@@ -854,7 +785,7 @@ static void board_power_init(void)
 #ifdef CONFIG_DEBUG_ENABLE
 void debug_uart_init()
 {
-    uart_init(&uart2_data);
+    uart_init(&uart1_data);
 }
 #endif
 
@@ -866,13 +797,10 @@ void board_early_init()
 
 void board_init()
 {
-#ifdef CONFIG_OSC_RTC_ENABLE
-    rtc_early_init(1);
-#else
-    rtc_early_init(0);
-#endif
-
     board_power_init();
+#ifdef CONFIG_RTC_ENABLE
+    rtc_early_init();
+#endif
     adc_init();
 #if (TCFG_IOKEY_ENABLE || TCFG_IRKEY_ENABLE || TCFG_RDEC_KEY_ENABLE || TCFG_ADKEY_ENABLE)
     key_driver_init();
@@ -886,9 +814,6 @@ void board_init()
     cfg_file_parse();
 #endif
 
-    //摄像头的复位脚引用了DACVDD，需要先初始化DAC后才能初始化摄像头
-    extern void vcm_early_init(u32 delay_ms);
-    vcm_early_init(1000);
 }
 
 #endif

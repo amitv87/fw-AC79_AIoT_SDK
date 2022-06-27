@@ -58,7 +58,7 @@ int __attribute__((weak)) set_phy_stats_cb(u8 id, void (*f)(enum phy_state))
     return 0;
 }
 
-void __attribute__((weak)) lwip_netflow(int in_out, int proto_type)
+void __attribute__((weak)) socket_send_but_netif_busy_hook(int s, char type_udp)
 {
 }
 
@@ -97,7 +97,6 @@ static struct lan_setting lan_setting_info = {
 };
 
 static struct netif wireless_netif;
-static u8 lwip_inited;
 static u8 lwip_static_ip_renew;
 
 #ifdef HAVE_LTE_NETIF
@@ -709,6 +708,7 @@ void Init_LwIP(u8_t lwip_netif)
 
     printf("|Init_LwIP [%d]\n", lwip_netif);
 
+    static u8 lwip_inited;
     if (!lwip_inited) {
         if (sys_sem_new(&sem, 0) != ERR_OK) {
             LWIP_ASSERT("failed to create sem", 0);

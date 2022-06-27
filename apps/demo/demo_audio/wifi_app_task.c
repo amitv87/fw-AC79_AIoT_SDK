@@ -395,24 +395,6 @@ static int wireless_net_init(void)   //主要是create wifi 线程的
 late_initcall(wireless_net_init);
 #endif
 
-#if 0
-int wifi_recv_pkg_and_soft_filter(u8 *pkg, u32 len)
-{
-    static u32 thdll, count;
-    int ret;
-
-    ret = time_lapse(&thdll, 1000);
-
-    if (ret) {
-        printf("sdio_recv_cnt = %d,  %d \r\n", ret, count);
-        count = 0;
-    }
-
-    ++count;
-    return 0;
-}
-#endif
-
 void lwip_netflow(int in_out, int proto_type)//inout:0->in,1->out;proto_type: IP_PROTO_UDP IP_PROTO_TCP
 {
     /*if(in_out==1||proto_type==IP_PROTO_UDP|| proto_type==IP_PROTO_TCP)*/

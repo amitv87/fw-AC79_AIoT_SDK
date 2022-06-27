@@ -21,6 +21,8 @@
 #define FLASH_SECTOR_SIZE 	(4*1024)
 #define NET_UPDATE_BUFF_SIZE_MAX	(4*1024)
 
+/* #define DUAL_BANK_VERIFY_ENABLE */    //回读flash进行校验
+
 struct net_update {
     u8 update_doing;
     u8 update_state;
@@ -38,6 +40,26 @@ int storage_device_ready(void);
 u32 get_target_udate_addr(void);
 
 //=======================net_update==========================================================
+
+#ifdef DUAL_BANK_VERIFY_ENABLE
+static int dual_bank_verify_hdl(int result)
+{
+    if (result) {
+        printf("app core verify OK!");
+        //回读校验正确，更新启动信息
+        dual_bank_update_burn_boot_info(net_update_finish_callback);
+    } else if (net_update_info) {
+        //回读校验错误
+        net_update_info->update_state = NET_UPDATE_STATE_ERR;
+        os_sem_post(&net_update_info->sem);
+        printf("net_update err\n\n");
+        return -1;
+    }
+
+    return 0;
+}
+#endif
+
 static void net_update_system_reset(void *priv)
 {
     printf("cpu reset ....\n\n");
@@ -147,7 +169,13 @@ int net_fclose(void *fd, char is_socket_err)
             }
         }
         if (net_update->update_state == NET_UPDATE_STATE_NONE && !is_socket_err) {
+
+#ifdef DUAL_BANK_VERIFY_ENABLE
+            dual_bank_update_verify(NULL, NULL, dual_bank_verify_hdl);
+#else
+            //更新启动信息
             dual_bank_update_burn_boot_info(net_update_finish_callback);
+#endif //DUAL_BANK_VERIFY_ENABLE
 
             err = os_sem_pend(&net_update_info->sem, 500);
             if (err) {

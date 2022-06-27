@@ -13,12 +13,12 @@
 
 /****************************本文件功能：lbuff的jpeg转YUV420****************************************/
 
-#define JPEG_DEC_USE_MUC	1 //1:分行解码可节省内存
-#define JPEG_DEC_MUC_FIX	1 //1:修复mcu分行解码的BUG
+#define JPEG_DEC_USE_MUC	0 //1:分行解码可节省内存
+#define JPEG_DEC_MUC_FIX	0 //1:修复mcu分行解码的BUG
 #define JPEG_FPS_DBG		0 //1:打开jpeg解码帧率测试
 
 #if !JPEG_DEC_USE_MUC
-#define JPEG_DEC_FAST		0 //1:整帧快速解码
+#define JPEG_DEC_FAST		1 //1:整帧快速解码
 #endif
 
 #if JPEG_DEC_MUC_FIX

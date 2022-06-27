@@ -3,5 +3,5 @@
 .global lib_aliyun_version
 
 lib_aliyun_version:
-.long 199618325 
-.asciz "ALIYUN-@20220429-$7455586"
+.long 204705941 
+.asciz "ALIYUN-@20220627-$308111e"

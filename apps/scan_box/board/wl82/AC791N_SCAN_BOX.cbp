@@ -427,6 +427,7 @@
 <Unit filename="../../../../include_lib/media/media_develop/media/application/eq_func_define.h" />
 <Unit filename="../../../../include_lib/net/lwip_2_1_3/lwip/port/arch/cc.h" />
 <Unit filename="../../../../include_lib/net/lwip_2_1_3/lwip/port/arch/cpu.h" />
+<Unit filename="../../../../include_lib/net/lwip_2_1_3/lwip/port/lwip.h" />
 <Unit filename="../../../../include_lib/net/lwip_2_1_3/lwip/port/lwipopts.h" />
 <Unit filename="../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/_errno.h" />
 <Unit filename="../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/arch.h" />
@@ -446,6 +447,8 @@
 <Unit filename="../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/priv/mem_priv.h" />
 <Unit filename="../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/priv/memp_priv.h" />
 <Unit filename="../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/priv/memp_std.h" />
+<Unit filename="../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/prot/ethernet.h" />
+<Unit filename="../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/prot/ieee.h" />
 <Unit filename="../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/sockets.h" />
 <Unit filename="../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/stats.h" />
 <Unit filename="../../../../include_lib/net/qrcode/qrcode.h" />

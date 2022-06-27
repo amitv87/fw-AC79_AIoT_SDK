@@ -143,7 +143,6 @@ static int send_packet(struct netif *netif, struct pbuf *p)
 
 static err_t low_level_output(struct netif *netif, struct pbuf *p)
 {
-    lwip_netflow(1, 0);
 #if ETH_PAD_SIZE
     pbuf_header(p, -ETH_PAD_SIZE); /* drop the padding word */
 #endif

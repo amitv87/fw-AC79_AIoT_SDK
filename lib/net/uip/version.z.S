@@ -3,5 +3,5 @@
 .global lib_uip_version
 
 lib_uip_version:
-.long 199618373 
-.asciz "UIP-@20220429-$7455586"
+.long 204705965 
+.asciz "UIP-@20220627-$308111e"

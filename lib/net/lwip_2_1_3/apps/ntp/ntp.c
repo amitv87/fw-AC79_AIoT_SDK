@@ -824,7 +824,7 @@ int ntp_client_get_time_once(const char *host, struct tm *s_tm, int recv_to)
     int fd;
     char ipaddr[20];
     NTP_DBG_PRINTF("will attemt to communicate with %s\n", host);
-    u8 cnt = 5;
+    u8 cnt = 10;
 
     if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         NTP_ERR_PRINTF("cannot create ntp socket\n");
@@ -842,8 +842,8 @@ int ntp_client_get_time_once(const char *host, struct tm *s_tm, int recv_to)
     localaddr.sin_addr.s_addr = inet_addr(ipaddr);
     if (bind(fd, (struct sockaddr *)&localaddr, sizeof(localaddr)) < 0) {
         NTP_ERR_PRINTF("ntp bind fail \n");
-        ret = 1;
-        os_time_dly(200);
+        /* ret = 1; */
+        /* os_time_dly(200); */
         goto err;
     }
 

@@ -296,14 +296,15 @@
 #define CONFIG_LCD_QR_CODE_ENABLE           0
 #define CONFIG_PLAY_JPG_ENABLE              0
 #if TCFG_DEMO_UI_RUN
-#define NO_UI_LCD_TEST                      1  //开机运行camera_lcd_only_show_demo.c 不带UI 直推到屏
+#define NO_UI_LCD_TEST                      0  //开机运行camera_lcd_only_show_demo.c 不带UI 直推到屏
 #endif
 
 #define TCFG_USE_SD_ADD_UI_FILE             0  //使用SD卡加载资源文件
 
 #if TCFG_LCD_ENABLE
 #define TCFG_LCD_HX8357_ENABLE              0
-#define TCFG_LCD_ST7789S_ENABLE			    1
+#define TCFG_LCD_ST7789S_ENABLE			    0
+#define TCFG_LCD_ILI9341_ENABLE	        	1
 #define TCFG_LCD_ST7789V_ENABLE			    0
 #define TCFG_LCD_ST7735S_ENABLE			    0
 #define TCFG_LCD_480x272_8BITS			    0
@@ -315,7 +316,7 @@
 #define HORIZONTAL_SCREEN                   1//1为使能横屏配置
 #endif
 
-#if TCFG_LCD_ST7789S_ENABLE
+#if TCFG_LCD_ST7789S_ENABLE || TCFG_LCD_ILI9341_ENABLE
 #define USE_LCD_TE                          1
 #endif
 

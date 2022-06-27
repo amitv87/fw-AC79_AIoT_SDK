@@ -85,7 +85,7 @@ static int send_packet(struct netif *netif, struct pbuf *p)
     int ret;
     buffer = (char *)netdev_alloc_output_buf((unsigned char **)(&pos), p->tot_len);
     if (buffer == NULL) {
-        return 0;
+        return -1;
     }
 
     for (q = p; q != NULL; q = q->next) {
@@ -117,15 +117,28 @@ static int send_packet(struct netif *netif, struct pbuf *p)
  *       dropped because of memory failure (except for the TCP timers).
  */
 
+__attribute__((weak)) int lwip_low_level_output_filter(u8 *pkg, u32 len)
+{
+    return 0;
+}
+__attribute__((weak)) int lwip_low_level_inputput_filter(u8 *pkg, u32 len)
+{
+    return 0;
+}
 static err_t low_level_output(struct netif *netif, struct pbuf *p)
 {
-    lwip_netflow(1, 0);
+    if (lwip_low_level_output_filter(p->payload, p->tot_len)) {
+        LINK_STATS_INC(link.drop);
+        return ERR_IF_BUSY;
+    }
+
 #if ETH_PAD_SIZE
     pbuf_header(p, -ETH_PAD_SIZE); /* drop the padding word */
 #endif
 
     if (send_packet(netif, p)) {
-        return ERR_IF;
+        LINK_STATS_INC(link.drop);
+        return ERR_IF_BUSY;
     }
 
 #if ETH_PAD_SIZE
@@ -145,7 +158,7 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
  * @return a pbuf filled with the received packet (including MAC header)
  *         NULL on memory error
  */
-static struct pbuf *low_level_input(void *rx_pkt, int len)
+static struct pbuf *low_level_input(u8 *rx_pkt, int len)
 {
     struct pbuf *q, *p;
     u16 i;
@@ -156,7 +169,9 @@ static struct pbuf *low_level_input(void *rx_pkt, int len)
         return 0;
     }
 
-//    {
+    if (lwip_low_level_inputput_filter(rx_pkt, len)) {
+        return NULL;
+    }
     //      printf("low_level_input len = %d",len);
 //    }
 #if ETH_PAD_SIZE
@@ -195,7 +210,6 @@ static struct pbuf *low_level_input(void *rx_pkt, int len)
         /* puts("pbuf_alloc fail!\n"); */
 
         LINK_STATS_INC(link.memerr);
-        LINK_STATS_INC(link.drop);
     }
 
     return p;
@@ -252,7 +266,7 @@ err_t wireless_ethernetif_init(struct netif *netif)
 
 #if LWIP_NETIF_HOSTNAME
     /* Initialize interface hostname */
-    netif->hostname = "ACXXNXX";
+    netif->hostname = "AC79NN";
 #endif /* LWIP_NETIF_HOSTNAME */
 
     /*

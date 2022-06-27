@@ -667,34 +667,6 @@ static void wifi_demo_task(void *priv)
     }
 }
 
-int wifi_recv_pkg_and_soft_filter(u8 *pkg, u32 len)
-{
-#if 0
-    static u32 thdll, count;
-    int ret;
-    ret = time_lapse(&thdll, 1000);
-    if (ret) {
-        printf("sdio_recv_cnt = %d,  %d \r\n", ret, count);
-        count = 0;
-    }
-    ++count;
-#endif
-
-    extern u32 memp_get_pbuf_pool_free_cnt(void);
-    if (memp_get_pbuf_pool_free_cnt() <= 0) {//根据LWIP接收缓存情况快速丢包减轻CPU负担
-        struct ieee80211_frame *wh = (struct ieee80211_frame *)&pkg[20];
-        if ((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) == IEEE80211_FC0_TYPE_DATA) {// 只丢弃数据帧
-            //if(pkg[54]==0X88&&pkg[55]==0x8E){}else //如果是EAPOL不要丢弃,正常不会出现
-            {
-                putbyte('D');
-                return  -1;
-            }
-        }
-    }
-
-    return 0;
-}
-
 static int demo_wifi(void)
 {
     return os_task_create(wifi_demo_task, NULL, 10, 1000, 0, "wifi_demo_task");

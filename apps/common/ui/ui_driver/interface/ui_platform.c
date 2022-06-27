@@ -3575,6 +3575,18 @@ int get_multi_string_width(struct draw_context *dc, u8 *str, int *str_width, int
     return 0;
 }
 
+void  reinit_text_font_init()
+{
+    static struct font_info *info = NULL;
+    int language = 0;
+    language = ui_language_get();
+    if (info) {
+        font_close(info);
+    }
+    info = font_open(NULL, language);
+    ASSERT(info, "font_open fail!");
+}
+
 struct font_info *text_font_init(u8 init)
 {
     static struct font_info *info = NULL;

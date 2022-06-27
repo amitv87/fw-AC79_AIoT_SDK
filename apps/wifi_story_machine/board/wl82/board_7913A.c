@@ -397,7 +397,7 @@ const struct wifi_calibration_param wifi_calibration_param = {
     .xosc_l     = 0xa,// 调节晶振左电容
     .xosc_r     = 0xa,// 调节晶振右电容
     .pa_trim_data = {5, 5, 2, 3, 11, 0, 7},// 根据MP测试生成PA TRIM值
-    .mcs_dgain    = {
+    .mcs_dgain    = { //如果IOVDD使用内部LDO供电,  由于IOVDD带载能力有限，各个速率发射功率限定在14dbm以内
         32,//11B_1M
         32,//11B_2.2M
         32,//11B_5.5M
@@ -574,6 +574,9 @@ static void board_set_soft_poweroff(void)
     gpio_set_dieh(PORT_VCC33_CTRL_IO, 0);
     gpio_latch_en(PORT_VCC33_CTRL_IO, 1);
 #endif
+	if(get_power_keep_state() & POWER_KEEP_RTC){ //针对7913使用内部RTC电源时关机P33时钟高于5M会读取异常
+		JL_CLOCK->SYS_DIV |= BIT(1) | BIT(8) | BIT(9) | BIT(10);
+	}
 }
 
 static void sleep_exit_callback(u32 usec)
@@ -613,7 +616,7 @@ static void board_power_init(void)
 
     power_set_callback(TCFG_LOWPOWER_LOWPOWER_SEL, sleep_enter_callback, sleep_exit_callback, board_set_soft_poweroff);
 
-    power_keep_state(POWER_KEEP_RESET | POWER_KEEP_DACVDD);
+    power_keep_state(POWER_KEEP_RTC | POWER_KEEP_RESET | POWER_KEEP_DACVDD);
 
     power_wakeup_init(&wk_param);
 

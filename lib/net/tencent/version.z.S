@@ -3,5 +3,5 @@
 .global lib_tencent_version
 
 lib_tencent_version:
-.long 199618343 
-.asciz "TENCENT-@20220429-$7455586"
+.long 204705949 
+.asciz "TENCENT-@20220627-$308111e"

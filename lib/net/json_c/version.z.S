@@ -3,5 +3,5 @@
 .global lib_json_c_version
 
 lib_json_c_version:
-.long 199618397 
-.asciz "JSON_C-@20220429-$7455586"
+.long 204705984 
+.asciz "JSON_C-@20220627-$308111e"

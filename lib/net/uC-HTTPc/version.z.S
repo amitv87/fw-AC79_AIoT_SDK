@@ -3,5 +3,5 @@
 .global lib_uc_httpc_version
 
 lib_uc_httpc_version:
-.long 199618372 
-.asciz "UC_HTTPC-@20220429-$7455586"
+.long 204705965 
+.asciz "UC_HTTPC-@20220627-$308111e"

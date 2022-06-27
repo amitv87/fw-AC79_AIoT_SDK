@@ -3,5 +3,5 @@
 .global lib_wolfmqtt_version
 
 lib_wolfmqtt_version:
-.long 199618374 
-.asciz "WOLFMQTT-@20220429-$7455586"
+.long 204705966 
+.asciz "WOLFMQTT-@20220627-$308111e"

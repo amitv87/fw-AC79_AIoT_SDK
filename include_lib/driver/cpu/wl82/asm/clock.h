@@ -80,7 +80,7 @@ int clk_set(const char *name, int clk);
 
 void clk_out_pc0(enum pc0_clock_out_index index);
 void clk_out_pa0(enum pa0_clock_out_index index);
-int sys_clk_source_set(char *name);//"BT_OSC" "RTC_SOC" "PLL_OSC" "RC_16M" "RC_250K"
+int sys_clk_source_set(char index);//0:BT_OSC,1:RTC_SOC,2:PLL_OSC
 void sys_clk_source_resume(int value);
 void sys_clk_source_rc_clk_on(int is_16M);//RC_16M / RC_250K
 void sys_clk_source_rc_clk_off(void);

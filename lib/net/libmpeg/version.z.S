@@ -3,5 +3,5 @@
 .global lib_mpeg_version
 
 lib_mpeg_version:
-.long 199618349 
-.asciz "MPEG-@20220429-$7455586"
+.long 204705952 
+.asciz "MPEG-@20220627-$308111e"

@@ -3,5 +3,5 @@
 .global lib_device_vad_version
 
 lib_device_vad_version:
-.long 199618329 
-.asciz "LIBVAD-@20220429-$7455586"
+.long 204705943 
+.asciz "LIBVAD-@20220627-$308111e"

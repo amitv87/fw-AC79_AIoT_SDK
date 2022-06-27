@@ -404,7 +404,6 @@ tcp_input(struct pbuf *p, struct netif *inp)
     if (dbg_flags & TCP_CWR) {
         puts("[RECV CWR]");
     }
-    lwip_netflow(0, IP_PROTO_TCP);
 
 #if TCP_INPUT_DEBUG
     LWIP_DEBUGF(TCP_INPUT_DEBUG, ("+-+-+-+-+-+-+-+-+-+-+-+-+-+- tcp_input: flags "));

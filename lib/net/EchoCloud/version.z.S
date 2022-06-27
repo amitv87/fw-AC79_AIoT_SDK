@@ -3,5 +3,5 @@
 .global lib_echocloud_version
 
 lib_echocloud_version:
-.long 199618330 
-.asciz "ECHOCLOUD-@20220429-$7455586"
+.long 204705943 
+.asciz "ECHOCLOUD-@20220627-$308111e"

@@ -11,6 +11,7 @@
 #define CONFIG_LOW_POWER_ENABLE              //软关机/睡眠开关
 // #define CONFIG_OSC_RTC_ENABLE                //RTC时钟开关
 
+#define CONFIG_RTOS_AND_MM_LIB_CODE_SECTION_IN_SDRAM
 
 #ifdef CONFIG_NO_SDRAM_ENABLE
 #undef __SDRAM_SIZE__

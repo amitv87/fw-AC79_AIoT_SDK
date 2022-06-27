@@ -1756,6 +1756,8 @@ err_mem:
                    to the application thread. */
                 err = out_err;
                 write_finished = 1;
+            } else if (write_finished == 1 && out_err == ERR_IF_BUSY) {
+                err = out_err;
             }
         } else if (err == ERR_MEM) {
             /* If ERR_MEM, we wait for sent_tcp or poll_tcp to be called.

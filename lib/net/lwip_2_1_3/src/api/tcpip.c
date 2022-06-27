@@ -495,7 +495,7 @@ tcpip_api_call(tcpip_api_call_fn fn, struct tcpip_api_call_data *call)
     TCPIP_MSG_VAR_REF(msg).msg.api_call.arg = call;
     TCPIP_MSG_VAR_REF(msg).msg.api_call.function = fn;
 #if LWIP_NETCONN_SEM_PER_THREAD
-    TCPIP_MSG_VAR_REF(msg).msg.api_call.sem = LWIP_NETCONN_THREAD_SEM_GET();
+    LWIP_NETCONN_THREAD_SEM_GET(TCPIP_MSG_VAR_REF(msg).msg.api_call.sem);
 #else /* LWIP_NETCONN_SEM_PER_THREAD */
     TCPIP_MSG_VAR_REF(msg).msg.api_call.sem = &call->sem;
 #endif /* LWIP_NETCONN_SEM_PER_THREAD */

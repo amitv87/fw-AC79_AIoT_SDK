@@ -730,7 +730,7 @@ etharp_input(struct pbuf *p, struct netif *netif)
             /* we are not configured? */
         } else if (ip4_addr_isany_val(*netif_ip4_addr(netif))) {
             /* { for_us == 0 and netif->ip_addr.addr == 0 } */
-            LWIP_DEBUGF(ETHARP_DEBUG | LWIP_DBG_TRACE, ("etharp_input: we are unconfigured, ARP request ignored.\n"));
+            LWIP_DEBUGF(ETHARP_DEBUG | LWIP_DBG_TYPES_ON, ("etharp_input: we are unconfigured, ARP request ignored.\n"));
             /* request was not directed to us */
         } else {
             /* { for_us == 0 and netif->ip_addr.addr != 0 } */
@@ -749,7 +749,7 @@ etharp_input(struct pbuf *p, struct netif *netif)
 #endif /* (LWIP_DHCP && DHCP_DOES_ARP_CHECK) */
         break;
     default:
-        LWIP_DEBUGF(ETHARP_DEBUG | LWIP_DBG_TRACE, ("etharp_input: ARP unknown opcode type %"S16_F"\n", lwip_htons(hdr->opcode)));
+        LWIP_DEBUGF(ETHARP_DEBUG | LWIP_DBG_TYPES_ON, ("etharp_input: ARP unknown opcode type %"S16_F"\n", lwip_htons(hdr->opcode)));
         ETHARP_STATS_INC(etharp.err);
         break;
     }
@@ -1144,7 +1144,7 @@ etharp_raw(struct netif *netif, const struct eth_addr *ethsrc_addr,
                 (p->len >= SIZEOF_ETHARP_HDR));
 
     hdr = (struct etharp_hdr *)p->payload;
-    LWIP_DEBUGF(ETHARP_DEBUG | LWIP_DBG_TRACE, ("etharp_raw: sending raw ARP packet.\n"));
+    LWIP_DEBUGF(ETHARP_DEBUG | LWIP_DBG_TYPES_ON, ("etharp_raw: sending raw ARP[%s] packet.\n", opcode == ARP_REQUEST ? "REQ" : "RSP"));
     hdr->opcode = lwip_htons(opcode);
 
     LWIP_ASSERT("netif->hwaddr_len must be the same as ETH_HWADDR_LEN for etharp!",

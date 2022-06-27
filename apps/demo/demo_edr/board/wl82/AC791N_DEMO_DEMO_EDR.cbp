@@ -84,6 +84,10 @@
 <Add directory="../../../../../apps/common/config/include" />
 <Add directory="../../../../../include_lib/btstack" />
 <Add directory="../../../../../include_lib/net" />
+<Add directory="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include" />
+<Add directory="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip" />
+<Add directory="../../../../../include_lib/net/lwip_2_1_3/lwip/port" />
+<Add directory="../../../../../include_lib/net/lwip_2_1_3/lwip/app" />
 </Compiler>
 <Linker>
 <Add option="--plugin-opt=-pi32v2-always-use-itblock=false" />
@@ -285,6 +289,28 @@
 <Unit filename="../../../../../include_lib/media/media_develop/media/application/eq_func_define.h" />
 <Unit filename="../../../../../include_lib/media/media_develop/media/cpu/wl82/asm/hw_eq.h" />
 <Unit filename="../../../../../include_lib/media/media_develop/media/sw_drc.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/port/arch/cc.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/port/arch/cpu.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/port/lwip.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/port/lwipopts.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/arch.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/debug.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/def.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/err.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/ip4_addr.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/ip6_addr.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/ip_addr.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/mem.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/memp.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/netif.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/opt.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/pbuf.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/priv/mem_priv.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/priv/memp_priv.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/priv/memp_std.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/prot/ethernet.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/prot/ieee.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/stats.h" />
 <Unit filename="../../../../../include_lib/net/wifi/wifi_connect.h" />
 <Unit filename="../../../../../include_lib/server/audio_dev.h" />
 <Unit filename="../../../../../include_lib/server/audio_server.h" />
@@ -339,6 +365,7 @@
 <Unit filename="../../../../../include_lib/update/uart_update.h" />
 <Unit filename="../../../../../include_lib/update/update.h" />
 <Unit filename="../../../../../include_lib/update/update_loader_download.h" />
+<Unit filename="../../../../../include_lib/utils/crypto_toolbox/endian.h" />
 <Unit filename="../../../../../include_lib/utils/event/bt_event.h" />
 <Unit filename="../../../../../include_lib/utils/event/device_event.h" />
 <Unit filename="../../../../../include_lib/utils/event/event.h" />

@@ -10,15 +10,7 @@
 
 #ifdef USE_RTC_TEST_DEMO
 //当应用层不定义该函数时，系统默认时间为SDK发布时间，当RTC设置时间小于SDK发布时间则设置无效
-void set_rtc_default_time(struct sys_time *t)
-{
-    t->year = 2020;
-    t->month = 6;
-    t->day = 1;
-    t->hour = 8;
-    t->min = 8;
-    t->sec = 8;
-}
+static void *rtc_hdl;
 
 static void time_print(void)//网络时间获取方法
 {
@@ -40,65 +32,81 @@ static void time_print(void)//网络时间获取方法
 
     static u32 time_lapse_hdl = 0; //需要初始化为0,句柄在time_lapse使用过程中不可消亡
     u32 to = time_lapse(&time_lapse_hdl, 5000); //指定时间后返回真,并且返回比上一次执行的时间经过了多少毫秒
+
     if (to) {
         printf("time_lapse timeout %d msec\r\n", to);
     }
 }
-void user_set_rtc_time(void)//用户设置RTC时间,设置的时间一定要比当前编译的时间偏后，否则rtc会按当前编译时间计时
-{
-    struct sys_time st;
-    void *fd = dev_open("rtc", NULL);
-    if (fd) {
-        st.year = 2023;
-        st.month = 8;
-        st.day = 8;
-        st.hour = 8;
-        st.min = 8;
-        st.sec = 8;
-        printf("user_set_rtc_time : %04d-%02d-%02d,%02d:%02d:%02d\n", st.year, st.month, st.day, st.hour, st.min, st.sec);
-        dev_ioctl(fd, IOCTL_SET_SYS_TIME, (u32)&st);
-        dev_close(fd);
-    }
-}
-void user_get_rtc_time(void)//用户获取RTC时间
-{
-    struct sys_time st;
-    void *fd = dev_open("rtc", NULL);
-    if (fd) {
-        dev_ioctl(fd, IOCTL_GET_SYS_TIME, (u32)&st);
-        dev_close(fd);
-        printf("user_get_rtc_time : %04d-%02d-%02d,%02d:%02d:%02d\n", st.year, st.month, st.day, st.hour, st.min, st.sec);
-    }
-}
-static void user_get_rtc_time_cyc(void)//用户循环获取RTC时间
-{
-    struct sys_time st = {0};
-    struct sys_time st1 = {0};
-    void *fd = dev_open("rtc", NULL);
-    if (!fd) {
-        while (1) {
-            printf("err in dev_open rtc\n");
-        }
-    }
-    while (1) {
-        os_time_dly(10);//因为本身os_time_dly(100) 1S就是不准确，所以改为10，100ms检测有没有发生变化，有变化才打印
-        dev_ioctl(fd, IOCTL_GET_SYS_TIME, (u32)&st1);
-        if (memcmp(&st, &st1, sizeof(struct sys_time))) { //有变化才打印
-            memcpy(&st, &st1, sizeof(struct sys_time)); //复制读取的数据
-            //此时，可以发送相关的数据数据到另外线程或此时显示UI等，使用的结构体为st
 
-            printf("user_get_rtc_time : %04d-%02d-%02d,%02d:%02d:%02d\n", st.year, st.month, st.day, st.hour, st.min, st.sec);
-        }
-    }
-    dev_close(fd);
+/* 闹钟响了进行这个函数 */
+static void alarm_rings(void *priv)
+{
+    printf("alarm clock is rings!!!!!!!!!!!!!!!");
+    /* 测试闹钟关机唤醒  使能唤醒 1 设置时间10秒  system will off set 1*/
+#if 1
+    alarm_wkup_ctrl(1, 10, 1); //打开闹钟闹钟唤醒功能 设置10s 一次
+    power_set_soft_poweroff();
+#else
+    alarm_wkup_ctrl(1, 10, 0); //打开闹钟闹钟唤醒功能 设置10s 一次
+#endif
 }
+
 static void time_rtc_test_task(void *p)
 {
-#ifndef CONFIG_OSC_RTC_ENABLE
-    os_time_dly(100);//使用内部的RC32K，则等待1秒校准之后才能设置和读取
-#endif
-    //此处默认不使用网络时间，需要则打开
-#if 0 //def CONFIG_WIFI_ENABLE //网络时间,当不需要网络时间则不需以下代码操作
+    static struct sys_time test_rtc_time;
+    rtc_hdl = dev_open("rtc", NULL);
+
+    if (!rtc_hdl) {
+        printf("err in rtc_hdl_open rtc\n");
+        return;
+    }
+#if 1
+    /* 注册闹钟响铃回调函数 */
+    set_rtc_isr_callback(alarm_rings, NULL);
+
+    /* 打开RTC设备 */
+    rtc_hdl = dev_open("rtc", NULL);
+    dev_ioctl(rtc_hdl, IOCTL_GET_ALARM, (u32)&test_rtc_time);
+    printf("get_alarm_time: %d-%d-%d %d:%d:%d\n", test_rtc_time.year, test_rtc_time.month, test_rtc_time.day, test_rtc_time.hour, test_rtc_time.min, test_rtc_time.sec);
+    /* 获取时间信息 */
+    dev_ioctl(rtc_hdl, IOCTL_GET_SYS_TIME, (u32)&test_rtc_time);
+    /* 打印时间信息 */
+    printf("frist_time_get_sys_time: %d-%d-%d %d:%d:%d\n", test_rtc_time.year, test_rtc_time.month, test_rtc_time.day, test_rtc_time.hour, test_rtc_time.min, test_rtc_time.sec);
+    /* 赋值时间信息 */
+    test_rtc_time.year = 2023;
+    test_rtc_time.month = 8;
+    test_rtc_time.day = 24;
+    test_rtc_time.hour = 14;
+    test_rtc_time.min = 23;
+    test_rtc_time.sec = 0;
+    /* 设置时间信息  */
+    dev_ioctl(rtc_hdl, IOCTL_SET_SYS_TIME, (u32)&test_rtc_time);
+    printf("set_sys_time: %d-%d-%d %d:%d:%d\n", test_rtc_time.year, test_rtc_time.month, test_rtc_time.day, test_rtc_time.hour, test_rtc_time.min, test_rtc_time.sec);
+    /* 获取时间星期 */
+    u8 weekday = dev_ioctl(rtc_hdl, IOCTL_GET_WEEKDAY, (u32)&test_rtc_time);
+    /* 打开闹钟开关 */
+    extern void set_alarm_ctrl(u8 set_alarm);
+    set_alarm_ctrl(1);
+    /* 赋值闹钟时间信息 */
+    test_rtc_time.year = 2023;
+    test_rtc_time.month = 8;
+    test_rtc_time.day = 24;
+    test_rtc_time.hour = 14;
+    test_rtc_time.min = 23;
+    test_rtc_time.sec = 18;
+    /* 设置闹钟 */
+    dev_ioctl(rtc_hdl, IOCTL_SET_ALARM, (u32)&test_rtc_time);
+
+    while (1) {
+        os_time_dly(100);//just test this dly
+        dev_ioctl(rtc_hdl, IOCTL_GET_SYS_TIME, (u32)&test_rtc_time);
+        printf("get_sys_time: %d-%d-%d %d:%d:%d\n", test_rtc_time.year, test_rtc_time.month, test_rtc_time.day, test_rtc_time.hour, test_rtc_time.min, test_rtc_time.sec);
+        dev_ioctl(rtc_hdl, IOCTL_GET_ALARM, (u32)&test_rtc_time);
+        printf("get_alarm_time: %d-%d-%d %d:%d:%d\n", test_rtc_time.year, test_rtc_time.month, test_rtc_time.day, test_rtc_time.hour, test_rtc_time.min, test_rtc_time.sec);
+    }
+
+#else
+//def CONFIG_WIFI_ENABLE //网络时间,当不需要网络时间则不需以下代码操作
     while (wifi_get_sta_connect_state() != WIFI_STA_NETWORK_STACK_DHCP_SUCC) {
         printf("Waitting STA Connected...\r\n");
         //当网络连接成功前, 获取的是同步网络时间前的RTC时间
@@ -106,25 +114,12 @@ static void time_rtc_test_task(void *p)
         time_print();
         os_time_dly(100);
     }
+
     //联网成功后，系统自动把网络时间同步到系统RTC实际
     while (1) {
         time_print();  //当网络连接成功前, 获取的是同步网络时间前的RTC时间
         os_time_dly(300);
     }
-#else //本地RTC获取
-#ifdef USER_SET_RTC_TIME //用户自己设置rtc时间
-    user_set_rtc_time();
-#else //使用sdk当前编译时间作为rtc时间
-    user_get_rtc_time();
-#endif
-#if 1
-    user_get_rtc_time_cyc();//100ms检测一次时间变化,
-#else
-    while (1) {
-        os_time_dly(100);//1s更新时间一次，注意：不一定两次之间的秒数一定是间隔1
-        user_get_rtc_time();
-    }
-#endif
 #endif
 }
 

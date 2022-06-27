@@ -72,8 +72,8 @@ int ntp_client_get_time_all(struct tm *s_tm, int recv_to);
 
 /*----------------------------------------------------------------------------*/
 /**@brief  Get the status of the time from ntp server
-   @return 0: sucess
-   @return -1: fail or still getting
+   @return 1: sucess
+   @return 0: fail or still getting
    @note
 */
 /*----------------------------------------------------------------------------*/

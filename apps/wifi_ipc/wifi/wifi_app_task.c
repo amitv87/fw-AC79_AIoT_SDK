@@ -433,7 +433,7 @@ static void wifi_app_task(void *priv)
 #endif
 
     net_app_init();
-    sys_timer_add(NULL, wifi_app_timer_func, 3 * 1000);
+    sys_timer_add_to_task("sys_timer", NULL, wifi_app_timer_func, 3 * 1000);
 }
 
 void wifi_sta_connect(char *ssid, char *pwd, char save, void *priv)
@@ -460,23 +460,6 @@ int wireless_net_init(void)//主要是create wifi 线程的
     return thread_fork(WIFI_APP_TASK_NAME, 10, 1500, 64, 0, wifi_app_task, NULL);
 }
 late_initcall(wireless_net_init);
-#endif
-
-
-#if 0
-int wifi_recv_pkg_and_soft_filter(u8 *pkg, u32 len) //通过软件过滤无用数据帧减轻cpu压力,pkg[20]就是对应抓包工具第一个字节的802.11 MAC Header 字段
-{
-    int ret;
-    static u32 thdll, count;
-    ret = time_lapse(&thdll, 1000);
-    if (ret) {
-        printf("sdio_recv_cnt = %d,  %d \r\n", ret, count);
-        count = 0;
-    }
-    ++count;
-
-    return 0;
-}
 #endif
 
 const char *get_root_path(void)

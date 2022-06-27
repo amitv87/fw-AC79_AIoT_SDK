@@ -4,7 +4,7 @@
 #include "lwip/sockets.h"
 #include "lwip/netdb.h"
 #include "os/os_api.h"
-#include "list.h"
+#include "generic/list.h"
 #include "string.h"
 
 

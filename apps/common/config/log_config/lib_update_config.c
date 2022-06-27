@@ -41,6 +41,9 @@ const int support_passive_update_new_file_structure = 1;
 //开启备份区空间不够时，支持资源强制写入预留区
 const int support_reserved_zone_forced_update = 1;
 
+//检测升级的文件是否与本地相同
+const int update_file_check_same = 0;
+
 /* ================================================================================
 关于support_passive_update_new_file_structure和support_reaserved_zone_file_dual_bank_update_en配置说明:
 1.双备份support_dual_bank_update_en变量使能后:

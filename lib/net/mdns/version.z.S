@@ -3,5 +3,5 @@
 .global lib_mdns_version
 
 lib_mdns_version:
-.long 199618366 
-.asciz "MDNS-@20220429-$7455586"
+.long 204705961 
+.asciz "MDNS-@20220627-$308111e"
