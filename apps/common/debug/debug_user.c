@@ -230,7 +230,7 @@ static void write_log_to_sd(char *data, u32 len)
         return;
     }
     fseek(file, all_time * len, SEEK_SET);
-    fwrite(file, write_time ? data : (data + len), len);
+    fwrite(write_time ? data : (data + len), 1, len, file);
     fclose(file);
     /* 下一次写数据文件指针偏移 */
     all_time++;

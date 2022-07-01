@@ -3575,10 +3575,11 @@ int get_multi_string_width(struct draw_context *dc, u8 *str, int *str_width, int
     return 0;
 }
 
+
+static struct font_info *info = NULL;
+static int language = 0;
 void  reinit_text_font_init()
 {
-    static struct font_info *info = NULL;
-    int language = 0;
     language = ui_language_get();
     if (info) {
         font_close(info);
@@ -3589,9 +3590,6 @@ void  reinit_text_font_init()
 
 struct font_info *text_font_init(u8 init)
 {
-    static struct font_info *info = NULL;
-    static int language = 0;
-
     if (init) {
         if (!info || (language != ui_language_get())) {
             language = ui_language_get();
@@ -3633,7 +3631,6 @@ static int br23_show_text(struct draw_context *dc, struct ui_text_attrs *text)
 
     if (text->format && !strcmp(text->format, "text")) {
         struct font_info *info = text_font_init(true);
-
         if (info && (FT_ERROR_NONE == (info->sta & (~(FT_ERROR_NOTABFILE | FT_ERROR_NOPIXFILE))))) {
             info->disp.map    = 0;
             info->disp.rect   = &draw_r;

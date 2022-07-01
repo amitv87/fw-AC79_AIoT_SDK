@@ -415,7 +415,7 @@ extern char wifi_get_rssi(void);
 /**
  * @brief wifi_get_cqi，用于获取WIFI连接的STA信号质量
  *
- * @note 返回WIFI连接的STA通信丢包质量,0-100,一般认为大于50为较好,20-50之间为一般,小于20较差, decide ChannelQuality based on: 1)last BEACON received time, 2)last RSSI, 3)TxPER, and 4)RxPER
+ * @note 返回WIFI连接的STA通信丢包质量,0-100,一般认为大于50为较好,20-50之间为一般,小于20较差, decide ChannelQuality based on: 1)last BEACON received time, 2)last RSSI权重50, 3)TxPER权重30, and 4)RxPER权重20
  */
 extern char wifi_get_cqi(void);
 
