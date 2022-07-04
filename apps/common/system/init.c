@@ -186,8 +186,8 @@ static void app_task_handler(void *p)
     board_init();
     __do_initcall(initcall);
     __do_initcall(module_initcall);
-    __do_initcall(late_initcall);
     app_core_init();
+    __do_initcall(late_initcall);
     app_main();
 
 #ifdef FINSH_ENABLE

@@ -17,9 +17,17 @@
 
 #define TVS_ADAPTER_PRINTF   printf
 
-#define ARREARS_ENABLE		1	//欠费屏蔽使能
-#define USE_MAC_DEVICE_NAME	0	//使用MAC地址作为device_name
-#define OTA_MQTT_ENABLE		1	//OTA使能
+#define ARREARS_ENABLE			0	//欠费屏蔽使能
+#define USE_MAC_DEVICE_NAME		0	//使用MAC地址作为device_name
+#define OTA_MQTT_ENABLE			1	//OTA使能
+#define RECORD_USE_PCM_ENABLE	0	//1: 使用PCM, 0:使用SPX
+#define RECORD_USE_VIRTUAL		0	//1:使用打断唤醒数据上传录音,使用MIC数据上传
+#define PRINTF_MG_EV			0	//流量统计打印开关
+#define TTS_REPLY_DISENABLE		0	//禁用tts下发回复
+
+
+#define PING_ONE_TIMER 			20	//弱网判断定时器定时时间,单位s
+#define HAL_TCP_TIMEOUT			1000//TCP连接超时时间, 单位ms, 大于2000无效
 
 #define FW_RUNNING_VERSION "1.0.0"	//固件版本号
 

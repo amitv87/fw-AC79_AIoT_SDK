@@ -62,3 +62,8 @@ void tvs_state_manager_init()
 
 }
 
+void tvs_state_manager_uninit()
+{
+    TVS_LOCKER_UNINIT
+}
+

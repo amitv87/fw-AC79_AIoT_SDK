@@ -521,18 +521,17 @@ void dhcps_init(void)
 
 void dhcps_uninit(void)
 {
-    puts("dhcps_uninit bug not fix...\n");
-//    return;
-
     struct _dhcps_cli *cli;
+    struct _dhcps_cli *n;
 
+    os_mutex_pend(&dhcps_mtx, 0);
     DHCP_DBG_FUNC_IN();
 
     if (pcb_dhcps) {
         udp_remove(pcb_dhcps);
         pcb_dhcps = NULL;
 
-        for (cli = dhcps_cli_head; cli != NULL; cli = cli->next) {
+        for (cli = dhcps_cli_head; cli != NULL; cli = n) {
             printf("dhcps remove mac_addr = 0x%x,0x%x,0x%x,0x%x,0x%x,0x%x\n",
                    cli->cli_mac[0], cli->cli_mac[1], cli->cli_mac[2],
                    cli->cli_mac[3], cli->cli_mac[4], cli->cli_mac[5]);
@@ -540,10 +539,16 @@ void dhcps_uninit(void)
             printf("dhcps remove ipaddr :%d.%d.%d.%d\n",
                    ip4_addr1(&cli->ipaddr), ip4_addr2(&cli->ipaddr),
                    ip4_addr3(&cli->ipaddr), ip4_addr4(&cli->ipaddr));
+
+            n = cli->next;
+
             free(cli);
         }
         dhcps_cli_head = NULL;
     }
+
+    os_mutex_post(&dhcps_mtx);
+
     os_mutex_del(&dhcps_mtx, 1);
 }
 

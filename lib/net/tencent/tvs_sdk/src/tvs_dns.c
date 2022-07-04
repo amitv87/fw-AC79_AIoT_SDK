@@ -8,8 +8,9 @@
 #include "tvs_config.h"
 #include "tvs_echo.h"
 #include "tvs_ip_provider.h"
-
+#include "tvs_dns.h"
 #include "tvs_threads.h"
+#include "os/os_api.h"
 
 #define HTTP_DNS_PATH   "http://119.29.29.29:80/d?dn="
 
@@ -24,7 +25,13 @@ static int g_system_dns_ip_tmp = 0;
 // 兜底IP
 #define BACKUP_IP   "183.3.225.67"
 
-static tvs_thread_handle_t *g_tvs_dns_thread = NULL;
+
+static int g_tvs_dns_pid = NULL;
+static void *g_tvs_dns_mutex = NULL;
+static int g_tvs_dns_start;
+
+#define DNS_REFRESH_TIMER     40  // 更新DNS的时间间隔
+
 
 typedef struct {
     int ip_addr;
@@ -281,9 +288,13 @@ int tvs_dns_init()
 {
     TVS_LOCKER_INIT
 
-    if (g_tvs_dns_thread == NULL) {
-        g_tvs_dns_thread = tvs_thread_new(dns_thread_func, NULL);
-    }
+    return 0;
+}
+
+int tvs_dns_uninit()
+{
+
+    TVS_LOCKER_UNINIT
 
     return 0;
 }
@@ -332,38 +343,34 @@ static void dns_thread_func(tvs_thread_handle_t *thread_handle_t)
     }
 }
 
-void tvs_dns_thread_start()
+
+static void tvs_dns_timer_func(void *param)
 {
-    if (!tvs_thread_is_stop(g_tvs_dns_thread)) {
-        return;
+    while (g_tvs_dns_start) {
+        dns_thread_func(NULL);
+        os_wrapper_wait_signal(g_tvs_dns_mutex, DNS_REFRESH_TIMER * 60 * 1000);
     }
-
-    tvs_thread_start_prepare(g_tvs_dns_thread, NULL, 0);
-
-    tvs_thread_start_now(g_tvs_dns_thread, "dns", 2, 1024);
 }
 
-static void *g_tvs_dns_timer = NULL;
-#define DNS_REFRESH_TIMER     40  // 更新DNS的时间间隔
-
-void tvs_dns_timer_func(void *param)
+static void tvs_dns_refresh_start()
 {
-    tvs_dns_thread_start();
-}
-
-void tvs_dns_refresh_start()
-{
-    if (!g_tvs_dns_timer) {
-        os_wrapper_start_timer(&g_tvs_dns_timer, tvs_dns_timer_func, DNS_REFRESH_TIMER * 60 * 1000, true);
+    if (!g_tvs_dns_pid) {
+        if (!g_tvs_dns_mutex) {
+            g_tvs_dns_mutex = os_wrapper_create_signal_mutex(0);
+        }
+        g_tvs_dns_start = 1;
+        thread_fork("tvs_dns_thread", 20, 1024, 0, &g_tvs_dns_pid, tvs_dns_timer_func, NULL);
     }
 }
 
 void tvs_dns_refresh_stop()
 {
-    if (g_tvs_dns_timer) {
-        TVS_LOG_PRINTF("stop ping refresh timer\n");
-        os_wrapper_stop_timer(g_tvs_dns_timer);
-        g_tvs_dns_timer = NULL;
+    if (g_tvs_dns_pid) {
+        g_tvs_dns_start = 0;
+        os_wrapper_post_signal(g_tvs_dns_mutex);
+        thread_kill(&g_tvs_dns_pid, KILL_WAIT);
+        g_tvs_dns_pid = 0;
+        os_wrapper_delete_signal_mutex(&g_tvs_dns_mutex);
     }
 
 }
@@ -374,6 +381,7 @@ void tvs_dns_on_network_changed(bool connected)
     if (connected) {
         // 网络重连的时候，需要刷新DNS IP
         tvs_dns_refresh_start();
+    } else {
+        tvs_dns_refresh_stop();
     }
 }
-

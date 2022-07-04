@@ -23,6 +23,8 @@ void tvs_iplist_reset_timer(int time, void *func);
 
 int tvs_iplist_init();
 
+int tvs_iplist_uninit();
+
 bool tvs_iplist_is_timeout();
 
 void tvs_iplist_on_network_changed(bool connected);

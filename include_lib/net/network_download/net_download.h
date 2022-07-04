@@ -41,6 +41,15 @@ enum {
     AI_MEDIA_PRIO,
 };
 
+enum {
+    NET_DOWNLOAD_STATUS_NONE = 0,
+    NET_DOWNLOAD_CONNECT_OK = 1,
+    NET_DOWNLOAD_COMPLETE = 2,
+    NET_DOWNLOAD_CONNECT_FAIL = -1,
+    NET_DOWNLOAD_RECONNECT_MAX = -2,
+    NET_DOWNLOAD_CLOSED_MANUAL = -3,
+};
+
 int net_download_open(void **priv, struct net_download_parm *parm);
 int net_download_read(void *priv, void *buf, u32 len);
 int net_download_seek(void *priv, u32 offset, int orig);
@@ -54,6 +63,9 @@ int net_download_set_pp(void *priv, u8 pp);
 int net_download_set_read_timeout(void *priv, u32 timeout_ms);
 void net_download_buf_inactive(void *priv);
 int net_download_restart(void *priv, struct net_download_parm *parm);
+int net_download_get_status(void *priv);
+int net_download_exit_flag(void *priv);
+int net_download_check_if_is_m3u8_url(void *priv);
 
 #endif
 

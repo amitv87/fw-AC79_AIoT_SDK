@@ -22,6 +22,7 @@
 #include "printf.h"
 #include "sys_arch.h"
 #include "eth/eth_phy.h"
+#include "wifi/wifi_connect.h"
 
 /*#define HAVE_ETH_WIRE_NETIF*/
 /*#define HAVE_LTE_NETIF*/
@@ -34,6 +35,7 @@ extern err_t wireless_ethernetif_init(struct netif *netif);
 extern err_t wired_ethernetif_init(struct netif *netif);
 extern err_t bt_ethernetif_init(struct netif *netif);
 extern err_t lte_ethernetif_init(struct netif *netif);
+extern void ntp_client_get_time(const char *host);
 int set_phy_stats_cb(u8 id, void (*f)(enum phy_state));
 
 int  __attribute__((weak)) lwip_event_cb(void *lwip_ctx, enum LWIP_EVENT event)
@@ -50,7 +52,7 @@ int __attribute__((weak)) set_phy_stats_cb(u8 id, void (*f)(enum phy_state))
     return 0;
 }
 
-void __attribute__((weak)) lwip_netflow(int in_out, int proto_type)
+void __attribute__((weak)) socket_send_but_netif_busy_hook(int s, char type_udp)
 {
 }
 
@@ -60,7 +62,7 @@ static struct lan_setting lan_setting_info = {
     .WIRELESS_IP_ADDR0  = 192,
     .WIRELESS_IP_ADDR1  = 168,
     .WIRELESS_IP_ADDR2  = 0,
-    .WIRELESS_IP_ADDR3  = 100,
+    .WIRELESS_IP_ADDR3  = 1,
 
     .WIRELESS_NETMASK0  = 255,
     .WIRELESS_NETMASK1  = 255,
@@ -89,6 +91,7 @@ static struct lan_setting lan_setting_info = {
 };
 
 static struct netif wireless_netif;
+static u8 lwip_static_ip_renew;
 
 #ifdef HAVE_LTE_NETIF
 static struct netif lte_netif;
@@ -109,6 +112,8 @@ static u32 bt_dhcp_timeout_cnt;
 #define DHCP_TMR_INTERVAL 100  //mill_sec
 static int dhcp_timeout_msec = 15 * 1000;
 static u32 wireless_dhcp_timeout_cnt;
+static u8 get_time_init;
+extern const u8 ntp_get_time_init;
 
 struct lan_setting *net_get_lan_info(void)
 {
@@ -304,6 +309,10 @@ static void network_is_dhcp_bound(struct netif *netif)
             else {
                 lwip_event_cb(NULL, LWIP_WIRE_DHCP_BOUND_SUCC);
             }
+            if (ntp_get_time_init && !get_time_init) {
+                get_time_init = 1;
+                thread_fork("ntp_client_get_time", 10, 1024, 0, 0, ntp_client_get_time, NULL);
+            }
         } else {
             tcpip_untimeout((sys_timeout_handler)network_is_dhcp_bound, netif);//减缓network_is_dhcp_bound 刚好被lwip_renew装载的情况
             if (tcpip_timeout(DHCP_TMR_INTERVAL, (sys_timeout_handler)network_is_dhcp_bound, netif) != ERR_OK) {
@@ -465,6 +474,7 @@ void __lwip_renew(unsigned short parm)
                 LWIP_ASSERT("failed to create timeout network_is_dhcp_bound", 0);
             }
         } else {
+            tcpip_untimeout((sys_timeout_handler)network_is_dhcp_bound, &wireless_netif);
             IP4_ADDR(&ipaddr, lan_setting_info.WIRELESS_IP_ADDR0, lan_setting_info.WIRELESS_IP_ADDR1, lan_setting_info.WIRELESS_IP_ADDR2, lan_setting_info.WIRELESS_IP_ADDR3);
             IP4_ADDR(&netmask, lan_setting_info.WIRELESS_NETMASK0, lan_setting_info.WIRELESS_NETMASK1, lan_setting_info.WIRELESS_NETMASK2, lan_setting_info.WIRELESS_NETMASK3);
             IP4_ADDR(&gw, lan_setting_info.WIRELESS_GATEWAY0, lan_setting_info.WIRELESS_GATEWAY1, lan_setting_info.WIRELESS_GATEWAY2, lan_setting_info.WIRELESS_GATEWAY3);
@@ -472,6 +482,17 @@ void __lwip_renew(unsigned short parm)
 
             lwip_event_cb(NULL, LWIP_WIRELESS_DHCP_BOUND_SUCC);
             Display_IPAddress();
+
+            struct wifi_mode_info info;
+            info.mode = NONE_MODE;
+            wifi_get_mode_cur_info(&info);
+            if (info.mode == STA_MODE) {
+                lwip_static_ip_renew = 1;
+            }
+            if (ntp_get_time_init && !get_time_init && info.mode == STA_MODE) {
+                get_time_init = 1;
+                thread_fork("ntp_client_get_time", 10, 1024, 0, 0, ntp_client_get_time, NULL);
+            }
         }
     }
 #ifdef HAVE_LTE_NETIF
@@ -529,6 +550,7 @@ void lwip_renew(u8_t lwip_netif, u8_t dhcp)
 
 void lwip_dhcp_release_and_stop(u8_t lwip_netif)
 {
+    lwip_static_ip_renew = 0;
     int err;
     err = tcpip_callback((tcpip_callback_fn)dhcp_release_and_stop, (void *)&wireless_netif);
     LWIP_ASSERT("failed to dhcp_release_and_stop tcpip_callback", err == 0);
@@ -967,6 +989,10 @@ int lwip_dhcp_bound(void)
     struct netif *wireless_netif = netif_find("wl0");
     if (wireless_netif == NULL) { //lwip 未初始化
         return 0;
+    }
+
+    if (lwip_static_ip_renew) { //静态IP情况下,可以直接通信
+        return 1;
     }
 
     struct dhcp *dhcp = (struct dhcp *)netif_get_client_data(wireless_netif, LWIP_NETIF_CLIENT_DATA_INDEX_DHCP);

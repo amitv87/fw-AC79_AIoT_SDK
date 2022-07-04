@@ -112,8 +112,14 @@ bool tvs_http_client_cb_cancel_loop(void *exit_param)
     return cancel;
 }
 
+extern bool tvs_check_ping();
 int speech_open_check(void)
 {
+    if (!tvs_check_ping()) {
+        printf("net can't ping, please check it!\n\r");
+        return -1;
+    }
+
     return tvs_is_executor_valid_ex(TVS_EXECUTOR_CMD_SPEECH, false);
 }
 
@@ -540,7 +546,7 @@ int tvs_executor_start_authorize()
         }
 
         TVS_LOG_PRINTF("%s, invalid client id\n", __func__);
-        IOT_Tvs_Auth_Error_Cb(false, TVS_API_ERROR_CLIENT_ID_INVALID);
+        /* IOT_Tvs_Auth_Error_Cb(false, TVS_API_ERROR_CLIENT_ID_INVALID); */
         return TVS_API_ERROR_CLIENT_ID_INVALID;
     }
 

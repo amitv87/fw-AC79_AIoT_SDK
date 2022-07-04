@@ -4,6 +4,8 @@
 #include "tvs_media_player_interface.h"
 #include "tvs_common_def.h"
 
+int tvs_core_uninit(void);
+
 int tvs_core_initialize(tvs_api_callback *callback, tvs_default_config *default_config, tvs_product_qua *qua);
 
 int tvs_core_new_session_id();

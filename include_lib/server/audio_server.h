@@ -170,6 +170,7 @@ struct audio_dec_req {
     u8 digital_gain_div;
     u32 output_buf_len;
     u32 orig_sr;
+    u32 force_sr;
     u32 sample_rate;
     u32 ff_fr_step;
     u32 total_time;

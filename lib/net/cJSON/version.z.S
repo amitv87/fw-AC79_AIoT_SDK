@@ -3,5 +3,5 @@
 .global lib_cjson_version
 
 lib_cjson_version:
-.long 185779110 
-.asciz "CJSON-@20211120-$137952d"
+.long 205249796 
+.asciz "CJSON-@20220703-$a6c087f"

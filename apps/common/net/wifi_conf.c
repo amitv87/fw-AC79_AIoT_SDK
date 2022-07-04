@@ -4,6 +4,7 @@
 #include "asm/crc16.h"
 #include "database.h"
 #include "syscfg/syscfg_id.h"
+#include "lwip.h"
 
 
 /*
@@ -17,6 +18,19 @@ Debug information verbosity: lower values indicate higher urgency
 5:RT_DEBUG_LOUD
 */
 const u8 RTDebugLevel = 2;
+
+const char WL_TX_DEBUG = 0; //WIFI底层发送数据FIFO繁忙打印
+const char WL_RX_DEBUG = 0; //WIFI底层接收FIFO塞满导致丢包打印
+
+const char WL_TX_ERR_RATIO_DEBUG_SEC = 0; //统计每秒TX数据包成功/失败/重发和错误率的情况,配置每隔多少秒打印一次
+
+const char WL_RX_ERR_RATIO_DEBUG_SEC = 0; //统计每秒RX数据包成功/失败/和错误率的情况,配置每隔多少秒打印一次
+const u16 WL_RX_BACK_GROUND_ERR_CNT_PER_SECOND = 10; //硬件少了寄存器统计接收正确包,所以统计正确包和误报率不准,人工设定一个当前环境干扰每秒钟的本底错误包作为弥补,一开始需要先观察打印确认
+
+const u8 WL_TX_PEND_DEBUG_SEC = 2; //WIFI底层FIFO塞满导致连续多少秒都发送不出数据时打印, 一般认为是干扰严重/wifi板TX性能差/CPU被挡等因素导致
+
+const char WL_RX_PEND_DEBUG_SEC = 2; //统计WIFI底层连续多少秒都接收不到空中包时打印,一般认为是进了屏蔽房/加了MAC层过滤/板子硬件性能太差/CPU太繁忙来接收线程来不及取数因素导致
+const char WL_RX_OVERFLOW_DEBUG = 0; //统计WIFI底层接收FIFO塞满导致丢包打印,一般认为对端发送太猛/空中干扰太强/CPU太繁忙来接收线程来不及取数因素导致, 使能后如果出现丢包打印每秒丢多少个数据包
 
 const u8 RxReorderEnable = 0; //过滤wifi 重复数据帧，0为关闭，1为开启
 
@@ -32,6 +46,151 @@ const u16 MAX_PACKETS_IN_MCAST_PS_QUEUE = 8;  //配置WiFi驱动最大发送MCAS
 const u16 MAX_PACKETS_IN_PS_QUEUE	= 16; //配置WiFi驱动最大发送power-save队列	//128	/*16 */
 #endif
 
+const u8 ntp_get_time_init = 1;	//连上网后调用ntp向ntp_host列表所有服务器获取时间, 0为关闭, 1为开启
+
+/*--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+static void print_debug_ipv4(u32 daddr, u32 saddr)
+{
+    put_buf(&daddr, 4);
+    put_buf(&saddr, 4);
+    printf("daddr : %s\n", inet_ntoa(daddr));
+    printf("saddr : %s\n", inet_ntoa(saddr));
+}
+
+//用于根据LWIP接收队列溢出情况下快速丢包减轻CPU负担,预留空间接收重要数据包
+int lwip_low_level_inputput_filter(u8 *pkg, u32 len)
+{
+    static const u8 bc_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+#define ipv4addr_ismulticast(addr) ((addr & PP_HTONL(0xf0000000UL)) == PP_HTONL(0xe0000000UL))
+
+    //根据LWIP接收缓存情况快速丢包减轻CPU负担,并且防止丢失重要重要数据包
+    struct iphdr_e *iph = (struct iphdr_e *)(pkg + 10);
+    u16 protoType = ntohs(iph->h_proto);
+
+    /*------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+#define ICMP_ER   0    /* echo reply */
+#define ICMP_ECHO 8    /* echo */
+    if (iph->iphd.protocol == 1 && *((u8 *)iph + sizeof(struct iphdr_e)) != ICMP_ER && *((u8 *)iph + sizeof(struct iphdr_e)) != ICMP_ECHO) { //如果是ICMP并且不是echo和echo reply就丢弃, 因为是一些Time_Ex等无用包
+        putbyte('I');
+        return -1;
+    }
+    /*------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+#define PBUF_RESERVED_FOR_ARP 1 //最起码预留一个 PBUF_POOL给ARP请求,否则不回复路由器导致断流
+#define PBUF_RESERVED_FOR_TCP (PBUF_RESERVED_FOR_ARP+1)
+    u32 remain_pbuf_pool = memp_get_pbuf_pool_free_cnt();
+    if (remain_pbuf_pool <= PBUF_RESERVED_FOR_TCP) {
+        printf(">>>>>>>>>>>%d\n", remain_pbuf_pool);
+        if (remain_pbuf_pool == 0) { //PBUF_POOL 一个也没了,直接丢弃
+            putbyte('X');
+            return -1;
+        } else if (remain_pbuf_pool <= PBUF_RESERVED_FOR_ARP && protoType != 0x0806) {//PBUF_POOL 在剩余小于 PBUF_RESERVED_FOR_ARP 的情况下, 丢弃非ARP包
+            putbyte('Y');
+            return -1;
+        } else if (!(protoType == 0x0800 && iph->iphd.protocol == 6)) { //PBUF_POOL 在剩余小于 PBUF_RESERVED_FOR_TCP 的情况下, 丢弃非TCP包
+            putbyte('D');
+            return -1;
+        }
+    }
+    /*------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+    return 0;
+}
+
+//在WIFI底层发送队列不足的情况, 预留空间给重要数据包发送
+int lwip_low_level_output_filter(u8 *pkg, u32 len)
+{
+    struct iphdr_e *iph = (struct iphdr_e *)(pkg + 10);
+    u16 protoType = ntohs(iph->h_proto);
+
+
+    u32 remain_wifi_txq = wifi_get_remain_tx_queue(0);
+
+#define WIFI_TXQ_RESERVED_FOR_ARP 1 //最起码预留一个WIFI_TXQ给ARP请求,否则不回复路由器导致断流
+#define WIFI_TXQ_RESERVED_FOR_TCP (WIFI_TXQ_RESERVED_FOR_ARP+1)
+
+    if (remain_wifi_txq <= WIFI_TXQ_RESERVED_FOR_TCP) {
+        if (remain_wifi_txq == 0) { //WIFI_TXQ 一个也没了,直接丢弃
+            putbyte('H');
+            return -1;
+        } else if (remain_wifi_txq <= WIFI_TXQ_RESERVED_FOR_ARP && protoType != 0x0806) {//WIFI_TXQ 在剩余小于 WIFI_TXQ_RESERVED_FOR_ARP 的情况下, 丢弃非ARP包
+            putbyte('J');
+            return -1;
+        } else if (!(protoType == 0x0800 && iph->iphd.protocol == 6)) { //WIFI_TXQ 在剩余小于 WIFI_TXQ_RESERVED_FOR_TCP 的情况下, 丢弃非TCP包
+            putbyte('K');
+            return -1;
+        }
+    }
+    return 0;
+}
+
+//空中干扰/网络拥塞严重的情况,WIFI底层发送较慢,MAX_PACKETS_IN_QUEUE 队列满导致丢弃上层数据包
+void socket_send_but_netif_busy_hook(int s, char type_udp)
+{
+    if (type_udp) {
+        putbyte('$');
+        os_time_dly(30); //根据实际应用发送情况调节, 针对UDP多释放一下CPU, 一方面有利于系统其他线程顺畅运行, 另一方面防止猛发送导致网络拥塞加剧
+    } else {
+        putbyte('|');
+        os_time_dly(2);
+    }
+}
+
+int wifi_recv_pkg_and_soft_filter(u8 *pkg, u32 len)  //通过软件过滤无用数据帧减轻cpu压力,pkg[20]就是对应抓包工具第一个字节的802.11 MAC Header 字段
+{
+#if 0
+    static u32 thdll, count;
+    int ret;
+    ret = time_lapse(&thdll, 1000);
+    if (ret) {
+        printf("sdio_recv_cnt = %d,  %d \r\n", ret, count);
+        count = 0;
+    }
+    ++count;
+#endif
+
+#if 0 //调试用
+
+    static const u8 bc_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+#define ipv4addr_ismulticast(addr) ((addr & PP_HTONL(0xf0000000UL)) == PP_HTONL(0xe0000000UL))
+
+    struct ieee80211_frame *wh = (struct ieee80211_frame *)&pkg[20];
+    if ((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) == IEEE80211_FC0_TYPE_DATA) {// 只丢弃数据帧
+        if (pkg[54] == 0X88 && pkg[55] == 0x8E) {} else //如果是EAPOL不要丢弃
+            if (len >= (52 + sizeof(struct iphdr_e))) {
+                u16 protoType;
+                struct iphdr_e *iph;
+                if (0 == memcmp(bc_mac, wh->i_addr1, 6)) {
+                    //广播
+                    iph = (struct iphdr_e *)((u8 *)pkg + 48);
+                } else {
+                    iph = (struct iphdr_e *)((u8 *)pkg + 52);
+                }
+                protoType = ntohs(iph->h_proto);
+
+                if (protoType == 0x0800) { //ipv4
+                    if (iph->iphd.protocol == 17) { //udp
+                        if (ipv4addr_ismulticast(iph->iphd.daddr)) { //组播
+                            /*putbyte('M');*/
+                        } else {
+                            /*putbyte('U');*/
+                        }
+
+                        /* print_debug_ipv4(iph->iphd.daddr, iph->iphd.saddr); */
+
+                    } else if (iph->iphd.protocol == 6) { //tcp
+                        /*putbyte('T');*/
+                        /* print_debug_ipv4(iph->iphd.daddr, iph->iphd.saddr); */
+                    }
+                } else if (protoType == 0x0806) { //arp
+                    /*putbyte('R');*/
+                }
+            }
+    }
+#endif
+
+    return 0;
+}
+/*--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 
 #if 0
 WirelessMode:

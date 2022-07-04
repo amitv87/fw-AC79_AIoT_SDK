@@ -27,6 +27,8 @@ char *tvs_config_get_current_host();
 
 void tvs_config_init();
 
+void tvs_config_uninit();
+
 void tvs_config_set_current_env(int env);
 
 int tvs_config_get_current_env();

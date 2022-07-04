@@ -323,5 +323,15 @@ extern void wifi_set_long_retry(u8  retry);
 // @brief 设置WIFI底层短帧重传次数
 extern void wifi_set_short_retry(u8  retry);
 
+/**
+ * @brief wifi_get_remain_tx_queue，用于获取WIFI底层发送队列剩余个数
+ *
+ * @param ac_queue 为Qos优先级,用户无配置就是填0
+ *
+ * @return 剩余多少个包可填充,最大为 MAX_PACKETS_IN_QUEUE
+ */
+extern u32 wifi_get_remain_tx_queue(char ac_queue);
+
+
 #endif  //_WIFI_CONNECT_H_
 

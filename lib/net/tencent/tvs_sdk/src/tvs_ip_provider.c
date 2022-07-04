@@ -1,4 +1,3 @@
-
 #define TVS_LOG_DEBUG_MODULE  "IPPROVIDER"
 #include "tvs_log.h"
 
@@ -24,6 +23,7 @@ typedef bool (*tvs_func_on_start)();
 typedef bool (*tvs_func_on_stop)();
 typedef int (*tvs_func_get_count)();
 typedef int (*tvs_func_do_init)();
+typedef int (*tvs_func_do_uninit)();
 typedef void (*tvs_func_on_network_changed)(bool connected);
 
 extern u8 net_connected;
@@ -31,6 +31,7 @@ extern u8 net_connected;
 typedef struct {
     const char *name;
     tvs_func_do_init do_init;
+    tvs_func_do_uninit do_uninit;
     tvs_func_on_start on_start;
     tvs_func_on_stop on_stop;
     tvs_func_get_next_ip get_next_ip;
@@ -53,6 +54,8 @@ static bool g_is_dns_ip = false;
 
 static bool g_running = false;
 
+static int g_index = 0;
+
 TVS_LOCKER_DEFINE
 
 static void tvs_ip_provider_on_ip_invalid_func(tvs_thread_handle_t *thread);
@@ -72,6 +75,7 @@ int tvs_ip_provider_init()
     memset(&g_ip_provider_modules, 0, sizeof(g_ip_provider_modules));
     int index = 0;
     g_ip_provider_modules[index].do_init = tvs_dns_init;
+    g_ip_provider_modules[index].do_uninit = tvs_dns_uninit;
     g_ip_provider_modules[index].on_start = tvs_http_dns_check_start;
     g_ip_provider_modules[index].get_count = tvs_http_dns_get_count;
     g_ip_provider_modules[index].get_next_ip = tvs_http_dns_get_next_ip;
@@ -82,6 +86,7 @@ int tvs_ip_provider_init()
     g_ip_provider_modules[index].dns_ip = true;
     index++;
     g_ip_provider_modules[index].do_init = NULL; // 在tvs_dns_init中已经初始化
+    g_ip_provider_modules[index].do_uninit = NULL; // 在tvs_dns_init中已经初始化
     g_ip_provider_modules[index].on_start = tvs_system_dns_check_start;
     g_ip_provider_modules[index].get_count = tvs_system_dns_get_count;
     g_ip_provider_modules[index].get_next_ip = tvs_system_dns_get_next_ip;
@@ -95,6 +100,7 @@ int tvs_ip_provider_init()
 #if 0
     index++;
     g_ip_provider_modules[index].do_init = tvs_iplist_init;
+    g_ip_provider_modules[index].do_uninit = tvs_iplist_uninit;
     g_ip_provider_modules[index].on_start = tvs_iplist_check_start;
     g_ip_provider_modules[index].get_count = tvs_iplist_get_count;
     g_ip_provider_modules[index].get_next_ip = tvs_iplist_get_next_ip;
@@ -108,6 +114,7 @@ int tvs_ip_provider_init()
     // 预置IP-LIST
     index++;
     g_ip_provider_modules[index].do_init = tvs_iplist_preset_init;
+    g_ip_provider_modules[index].do_uninit = tvs_iplist_preset_uninit;
     g_ip_provider_modules[index].on_start = tvs_iplist_preset_check_start;
     g_ip_provider_modules[index].get_count = tvs_iplist_preset_get_count;
     g_ip_provider_modules[index].get_next_ip = tvs_iplist_preset_get_next_ip;
@@ -118,6 +125,7 @@ int tvs_ip_provider_init()
     g_ip_provider_modules[index].dns_ip = false;
 
     index++;
+    g_index = index;
 
     for (int i = 0; i < index; i++) {
         if (g_ip_provider_modules[i].do_init != NULL) {
@@ -126,6 +134,26 @@ int tvs_ip_provider_init()
     }
 
     return 0;
+}
+
+int tvs_ip_provider_uninit()
+{
+
+    if (!g_ip_provider_thread) {
+        return 0;
+    }
+
+    tvs_thread_uninit(&g_ip_provider_thread);
+
+    for (int i = 0; i < g_index; i++) {
+        if (g_ip_provider_modules[i].do_uninit != NULL) {
+            g_ip_provider_modules[i].do_uninit();
+        }
+    }
+    g_index = 0;
+
+
+    TVS_LOCKER_UNINIT
 }
 
 bool tvs_ip_provider_is_valid(int ipaddr)
@@ -312,6 +340,23 @@ bool tvs_ping_all()
     return ping_count > 0;
 }
 
+#define PING_TIMEOUT_TIME 1000
+extern void cancel_addrinfo(void);
+
+static void *g_tvs_timeout = NULL;
+
+bool tvs_check_ping()
+{
+    os_wrapper_start_timer(&g_tvs_timeout, cancel_addrinfo, PING_TIMEOUT_TIME, false);
+    int ping_count = tvs_ping_host("www.sina.com.cn", 1);
+    if (ping_count > 0) {
+        os_wrapper_stop_timer(g_tvs_timeout);
+        return true;
+    }
+    return false;
+}
+
+
 bool tvs_ping_one()
 {
     int ping_count = 0;
@@ -343,7 +388,7 @@ static int tvs_ip_provider_on_ip_invalid_inner(int ipaddr)
     }
 
     // 首先检查网络通不通
-    bool network_valid = tvs_ping_all();
+    bool network_valid = tvs_ping_one();
 
     if (!network_valid) {
         // 网络不通，不执行查找备用IP的操作
@@ -413,9 +458,9 @@ int tvs_ip_provider_on_ip_invalid(int ipaddr)
     if (!tvs_thread_is_stop(g_ip_provider_thread)) {
         return 0;
     }
-    tvs_thread_start_prepare(g_ip_provider_thread, &ipaddr, sizeof(int));
-
-    tvs_thread_start_now(g_ip_provider_thread, "ipprovider", 2, 1024);
+    if (!tvs_thread_start_prepare(g_ip_provider_thread, &ipaddr, sizeof(int))) {
+        tvs_thread_start_now(g_ip_provider_thread, "ipprovider", 2, 1024);
+    }
 
     return 0;
 }

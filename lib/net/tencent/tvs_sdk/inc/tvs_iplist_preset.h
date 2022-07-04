@@ -11,6 +11,8 @@ int tvs_iplist_preset_get_count();
 
 int tvs_iplist_preset_init();
 
+int tvs_iplist_preset_uninit();
+
 void tvs_iplist_preset_on_network_changed(bool connected);
 
 #endif

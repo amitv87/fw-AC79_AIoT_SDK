@@ -115,7 +115,6 @@ icmp_input(struct pbuf *p, struct netif *inp)
         MIB2_STATS_INC(mib2.icmpinechoreps);
         break;
     case ICMP_ECHO:
-        lwip_netflow(0, IP_PROTO_ICMP);
         MIB2_STATS_INC(mib2.icmpinechos);
         src = ip4_current_dest_addr();
         /* multicast destination address? */

@@ -132,7 +132,7 @@ iperf_udp_recv(struct iperf_stream *sp)
     sp->jitter += (d - sp->jitter) / 16.0;
 
     if (sp->test->debug) {
-        printf("packet_count %d\n", sp->packet_count);
+        /*printf("packet_count %d\n", sp->packet_count);*/
     }
 
     return r;
@@ -229,7 +229,7 @@ iperf_udp_buffercheck(struct iperf_test *test, int s)
             return -1;
         }
         if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, &opt, sizeof(opt)) < 0) {
-            puts("lwip not support SD_SNDBUF\n");
+            puts("IPERF lwip not support SD_SNDBUF\n");
             /*i_errno = IESETBUF;*/
             /*return -1;*/
         }
@@ -242,7 +242,7 @@ iperf_udp_buffercheck(struct iperf_test *test, int s)
         if (sndbuf_actual == 0) {
             sndbuf_actual = test->settings->blksize;    //modify by shunjian
         }
-        puts("lwip not support SD_SNDBUF\n");
+        puts("IPERF lwip not support SD_SNDBUF\n");
         //i_errno = IESETBUF;
         //return -1;
     }
@@ -372,7 +372,7 @@ iperf_udp_accept(struct iperf_test *test)
         unsigned int rate = test->settings->rate / 8;
         if (rate > 0) {
             if (test->debug) {
-                printf("Setting application pacing to %u\n", rate);
+                printf("Setting application pacing to %uKB\n", rate / 1024);
             }
         }
     }
@@ -487,7 +487,7 @@ iperf_udp_connect(struct iperf_test *test)
         unsigned int rate = test->settings->rate / 8;
         if (rate > 0) {
             if (test->debug) {
-                printf("Setting application pacing to %u\n", rate);
+                printf("Setting application pacing to %uKB\n", rate / 1024);
             }
         }
     }

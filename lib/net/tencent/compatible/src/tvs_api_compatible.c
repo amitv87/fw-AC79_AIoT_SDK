@@ -133,6 +133,15 @@ int tvs_api_init(tvs_api_callback *api_callbacks, tvs_default_config *config, tv
     return tvs_core_initialize(api_callbacks, config, produce_qua);
 }
 
+int tvs_api_uninit(void)
+{
+    tvs_core_uninit();
+
+    TVS_LOCKER_UNINIT
+
+    return 0;
+}
+
 void tvs_api_set_env(tvs_api_env env)
 {
 

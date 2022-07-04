@@ -361,7 +361,6 @@ igmp_input(struct pbuf *p, struct netif *inp, const ip4_addr_t *dest)
         LWIP_DEBUGF(IGMP_DEBUG, ("igmp_input: IGMP frame not for us\n"));
         return;
     }
-    lwip_netflow(0, IP_PROTO_IGMP);
 
     /* NOW ACT ON THE INCOMING MESSAGE TYPE... */
     switch (igmp->igmp_msgtype) {

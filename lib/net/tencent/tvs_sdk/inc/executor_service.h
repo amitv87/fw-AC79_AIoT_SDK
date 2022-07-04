@@ -48,7 +48,8 @@ void executor_service_start_head(int cmd, executor_runnable_function runnable,
 void executor_service_cancel_cmds(int cmd);
 
 int get_current_node(void);
-void executor_service_stop_all_activities(int cms_activities_start);
+void executor_service_stop_all_activities(int cmd_activities_start);
+void executor_service_del_all_activities(int cmd_activities_start);
 
 #ifdef __cplusplus
 }

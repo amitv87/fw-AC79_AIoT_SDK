@@ -15,7 +15,7 @@
 #include "tvs_log.h"
 
 static u16_t PING_IDs = 0x1234;
-#define PING_TO		3000    /* timeout to wait every reponse(ms) */
+#define PING_TO		300    /* timeout to wait every reponse(ms) */
 #define PING_ID		0xABCD
 #define PING_DATA_SIZE	100     /* size of send frame buff, not include ICMP frma head */
 #define PING_IP_HDR_SIZE	40
@@ -112,6 +112,12 @@ static void ping_timeout(void *arg)
     sys_timeout(ping->delayms, ping_timeout, ping);
 }
 
+static int tvs_ping_time;
+int get_ping_recv_time()
+{
+    return tvs_ping_time;
+}
+
 /* Ping using the raw ip */
 static u8_t ping_recv(void *arg, struct raw_pcb *pcb, struct pbuf *p, const ip_addr_t *addr)
 {
@@ -127,6 +133,7 @@ static u8_t ping_recv(void *arg, struct raw_pcb *pcb, struct pbuf *p, const ip_a
             TVS_LOG_PRINTF("ping: recv ");
             ip_addr_debug_print(LWIP_DBG_ON, addr);
             TVS_LOG_PRINTF("%lu ms\n", GET_TICKS() - ping->ping_time);
+            tvs_ping_time = GET_TICKS() - ping->ping_time;
             ++ping->succ_cnt;
             sys_untimeout(ping_timeout, ping);
             ping_timeout(ping);

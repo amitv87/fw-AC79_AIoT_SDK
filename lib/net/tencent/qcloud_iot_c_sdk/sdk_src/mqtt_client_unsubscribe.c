@@ -195,6 +195,7 @@ int qcloud_iot_mqtt_unsubscribe(Qcloud_IoT_Client *pClient, char *topicFilter)
     }
 
     HAL_MutexUnlock(pClient->lock_write_buf);
+    HAL_Free(topic_filter_stored);
 
     IOT_FUNC_EXIT_RC(packet_id);
 }

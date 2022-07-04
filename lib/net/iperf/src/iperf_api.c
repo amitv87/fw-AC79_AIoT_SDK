@@ -2019,6 +2019,10 @@ add_to_interval_list(struct iperf_stream_result *rp, struct iperf_interval_resul
     struct iperf_interval_results *irp;
 
     irp = (struct iperf_interval_results *) malloc(sizeof(struct iperf_interval_results));
+    if (irp == NULL) {
+        printf("iperf add_to_interval_list malloc fail \r\n");
+        return;
+    }
     memcpy(irp, new, sizeof(struct iperf_interval_results));
     TAILQ_INSERT_TAIL(&rp->interval_results, irp, irlistentries);
 }
@@ -2648,6 +2652,18 @@ iperf_print_intermediate(struct iperf_test *test)
             }
         }
     }
+
+//FIX MEM LEAK
+    SLIST_FOREACH(sp, &test->streams, streams) {
+        struct iperf_interval_results *nirp;
+        for (irp = TAILQ_FIRST(&sp->result->interval_results); irp != NULL; irp = nirp) {
+            nirp = TAILQ_NEXT(irp, irlistentries);
+            if (nirp != NULL) {
+                TAILQ_REMOVE(&sp->result->interval_results, irp, irlistentries);
+                free(irp);
+            }
+        }
+    }
 }
 
 /**
@@ -3151,6 +3167,12 @@ print_interval_results(struct iperf_test *test, struct iperf_stream *sp, cJSON *
             if (test->json_output) {
                 iperf_cJSON_AddItemToArray(json_interval_streams, iperf_json_printf("socket: %d  start: %f  end: %f  seconds: %f  bytes: %d  bits_per_second: %f  packets: %d  omitted: %b", (int64_t) sp->socket, (double) st, (double) et, (double) irp->interval_duration, (int64_t) irp->bytes_transferred, bandwidth * 8, (int64_t) irp->interval_packet_count, irp->omitted));
             } else {
+                if (sp->test->debug) {
+                    if (!(sp->target++ % 30)) {
+                        puts("\r\n[ID] Interval   Packets      Bandwidth\r\n");
+                    }
+                    printf(" %d   [%.0f-%.0f]      %d        %llu KB/sec > %s", sp->socket, st, et, irp->interval_packet_count, irp->bytes_transferred / 1024, irp->omitted ? " (OMITTING)" : " ");
+                }
                 iperf_printf(test, report_bw_udp_sender_format, sp->socket, st, et, ubuf, nbuf, irp->interval_packet_count, irp->omitted ? report_omitted : "");
             }
         } else {
@@ -3162,6 +3184,12 @@ print_interval_results(struct iperf_test *test, struct iperf_stream *sp, cJSON *
             if (test->json_output) {
                 iperf_cJSON_AddItemToArray(json_interval_streams, iperf_json_printf("socket: %d  start: %f  end: %f  seconds: %f  bytes: %d  bits_per_second: %f  jitter_ms: %f  lost_packets: %d  packets: %d  lost_percent: %f  omitted: %b", (int64_t) sp->socket, (double) st, (double) et, (double) irp->interval_duration, (int64_t) irp->bytes_transferred, bandwidth * 8, (double) irp->jitter * 1000.0, (int64_t) irp->interval_cnt_error, (int64_t) irp->interval_packet_count, (double) lost_percent, irp->omitted));
             } else {
+                if (sp->test->debug) {
+                    if (!(sp->target++ % 30)) {
+                        puts("\r\n[ID] Interval         Jitter   LostRate            OutOfOrder    Bandwidth\r\n");
+                    }
+                    printf(" %d   [%.0f-%.0f]         %.0fms     %.2f%%(%d / %d)       %d        %llu KB/sec < %s", sp->socket, st, et, irp->jitter * 1000.0, lost_percent, irp->interval_cnt_error, irp->interval_packet_count, irp->interval_outoforder_packets, irp->bytes_transferred / 1024, irp->omitted ? " (OMITTING)" : " ");
+                }
                 iperf_printf(test, report_bw_udp_format, sp->socket, st, et, ubuf, nbuf, irp->jitter * 1000.0, irp->interval_cnt_error, irp->interval_packet_count, lost_percent, irp->omitted ? report_omitted : "");
             }
         }
@@ -3257,9 +3285,9 @@ iperf_new_stream(struct iperf_test *test, int s)
         return NULL;
     }
 //    srandom(time(NULL));
-    for (i = 0; i < test->settings->blksize; ++i) {
-        sp->buffer[i] = random32(0);
-    }
+    /*for (i = 0; i < test->settings->blksize; ++i) {*/
+    /*sp->buffer[i] = random32(0);*/
+    /*}*/
 
     /* Set socket */
     sp->socket = s;

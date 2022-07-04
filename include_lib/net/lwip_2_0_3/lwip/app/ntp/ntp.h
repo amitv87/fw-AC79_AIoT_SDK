@@ -24,7 +24,102 @@
  *  @{
  */
 
+//此处添加ntp服务器,请自行测试npt服务器是否正常
+static const char *ntp_host[] = {
+    "s2a.time.edu.cn",
+    "s2b.time.edu.cn",
+    "s2c.time.edu.cn",
+    // "s2d.time.edu.cn",
+    // "s2e.time.edu.cn",
+    // "s2f.time.edu.cn",
+    // "s2g.time.edu.cn",
+    // "s2h.time.edu.cn",
+    // "s2j.time.edu.cn",
+    // "s2k.time.edu.cn",
+    // "s2m.time.edu.cn",
+};
+
+#define NTP_HOST_NUM ARRAY_SIZE(ntp_host)
+
 #define NTP_DBUG_INFO_ON	0		/*!< NTP client debug information on/off */
+#define NTP_ERR_INFO_ON		1		/*!< NTP client error information on/off */
+
+
+/*----------------------------------------------------------------------------*/
+/**@brief  Get time from ntp server
+   @param  host: NTP server host name
+   @param  s_tm: Save time information
+   @param  recv_to: The value of socket receive timeout(ms)
+   @return 0: sucess
+   @return -1: fail
+*/
+/*----------------------------------------------------------------------------*/
+int ntp_client_get_time_once(const char *host, struct tm *s_tm, int recv_to);
+
+
+
+/*----------------------------------------------------------------------------*/
+/**@brief  Get time from all ntp_host list server
+   @param  s_tm: Save time information
+   @param  recv_to: The value of socket receive timeout(ms)
+   @return 0: sucess
+   @return -1: fail
+*/
+/*----------------------------------------------------------------------------*/
+int ntp_client_get_time_all(struct tm *s_tm, int recv_to);
+
+
+
+/*----------------------------------------------------------------------------*/
+/**@brief  Get the status of the time from ntp server
+   @return 1: sucess
+   @return 0: fail or still getting
+   @note
+*/
+/*----------------------------------------------------------------------------*/
+u8 ntp_client_get_time_status(void);
+
+
+
+/*----------------------------------------------------------------------------*/
+/**@brief  	Get time from ntp server,and save to the rtc,if it has.
+   @param  	host: NTP server host name, if NULL, it will visit all the ntp_host list.
+   @note 	This api is a loop, is will exit when getting time successful or calling ntp_client_get_time_exit function.
+   @note	When it succeed, it will post the net_event NET_NTP_GET_TIME_SUCC and set the ntp_client_time_status to 1.
+*/
+/*----------------------------------------------------------------------------*/
+void ntp_client_get_time(const char *host);
+
+
+
+
+/*----------------------------------------------------------------------------*/
+/**@brief  	Exit the ntp_client_get_time function.
+*/
+/*----------------------------------------------------------------------------*/
+void ntp_client_get_time_exit(void);
+
+
+
+/*----------------------------------------------------------------------------*/
+/**@brief  clear the status of the time from ntp server
+*/
+/*----------------------------------------------------------------------------*/
+void ntp_client_get_time_clear(void);
+
+/*! @}*/
+
+
+
+
+
+
+
+
+
+
+
+#if 0	//此API未用到
 
 #define NTP_CLIENT_THREAD_PRIO	22		/*!< The priority of NTP client thread  */
 
@@ -96,20 +191,9 @@ int ntp_client_start(void);
 /*----------------------------------------------------------------------------*/
 void ntp_client_uninit(void);
 
+#endif
 
-/*----------------------------------------------------------------------------*/
-/**@brief  Get time from ntp server
-   @param  host: NTP server host name
-   @param  s_tm: Save time information
-   @param  recv_to: The value of socket receive timeout(ms)
-   @return 0: sucess
-   @return -1: fail
-   @note	This api is independent, not need to call ntp_client_init and ntp_client_uninit, it only get once
-*/
-/*----------------------------------------------------------------------------*/
-int ntp_client_get_time_once(const char *host, struct tm *s_tm, int recv_to);
 
-/*! @}*/
 
 #endif
 

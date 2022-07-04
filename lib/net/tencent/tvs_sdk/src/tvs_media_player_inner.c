@@ -183,6 +183,9 @@ int tvs_media_player_inner_pause_play()
 
     //添加一个pause判断, 已经pause上报了不在重复上报
     if (g_tvs_playback_state == TVS_PLAYBACK_PAUSED) {
+        if (alarm_rings) {
+            tvs_media_player_pause_play(g_player_token);
+        }
         do_unlock();
         TVS_LOG_PRINTF("already paused\n");
         return 0;
@@ -227,14 +230,11 @@ int tvs_media_player_inner_start_play()
     }
 
     if (g_tvs_playback_state == TVS_PLAYBACK_NEW_SOURCE) {
-        //这个可以不用调用，因为在外层也会调用upload_start
-        /* set_player_state(TVS_PLAYBACK_STARTED); */
-        /* upload_player_started();	 */
 
         TVS_LOG_PRINTF("call tvs_media_player_start_play\n");
         ret = tvs_media_player_start_play(g_player_token);
     } else {
-        if (!is_current_media_end()) {
+        if (!is_current_media_end() && !alarm_rings) {
             set_player_state(TVS_PLAYBACK_RESUMED);
             tvs_media_player_inner_upload_song_status(TVS_PLAYBACK_RESUMED);
             TVS_LOG_PRINTF("call tvs_media_player_resume_play\n");
@@ -328,6 +328,11 @@ void tvs_media_player_inner_init()
     TVS_LOCKER_INIT
 
     tvs_media_player_init();
+}
+
+void tvs_media_player_inner_uninit()
+{
+    TVS_LOCKER_UNINIT
 }
 
 void tvs_core_notify_media_player_on_play_finished(const char *token)

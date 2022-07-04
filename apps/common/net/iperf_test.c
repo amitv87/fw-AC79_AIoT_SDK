@@ -14,12 +14,12 @@ static void iperf_test_thread(void *priv)
     char *argv[32] = {"iperf3", 0}; //p:f:i:D1VJvsc:ub:t:n:k:l:P:Rw:B:M:N46S:L:ZO:F:A:T:C:dI:hX:
 
     argv[++argc] = "-i";
-    argv[++argc] = "60";
+    argv[++argc] = "1";
     argv[++argc] = "-s";
     argv[++argc] = "-p";
-    argv[++argc] = "5001";
+    argv[++argc] = (char *)priv;
 //    argv[++argc] = "-V";
-//    argv[++argc] = "-d";
+    argv[++argc] = "-d";
 #else
     int argc = 0;
     char *argv[32] = {"iperf3", 0}; //p:f:i:D1VJvsc:ub:t:n:k:l:P:Rw:B:M:N46S:L:ZO:F:A:T:C:dI:hX:
@@ -49,7 +49,9 @@ void iperf_test(void)
 #ifdef CONFIG_IPERF_ENABLE
     static int iperf_test_pid;
     if (iperf_test_pid == 0) {
-        thread_fork("iperf_test", 16, 1024, 0, &iperf_test_pid, iperf_test_thread, 0);
+        thread_fork("iperf_test", 16, 1024, 0, &iperf_test_pid, iperf_test_thread, "5001");
+        os_time_dly(2); //防止iperf_main 重入
+        thread_fork("iperf_test2", 16, 1024, 0, 0, iperf_test_thread, "5000");
     }
 #endif
 }
@@ -527,4 +529,5 @@ void iperf2_multicast_recv_test(void)
     thread_fork("iperf2_multicast_recv", 16, 1024, 0, 0, iperf2_multicast_recv, 0);
 }
 #endif
+
 

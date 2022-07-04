@@ -420,7 +420,7 @@ static void wifi_app_task(void *priv)
 #endif
 
     net_app_init();
-    sys_timer_add(NULL, wifi_app_timer_func, 3 * 1000);
+    sys_timer_add_to_task("sys_timer", NULL, wifi_app_timer_func, 3 * 1000);
 }
 
 void wifi_sta_connect(char *ssid, char *pwd, char save, void *priv)

@@ -6,6 +6,7 @@
 #include "tvs_config.h"
 #include "tvs_audio_recorder_interface.h"
 #include "tvs_jsons.h"
+#include "tvs_api_config.h"
 
 #define TVS_LOG_DEBUG_MODULE  "SPEECH"
 #include "tvs_log.h"
@@ -333,6 +334,13 @@ int tvs_speech_manager_init()
     return 0;
 }
 
+int tvs_speech_manager_uninit()
+{
+    TVS_LOCKER_UNINIT
+
+    return 0;
+}
+
 int tvs_speech_manager_start(tvs_speech_manager_config *speech_config,
                              tvs_http_client_callback_exit_loop should_exit_func,
                              tvs_http_client_callback_should_cancel should_cancel,
@@ -370,8 +378,15 @@ int tvs_speech_manager_start(tvs_speech_manager_config *speech_config,
 
     char *url = tvs_config_get_event_url();
     speech_param.dialog_id = do_create_msg_id();
+
+#if RECORD_USE_PCM_ENABLE
+    char *payload = get_speech_recognize_request_body(true, bitrate == 8000, speech_param.dialog_id,
+                    /* char *payload = get_speech_recognize_request_body(false, bitrate == 8000, speech_param.dialog_id, */
+                    speech_config->type, speech_config->wakeword, speech_config->startIndexInSamples, speech_config->endIndexInSamples);
+#else
     char *payload = get_speech_recognize_request_body(true, bitrate == 8000, speech_param.dialog_id,
                     speech_config->type, speech_config->wakeword, speech_config->startIndexInSamples, speech_config->endIndexInSamples);
+#endif
 
     if (NULL == payload) {
         if (NULL != speech_param.dialog_id) {

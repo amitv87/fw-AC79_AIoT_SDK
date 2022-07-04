@@ -121,7 +121,7 @@ extern const char *bt_get_local_name();
 #define DEFAULT_PWD_MAX_LEN			64		//默认pwd最大长度
 #define DEFAULT_TOKEN_LEN			32		//默认token长度
 
-extern int lwip_dhcp_bound(void);
+extern int net_dhcp_ready(void);
 extern void ble_wifi_config(void);
 extern void qiot_device_bind_set_token(const char *token);
 extern void tencent_net_config(const char *recv_buf, int recv_len, u8 mode);
@@ -452,7 +452,7 @@ static void send_wifi_report()
 int tc_wait_wifi_conn(void)
 {
     int cnt = 0;
-    while (!lwip_dhcp_bound()) {     //等待20s,检测wifi连接状态
+    while (!net_dhcp_ready()) {     //等待20s,检测wifi连接状态
         os_time_dly(20);
         cnt++;
         if (cnt >= WIFI_CONN_CNT) {

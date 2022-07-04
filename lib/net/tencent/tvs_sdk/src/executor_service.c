@@ -8,7 +8,7 @@
 * 无需重新执行）
 */
 #include "executor_service.h"
-#define TVS_LOG_DEBUG  0
+#define TVS_LOG_DEBUG  1
 #define TVS_LOG_DEBUG_MODULE  "EXECSER"
 #include "tvs_log.h"
 #include "tvs_state.h"
@@ -17,6 +17,10 @@
 static executor_list *g_executor_list = 0;
 
 static void *g_waiter_mutex = NULL;
+
+static void *g_executor_pid = NULL;
+
+static u8 executor_running = 0;
 
 TVS_LOCKER_DEFINE
 
@@ -96,7 +100,7 @@ static void executor_start_head(executor_list_node *new_node)
 
 static void executor_thread(void *param)
 {
-    while (1) {
+    while (executor_running || get_current_node()) {
         do_lock();
         executor_list_node *node = executor_list_get_head(g_executor_list);
 
@@ -150,6 +154,8 @@ static void executor_thread(void *param)
             do_unlock();
         }
     }
+    TVS_LOG_PRINTF("%s exit\n", __func__);
+
 }
 
 void executor_service_init()
@@ -164,7 +170,26 @@ void executor_service_init()
     // 创建一个初始值为0的二值信号量用于等待队列中有任务
     g_waiter_mutex = os_wrapper_create_signal_mutex(0);
 
-    os_wrapper_start_thread(executor_thread, NULL, "executor", 3, 2048);
+    executor_running = 1;
+    g_executor_pid = os_wrapper_start_thread(executor_thread, NULL, "executor", 3, 2048);
+}
+
+void executor_service_uninit()
+{
+    executor_running = 0;
+    executor_service_del_all_activities(0);
+
+    executor_notify();
+    //等待线程退出
+    os_wrapper_thread_delete(&g_executor_pid);
+
+    if (g_executor_list) {
+        HAL_Free(g_executor_list);
+        g_executor_list = NULL;
+    }
+
+    os_wrapper_delete_signal_mutex(&g_waiter_mutex);
+    TVS_LOCKER_UNINIT
 }
 
 
@@ -192,10 +217,11 @@ static executor_list_node *create_node(int cmd, executor_runnable_function runna
 // cancel当前队列中指定cmd的所有节点
 void executor_service_cancel_cmds(int cmd)
 {
-    TVS_LOG_PRINTF("cancel cmds start\n");
+    TVS_LOG_PRINTF("cancel cmds %d start\n", cmd);
     do_lock();
-    executor_list_node *node = g_executor_list->head;
+    executor_list_node *node = executor_list_get_head(g_executor_list);
     executor_node_param *param = NULL;
+    int i = 0;
     while (node != NULL) {
         if (node->param != NULL) {
             param = (executor_node_param *)(node->param);
@@ -223,7 +249,7 @@ int get_current_node(void)
 }
 
 // 用于cancel当前队列中，所有cmd值大于cms_activities_start的节点
-void executor_service_stop_all_activities(int cms_activities_start)
+void executor_service_stop_all_activities(int cmd_activities_start)
 {
     TVS_LOG_PRINTF("%s\n", __func__);
     do_lock();
@@ -231,13 +257,45 @@ void executor_service_stop_all_activities(int cms_activities_start)
     if (current_node != NULL && current_node->param != NULL) {
         executor_node_param *param = (executor_node_param *)(current_node->param);
         int cmd = param->cmd;
-        if (cmd >= cms_activities_start) {
+        if (cmd >= cmd_activities_start) {
             TVS_LOG_PRINTF("cancel node %p, cmd %d\n", current_node, cmd);
             param->cancel = 1;
         }
     }
     do_unlock();
     TVS_LOG_PRINTF("%s end\n", __func__);
+}
+
+//遍历所有node, 将cancel置1, 用于删除所有节点
+void executor_service_del_all_activities(int cmd_activities_start)
+{
+    TVS_LOG_PRINTF("%s\n", __func__);
+    do_lock();
+    if (!g_executor_list) {
+        TVS_LOG_PRINTF("%s end\n", __func__);
+        do_unlock();
+    }
+
+    executor_list_node *current_head = executor_list_get_head(g_executor_list);
+    executor_list_node *node = current_head;
+    do {
+        if (node != NULL && node->param != NULL) {
+            executor_node_param *param = (executor_node_param *)(node->param);
+            int cmd = param->cmd;
+            if (cmd >= cmd_activities_start) {
+                TVS_LOG_PRINTF("cancel node %p, cmd %d\n", node, cmd);
+                param->cancel = 1;
+            }
+            node = node->next;
+        } else {
+            break;
+        }
+    } while (node != current_head);
+
+
+    do_unlock();
+    TVS_LOG_PRINTF("%s end\n", __func__);
+
 }
 
 void executor_service_start_immediately(int cmd, executor_runnable_function runnable,

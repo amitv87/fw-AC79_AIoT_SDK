@@ -4,6 +4,8 @@
 
 int tvs_authorizer_init();
 
+int tvs_authorizer_uninit();
+
 char *tvs_authorizer_get_authtoken();
 
 int tvs_authorizer_manager_start(const char *client_id, const char *refresh_token,

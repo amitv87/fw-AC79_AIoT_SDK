@@ -107,9 +107,9 @@ static void tvs_authorizer_clear_not_lock(bool clear_authorization)
     if (clear_authorization && g_tvs_authorization != NULL) {
         TVS_FREE(g_tvs_authorization);
         g_tvs_authorization = NULL;
+        //云小微工程师添加该函数
+        tvs_down_channel_break();
     }
-    //云小微工程师添加该函数
-    tvs_down_channel_break();
 }
 
 static void auth_timer_func(void *param)
@@ -169,6 +169,7 @@ void tvs_authorizer_set_current_client_id(char *client_id)
     }
     if (g_current_client_id != NULL) {
         TVS_FREE(g_current_client_id);
+        g_current_client_id = NULL;
     }
 
     g_current_client_id = client_id == NULL ? NULL : strdup(client_id);
@@ -199,6 +200,7 @@ int tvs_authorizer_set_manuf_current_client_id(const char *client_id, const char
     cJSON *sessionId = cJSON_GetObjectItem(root, "sessionId");
     if (authCode == NULL || sessionId == NULL) {
         TVS_LOG_PRINTF("%s call error,auth resp info not found authCode or sessionId!!!", __func__);
+        cJSON_Delete(root);
         return -1;
     }
 
@@ -212,9 +214,11 @@ int tvs_authorizer_set_manuf_current_client_id(const char *client_id, const char
         g_auth_is_manuf = true;
         tvs_auth_set_authCode(authCode->valuestring, strlen(authCode->valuestring));
         tvs_authorizer_set_current_client_id((char *)client_id);		//yii:设置clientID跟取消之前的授权
+        cJSON_Delete(root);
         return 0;
     } else {
         TVS_LOG_PRINTF("%s call error,auth resp info format error:%s!!!", __func__, auth_resp_info);
+        cJSON_Delete(root);
         return -1;
     }
 }
@@ -339,6 +343,7 @@ static void do_callback(bool success, int error, char *client_id, char *refresh_
 
     if (auth_info) {
         TVS_FREE(auth_info);
+        auth_info = NULL;
     }
 }
 
@@ -353,12 +358,14 @@ static void on_auth_complete(bool success, tvs_authorizer_param *param)
         // 授权成功，保存结果到RAM中
         if (g_tvs_authorization != NULL) {
             TVS_FREE(g_tvs_authorization);
+            g_tvs_authorization = NULL;
         }
 
         g_tvs_authorization = strdup(param->authorization);
 
         if (g_refresh_token != NULL) {
             TVS_FREE(g_refresh_token);
+            g_refresh_token = NULL;
         }
 
         // 保存refresh token,用于刷票
@@ -507,10 +514,12 @@ void tvs_authorizer_callback_on_loop_end(tvs_http_client_param *param)
 
     if (auth_param->authorization != NULL) {
         TVS_FREE(auth_param->authorization);
+        auth_param->authorization = NULL;
     }
 
     if (auth_param->refresh_token != NULL) {
         TVS_FREE(auth_param->refresh_token);
+        auth_param->refresh_token = NULL;
     }
 }
 
@@ -565,6 +574,22 @@ int tvs_authorizer_init()
     return 0;
 }
 
+int tvs_authorizer_uninit()
+{
+    if (g_tvs_product_id) {
+        TVS_FREE(g_tvs_product_id);
+        g_tvs_product_id = NULL;
+    }
+    if (g_tvs_dsn) {
+        TVS_FREE(g_tvs_dsn);
+        g_tvs_dsn = NULL;
+    }
+
+    TVS_LOCKER_UNINIT
+
+    return 0;
+}
+
 // 开始授权/刷票
 int tvs_authorizer_manager_start(const char *client_id, const char *refresh_token,
                                  tvs_http_client_callback_exit_loop should_exit_func,
@@ -578,7 +603,7 @@ int tvs_authorizer_manager_start(const char *client_id, const char *refresh_toke
 
     if (!tvs_authorizer_check_client_id((char *)client_id)) {
         TVS_LOG_PRINTF("client id %s is out of date\n", client_id);
-        IOT_Tvs_Auth_Error_Cb(false, -2);
+        /* IOT_Tvs_Auth_Error_Cb(false, -2); */
         return -1;
     }
 
@@ -667,7 +692,7 @@ static int load_auth_info(const char *authorize_info, int len)
         return ret;
     }
     do {
-        cJSON *root =  cJSON_Parse(authorize_info);
+        root =  cJSON_Parse(authorize_info);
 
         if (root == NULL) {
             TVS_LOG_PRINTF("invalid auth info: %.*s\n", len, authorize_info);

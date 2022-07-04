@@ -396,7 +396,7 @@ const struct wifi_calibration_param wifi_calibration_param = {
     .xosc_l     = 0xa,// 调节晶振左电容
     .xosc_r     = 0xa,// 调节晶振右电容
     .pa_trim_data = {5, 5, 2, 3, 11, 0},// 根据MP测试生成PA TRIM值
-    .mcs_dgain    = {
+    .mcs_dgain    = { //如果IOVDD使用内部LDO供电,  由于IOVDD带载能力有限，各个速率发射功率限定在14dbm以内
         32,//11B_1M
         32,//11B_2.2M
         32,//11B_5.5M

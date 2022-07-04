@@ -1,4 +1,3 @@
-
 #define TVS_LOG_DEBUG_MODULE  "ping"
 #include "tvs_log.h"
 
@@ -7,10 +6,22 @@
 #include "tvs_config.h"
 #include "tvs_http_client.h"
 #include "tvs_http_manager.h"
-
+#include "tvs_api_config.h"
 #include "net_ping.h"
+#include "os/os_api.h"
 
 extern int mg_resolve2(const char *host, struct in_addr *ina);
+extern bool tvs_ping_one();
+extern int get_ping_recv_time();
+extern u8 net_connected;
+
+
+static void *g_tvs_ping_mutex = NULL;
+static int g_tvs_ping_pid;
+static int g_tvs_ping_start;
+
+#define REFRESH_TIMER     210 // 时间间隔
+
 
 int tvs_ping_host(const char *host, int times)
 {
@@ -80,9 +91,9 @@ int tvs_ping_start(const char *host)
 
     pdata.sin_addr.addr = ipaddr;
 
-    tvs_thread_start_prepare(g_thread, &pdata, sizeof(ping_data));
-
-    tvs_thread_start_now(g_thread, "ping", 2, 1024);
+    if (!tvs_thread_start_prepare(g_thread, &pdata, sizeof(ping_data))) {
+        tvs_thread_start_now(g_thread, "ping", 2, 1024);
+    }
 }
 #endif
 
@@ -97,11 +108,11 @@ void tvs_ping_callback_on_connect(void *connection, int error_code, tvs_http_cli
 
 void tvs_ping_callback_on_response(void *connection, int ret_code, const char *response, int response_len, tvs_http_client_param *param)
 {
-    /*if (ret_code == 200 || ret_code == 204) {
-    	TVS_LOG_PRINTF("ping success\n");
-    } else {
-    	TVS_LOG_PRINTF("get resonse err %d\n", ret_code);
-    }*/
+    /* if (ret_code == 200 || ret_code == 204) { */
+    /* TVS_LOG_PRINTF("ping success\n"); */
+    /* } else { */
+    /* TVS_LOG_PRINTF("get resonse err %d\n", ret_code); */
+    /* } */
 }
 
 void tvs_ping_callback_on_close(void *connection, int by_server, tvs_http_client_param *param) { }
@@ -150,28 +161,54 @@ bool tvs_ping_start(tvs_http_client_callback_exit_loop should_exit_func,
     return ret == 200;
 }
 
-static void *g_tvs_ping_timer = NULL;
-#define REFRESH_TIMER     210 // 时间间隔
 
 void tvs_ping_timer_func(void *param)
 {
-    tvs_executor_start_ping();
+    while (g_tvs_ping_start) {
+        tvs_executor_start_ping();
+        os_wrapper_wait_signal(g_tvs_ping_mutex, REFRESH_TIMER * 1000);
+    }
+}
+
+void tvs_ping_one_func()
+{
+    if (g_tvs_ping_start) {
+        return ;
+    }
+    g_tvs_ping_start = 1;
+    if (tvs_ping_one()) {
+        if (get_ping_recv_time() < 100) {
+            //网络良好
+        } else {
+            //网络较差
+        }
+    } else {
+        //网络不通
+        net_connected = 0;
+    }
+    g_tvs_ping_start = 0;
 }
 
 void tvs_ping_refresh_start()
 {
     if (tvs_config_is_down_channel_enable()) {
-        if (!g_tvs_ping_timer) {
-            os_wrapper_start_timer(&g_tvs_ping_timer, tvs_ping_timer_func, REFRESH_TIMER * 1000, true);
+        if (!g_tvs_ping_pid) {
+            if (!g_tvs_ping_mutex) {
+                g_tvs_ping_mutex = os_wrapper_create_signal_mutex(0);
+            }
+            g_tvs_ping_start = 1;
+            thread_fork("tvs_ping_thread", 20, 256, 0, &g_tvs_ping_pid, tvs_ping_timer_func, NULL);
         }
     }
 }
 
 void tvs_ping_refresh_stop()
 {
-    if (g_tvs_ping_timer) {
-        TVS_LOG_PRINTF("stop ping refresh timer\n");
-        os_wrapper_stop_timer(g_tvs_ping_timer);
-        g_tvs_ping_timer = NULL;
+    if (g_tvs_ping_pid) {
+        g_tvs_ping_start = 0;
+        os_wrapper_post_signal(g_tvs_ping_mutex);
+        thread_kill(&g_tvs_ping_pid, KILL_WAIT);
+        g_tvs_ping_pid = 0;
+        os_wrapper_delete_signal_mutex(&g_tvs_ping_mutex);
     }
 }

@@ -3,6 +3,8 @@
 
 int tvs_dns_init();
 
+int tvs_dns_uninit();
+
 void tvs_dns_fetch_all(tvs_http_client_callback_exit_loop should_exit_func,
                        tvs_http_client_callback_should_cancel should_cancel_func, void *exit_param);
 
@@ -28,5 +30,7 @@ bool tvs_system_dns_remove_ip(int ip_addr);
 bool tvs_http_dns_remove_ip(int ip_addr);
 
 void tvs_dns_get_first_ip();
+
+void tvs_dns_refresh_stop();
 
 #endif

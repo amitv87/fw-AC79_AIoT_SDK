@@ -30,6 +30,12 @@ bool tvs_do_lock(const char *file, int line, const char *last_file, int last_lin
 		g_lock_mutex = os_wrapper_create_locker_mutex(); \
 	}
 
+
+#define TVS_LOCKER_UNINIT	\
+	if (g_lock_mutex != NULL) {	\
+		os_wrapper_del_locker_mutex(&g_lock_mutex);	\
+	}
+
 typedef struct tvs_thread_handle tvs_thread_handle_t;
 
 typedef void(*thread_func)(tvs_thread_handle_t *thread_handle_t);
@@ -38,9 +44,11 @@ typedef void(*thread_end_func)(tvs_thread_handle_t *thread_handle_t);
 
 tvs_thread_handle_t *tvs_thread_new(thread_func func, thread_end_func end_func);
 
+void tvs_thread_uninit(void **_thread);
+
 void *tvs_thread_get_task_handle(tvs_thread_handle_t *thread);
 
-void tvs_thread_start_prepare(tvs_thread_handle_t *thread, void *param, int param_size);
+int tvs_thread_start_prepare(tvs_thread_handle_t *thread, void *param, int param_size);
 
 void tvs_thread_start_now(tvs_thread_handle_t *thread, const char *name, int prior, int stack_depth);
 

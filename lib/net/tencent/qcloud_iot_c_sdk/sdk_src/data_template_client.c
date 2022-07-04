@@ -813,9 +813,9 @@ int IOT_Template_Yield(void *pClient, uint32_t timeout_ms)
     handle_template_expired_event(pTemplate);
 #endif
 
-#ifdef TVS_ENABLE
-    IOT_Tvs_Auth_Handle(pTemplate);
-#endif
+    /* #ifdef TVS_ENABLE */
+    /* IOT_Tvs_Auth_Handle(pTemplate); */
+    /* #endif */
 
     rc = IOT_MQTT_Yield(pTemplate->mqtt, timeout_ms);
 

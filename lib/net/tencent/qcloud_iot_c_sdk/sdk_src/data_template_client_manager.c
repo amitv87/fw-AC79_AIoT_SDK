@@ -504,7 +504,7 @@ static void save_arrears_info(int enable)
 
     u32 addr;
 
-    u8 *data = (u8 *)calloc(2, 1024);
+    u8 *data = (u8 *)HAL_Calloc(2, 1024);
     if (!data) {
         printf("malloc read buf failed ,%s-----%d", __func__, __LINE__);
         return ;
@@ -512,7 +512,8 @@ static void save_arrears_info(int enable)
 
     FILE *profile_fp = fopen(TENCENT_PATH, "r");
     if (profile_fp == NULL) {
-        free(data);
+        HAL_Free(data);
+        data = NULL;
         return ;
     }
     struct vfs_attr file_attr;
@@ -525,20 +526,18 @@ static void save_arrears_info(int enable)
     addr += 8 * 1024;
 
     norflash_read(NULL, data, 2 * 1024, addr);
-    printf("-------%s-------%d\n\r", __func__, __LINE__);
 
     //擦除flash 4k
     norflash_ioctl(NULL, IOCTL_ERASE_SECTOR, addr);
-    printf("-------%s-------%d\n\r", __func__, __LINE__);
 
     data[1024 + 128] = enable;	//将enable存到128
     data[1024 + 129] = arrears_type;	//将type存到129
 
     //写flash
     norflash_write(NULL, data, 2 * 1024, addr);
-    printf("-------%s-------%d\n\r", __func__, __LINE__);
 
-    free(data);
+    HAL_Free(data);
+    data = NULL;
 
 }
 
@@ -548,7 +547,7 @@ void load_arrears_info(void)
 
     u32 addr;
 
-    u8 *data = (u8 *)calloc(1, 1024);
+    u8 *data = (u8 *)HAL_Calloc(1, 1024);
     if (!data) {
         printf("malloc read buf failed ,%s-----%d", __func__, __LINE__);
         return ;
@@ -556,7 +555,7 @@ void load_arrears_info(void)
 
     FILE *profile_fp = fopen(TENCENT_PATH, "r");
     if (profile_fp == NULL) {
-        free(data);
+        HAL_Free(data);
         return ;
     }
     struct vfs_attr file_attr;
@@ -576,7 +575,7 @@ void load_arrears_info(void)
         arrears_type = DEFAULT_ARREARS_TYPE	;	//如果没有读到之前保存的标志位 ，使用默认
     }
 
-    free(data);
+    HAL_Free(data);
 }
 
 #endif
@@ -662,8 +661,10 @@ static void _on_template_downstream_topic_handler(void *pClient, MQTTMessage *me
                 report_ota_info();
             }
 #endif
+#if ARREARS_ENABLE
             //添加存储欠费标志位到flash
             save_arrears_info(enable);
+#endif
 __exit:
             if (root) {
                 cJSON_Delete(root);

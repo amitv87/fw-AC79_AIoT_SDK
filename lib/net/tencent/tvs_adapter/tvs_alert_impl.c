@@ -5,7 +5,7 @@
 
 #include "tvs_api/tvs_api.h"
 #include "tvs_alert_impl.h"
-
+#include "tvs_api_impl.h"
 #include "system/includes.h"
 
 #include "cJSON_common/cJSON.h"
@@ -23,8 +23,10 @@
 //yii:引用tencent平台api
 extern const struct ai_sdk_api tc_tvs_api;
 extern u8 upgrade_flag;
+extern void tvs_taskq_post(int msg);
 
 u8 alarm_rings = 0;	//闹钟开启标志位
+u8 alarm_interrupt_mode = 0; //0. 关闭语音识别 响应闹钟 1. 无视闹钟 继续当前语音识别
 static int wakeup_timeout_id = 0;
 static int alarm_wakeup_pid = 0;
 
@@ -58,6 +60,11 @@ static void RTC_alarm(alert_info *new_alert);
 
 
 static int time_quit = 1;
+
+__attribute__((weak)) int get_listen_flag()
+{
+    return 0;
+}
 
 #if USE_RTC_ALARM
 /* 打开闹钟开关 */
@@ -224,6 +231,22 @@ static void alarm_wakeup_test(void *priv)
     int err = 0;
     int msg[32] = {0};
     if (!upgrade_flag) {
+
+        if (alarm_interrupt_mode == 0) {			//0. 关闭语音识别 响应闹钟
+            if (get_listen_flag() >= 2) {
+                alarm_rings = 1;
+                tvs_taskq_post(TC_RECORD_STOP);
+                while (get_listen_flag() >= 2) {	//等待关闭语音识别
+                    os_time_dly(20);
+                }
+            }
+        } else if (alarm_interrupt_mode == 1) {	//1. 无视闹钟 继续当前语音识别
+            if (get_listen_flag() >= 2) {
+                //不上报闹钟响铃也不上报闹钟停止, 看下云端会不会有影响, 没影响就不处理
+                goto alarm_exit;
+            }
+        }
+
         alarm_rings = 1;
         tvs_media_player_inner_pause_play();
         wakeup_timeout_id = sys_timeout_add_to_task("app_core", NULL, wakeup_timeout, ALARM_TIMEOUT * 1000);
@@ -246,6 +269,7 @@ static void alarm_wakeup_test(void *priv)
         alarm_rings = 0;
         tvs_media_player_inner_start_play();
     }
+alarm_exit:
 
     thread_fork("del_alarm_info", 20, 1024, 0, NULL, del_alarm_info, priv);
 }
@@ -287,6 +311,7 @@ static int tvs_alert_adapter_impl_new(tvs_alert_infos *alerts, int alert_count)
         new_alert = list_entry(pos, alert_info, entry);
         if (!strcmp(new_alert->schedule, schedule->valuestring)) {
             printf("-------%s---------%d-----already existence !", __func__, __LINE__);
+            cJSON_Delete(json);
             return 0;
         }
 
@@ -345,6 +370,7 @@ static int tvs_alert_adapter_impl_new(tvs_alert_infos *alerts, int alert_count)
 #else
     SYS_alarm(new_alert);
 #endif
+    cJSON_Delete(json);
 
     return 0;
 }
@@ -366,6 +392,7 @@ static int tvs_alert_adapter_impl_delete(tvs_alert_summary *alerts, int alert_co
             free(del_alert->schedule);
             free(del_alert->token);
             free(del_alert->type);
+            free(del_alert->url);
             free(del_alert);
             printf("-------%s---------%d-----del !\n\n", __func__, __LINE__);
             break;
@@ -422,6 +449,35 @@ static void alert_init()
 {
     //yii:闹钟节点头初始化
     INIT_LIST_HEAD(&alert_head.entry);
+
+}
+
+//删除所有闹钟,云端的不删除,因为重新连接云端之后也可以从云端拿回闹钟信息
+void tvs_uninit_alert(void)
+{
+    struct list_head *pos 	= NULL;
+    alert_info *del_alert 	= NULL;
+    alert_info *safe_alert 	= NULL;
+
+    int cnt = 0;
+
+    list_for_each_entry_safe(del_alert, safe_alert, &alert_head.entry, entry) {
+        list_del(&del_alert->entry);
+#if !(USE_RTC_ALARM)
+        sys_timeout_del(del_alert->id);
+#endif
+        free(del_alert->schedule);
+        free(del_alert->token);
+        free(del_alert->type);
+        free(del_alert->url);
+        free(del_alert);
+        printf("-------%s---------%d-----del %d!\n\n", __func__, __LINE__, cnt++);
+    }
+#if USE_RTC_ALARM
+    set_alarm_ctrl(0);	//关闭RTC闹钟
+#endif
+    /* alert_head.entry = NULL; */
+
 }
 
 int tvs_init_alert_adater_impl(tvs_alert_adapter *ad)

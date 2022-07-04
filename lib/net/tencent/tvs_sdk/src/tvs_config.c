@@ -261,6 +261,13 @@ void tvs_config_init()
 
 }
 
+void tvs_config_uninit()
+{
+
+    TVS_LOCKER_UNINIT
+
+}
+
 void tvs_config_set_sdk_running(bool running)
 {
     do_lock();

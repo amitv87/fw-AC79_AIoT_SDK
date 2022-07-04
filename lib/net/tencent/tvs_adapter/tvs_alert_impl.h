@@ -9,4 +9,5 @@ void on_alert_trigger_start(const char *alert_token);
 // TO-DO 闹钟响铃之后，超时或者手动停止，都需要调用此函数通知SDK
 void on_alert_trigger_stop(const char *alert_token, tvs_alert_stop_reason reason);
 
+void tvs_uninit_alert(void);
 #endif

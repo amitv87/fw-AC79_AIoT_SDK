@@ -141,7 +141,7 @@ ip_reass_tmr(void)
         } else {
             /* reassembly timed out */
             struct ip_reassdata *tmp;
-            LWIP_DEBUGF(IP_REASS_DEBUG, ("ip_reass_tmr: timer timed out\n"));
+            LWIP_DEBUGF(IP_REASS_DEBUG | LWIP_DBG_TYPES_ON | LWIP_DBG_LEVEL_WARNING, ("ip_reass_tmr: timer timed out\n"));
             tmp = r;
             /* get the next pointer before freeing */
             r = r->next;
@@ -177,6 +177,8 @@ ip_reass_free_complete_datagram(struct ip_reassdata *ipr, struct ip_reassdata *p
 #if LWIP_ICMP
     iprh = (struct ip_reass_helper *)ipr->p->payload;
     if (iprh->start == 0) {
+        LWIP_DEBUGF(IP_REASS_DEBUG | LWIP_DBG_TYPES_ON, ("ip_reass:icmp_time_exceeded"));
+#if 0 //modify
         /* The first fragment was received, send ICMP time exceeded. */
         /* First, de-queue the first pbuf from r->p. */
         p = ipr->p;
@@ -188,6 +190,7 @@ ip_reass_free_complete_datagram(struct ip_reassdata *ipr, struct ip_reassdata *p
         LWIP_ASSERT("pbufs_freed + clen <= 0xffff", pbufs_freed + clen <= 0xffff);
         pbufs_freed = (u16_t)(pbufs_freed + clen);
         pbuf_free(p);
+#endif
     }
 #endif /* LWIP_ICMP */
 
@@ -739,6 +742,7 @@ ipfrag_free_pbuf_custom(struct pbuf *p)
 err_t
 ip4_frag(struct pbuf *p, struct netif *netif, const ip4_addr_t *dest)
 {
+    err_t err = ERR_OK;
     struct pbuf *rambuf;
 #if !LWIP_NETIF_TX_SINGLE_PBUF
     struct pbuf *newpbuf;
@@ -869,7 +873,7 @@ ip4_frag(struct pbuf *p, struct netif *netif, const ip4_addr_t *dest)
         /* No need for separate header pbuf - we allowed room for it in rambuf
          * when allocated.
          */
-        netif->output(netif, rambuf, dest);
+        err = netif->output(netif, rambuf, dest);
         IPFRAG_STATS_INC(ip_frag.xmit);
 
         /* Unfortunately we can't reuse rambuf - the hardware may still be
@@ -884,7 +888,7 @@ ip4_frag(struct pbuf *p, struct netif *netif, const ip4_addr_t *dest)
         ofo = (u16_t)(ofo + nfb);
     }
     MIB2_STATS_INC(mib2.ipfragoks);
-    return ERR_OK;
+    return err;
 memerr:
     MIB2_STATS_INC(mib2.ipfragfails);
     return ERR_MEM;

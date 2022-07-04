@@ -172,6 +172,7 @@ static int _app_handle_recv_data(comm_peer_t *peer, char *pdata, int len)
 
             /* 0: need to wait for next cmd
              * 1: Everything OK and we've finished the job */
+            cJSON_Delete(root);
             return (ret == 0);
         } else {
             cJSON_Delete(root);
@@ -230,11 +231,13 @@ static int _app_handle_recv_data(comm_peer_t *peer, char *pdata, int len)
     case CMD_LOG_QUERY:
         ret = app_send_dev_log(peer);
         Log_i("app_send_dev_log ret: %d", ret);
+        cJSON_Delete(root);
         return 1;
 
     case CMD_AUTHINFO_QUERY:
         ret = _app_reply_auth_reqinfo(peer);
         Log_i("_app_reply_auth_reqinfo ret: %d", ret);
+        cJSON_Delete(root);
         return ret;
 
     default:
@@ -243,6 +246,7 @@ static int _app_handle_recv_data(comm_peer_t *peer, char *pdata, int len)
         app_send_error_log(peer, CUR_ERR, ERR_APP_CMD, ERR_APP_CMD_JSON_FORMAT);
         break;
     }
+    cJSON_Delete(root);
 
     return -1;
 }

@@ -16,6 +16,8 @@ int tvs_media_player_inner_stop_play();
 
 void tvs_media_player_inner_init();
 
+void tvs_media_player_inner_uninit();
+
 void tvs_media_player_inner_on_play_finished(const char *token);
 
 void tvs_media_player_inner_on_play_stopped(int error_code, const char *token);

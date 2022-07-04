@@ -7,5 +7,6 @@ void tvs_state_set(int new_state, int type, int error);
 
 void tvs_state_manager_init();
 
+void tvs_state_manager_uninit();
 
 #endif

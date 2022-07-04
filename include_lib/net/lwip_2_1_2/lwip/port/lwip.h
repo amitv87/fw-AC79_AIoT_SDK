@@ -61,6 +61,24 @@ enum LWIP_EVENT {
     LWIP_LTE_DHCP_BOUND_SUCC,
 };
 
+struct iphdr {
+    u8	version: 4,
+     ihl: 4;
+    u8	tos;
+    u16	tot_len;
+    u16	id;
+    u16	frag_off;
+    u8	ttl;
+    u8	protocol;
+    u16	check;
+    u32	saddr;
+    u32	daddr;
+};
+struct iphdr_e {
+    u16 reserved;
+    u16 h_proto;
+    struct iphdr iphd;
+};
 #define  ETH_NETIF      (0)
 #define  WIFI_NETIF     (1)
 #define  BT_NETIF       (2)
@@ -69,7 +87,7 @@ enum LWIP_EVENT {
 #ifndef __LW_IP_C
 /* Exported variables --------------------------------------------------------*/
 /* Exported functions ------------------------------------------------------- */
-void Init_LwIP(u8_t lwip_netif, u8_t dhcp);
+void Init_LwIP(u8_t lwip_netif);
 void lwip_netif_set_up(u8_t lwip_netif);
 void lwip_renew(u8_t lwip_netif, u8_t dhcp);
 int lwip_dhcp_bound(void);
@@ -86,6 +104,7 @@ struct lan_setting *net_get_lan_info(void);
 int net_set_lan_info(struct lan_setting *__lan_setting_info);
 void lwip_get_netif_info(u8 is_wireless, struct netif_info *info);
 void set_wireless_netif_macaddr(const char *mac_addr);
+u32 memp_get_pbuf_pool_free_cnt(void);
 #endif /* !defined(__LW_IP_C) */
 
 /*

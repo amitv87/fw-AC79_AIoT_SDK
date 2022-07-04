@@ -409,6 +409,10 @@ int sys_power_get_battery_persent(void)
 void sys_power_init(void)
 {
     vbat_check_init();
+
+    if (get_vbat_level() <= LOW_POWER_SHUTDOWN) {
+        power_set_soft_poweroff();
+    }
 #ifdef CONFIG_AUTO_SHUTDOWN_ENABLE
     u8 auto_off_time = 0;
     syscfg_read(CFG_AUTO_OFF_TIME_ID, &auto_off_time, sizeof(auto_off_time));

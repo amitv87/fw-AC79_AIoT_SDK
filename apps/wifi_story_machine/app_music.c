@@ -651,7 +651,7 @@ static int local_music_dec_file(void *file, int breakpoint, void *handler, int a
 #if TCFG_USER_EMITTER_ENABLE
     void *emitter = get_bt_emitter_audio_server();
     if (emitter) {
-        req.dec.orig_sr = 44100;
+        req.dec.force_sr = 44100;
         req.dec.sample_source = "virtual";
     }
 #endif
@@ -1479,7 +1479,7 @@ static int __net_music_dec_file(int breakpoint)
 #if TCFG_USER_EMITTER_ENABLE
     void *emitter = get_bt_emitter_audio_server();
     if (emitter) {
-        req.dec.orig_sr = 44100;
+        req.dec.force_sr = 44100;
         req.dec.sample_source = "virtual";
     }
 #endif

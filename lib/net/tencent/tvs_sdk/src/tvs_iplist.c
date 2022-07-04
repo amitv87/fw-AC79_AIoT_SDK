@@ -399,3 +399,9 @@ int tvs_iplist_init()
     TVS_LOCKER_INIT
     return 0;
 }
+
+int tvs_iplist_uninit()
+{
+    TVS_LOCKER_UNINIT
+    return 0;
+}

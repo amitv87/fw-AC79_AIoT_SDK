@@ -293,9 +293,6 @@ do_memp_malloc_pool_fn(const struct memp_desc *desc, const char *file, const int
         desc->stats->err++;
 #endif
         SYS_ARCH_UNPROTECT(old_level);
-        if (desc->desc && !strcmp(desc->desc, "PBUF_POOL")) {
-            putchar('X');
-        }
         LWIP_DEBUGF(MEMP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("memp_malloc: out of memory in pool %s\n", desc->desc));
     }
 
@@ -328,6 +325,11 @@ memp_malloc_pool_fn(const struct memp_desc *desc, const char *file, const int li
 #endif
 }
 
+u32 memp_get_pbuf_pool_free_cnt(void)
+{
+    const struct memp_desc *desc = memp_pools[MEMP_PBUF_POOL];
+    return PBUF_POOL_SIZE - desc->stats->used;
+}
 /**
  * Get an element from a specific pool.
  *

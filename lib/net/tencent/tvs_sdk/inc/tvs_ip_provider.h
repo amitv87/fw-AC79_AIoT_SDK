@@ -17,4 +17,6 @@ int tvs_ip_provider_convert_ip_str(const char *ip_str);
 
 void tvs_ip_provider_get_first_ip();
 
+bool tvs_ip_provider_is_running();
+
 #endif

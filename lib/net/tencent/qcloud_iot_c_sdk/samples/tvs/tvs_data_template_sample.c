@@ -1102,12 +1102,12 @@ static void tvs_upgrade(void *h_ota)
 
     IOT_OTA_InitTimer(h_ota);
 
-    buffer = (u8 *)malloc(PER_RECV_SIZE);
+    buffer = (u8 *)HAL_Malloc(PER_RECV_SIZE);
     if (!buffer) {
         upgrade_fetch_success = false;
         goto __exit;
     }
-    ctx = (httpcli_ctx *)calloc(1, sizeof(httpcli_ctx));
+    ctx = (httpcli_ctx *)HAL_Calloc(1, sizeof(httpcli_ctx));
     if (NULL == ctx) {
         upgrade_fetch_success = false;
         goto __exit;
@@ -1185,14 +1185,14 @@ _reconnect_:
 __exit:
 
     if (buffer) {
-        free(buffer);
+        HAL_Free(buffer);
     }
     if (update_fd) {
         net_fclose(update_fd, error);
     }
     if (ctx) {
         ops->close(ctx);
-        free(ctx);
+        HAL_Free(ctx);
     }
 
     // report result
@@ -1249,6 +1249,7 @@ int qcloud_tvs_task_start(void *priv)
     sReplyPara      replyPara;
     int             ReportCont;
     int             rc 		= 	QCLOUD_RET_SUCCESS;
+    /****************添加OTA功能***********************/
 
     OTAContextData 	*ota_ctx 		= NULL;
     void 			*mqtt_client 	= NULL;
@@ -1269,8 +1270,9 @@ int qcloud_tvs_task_start(void *priv)
     rc                             = _setup_connect_init_params(&init_params);
     if (rc != QCLOUD_RET_SUCCESS) {
         Log_e("init params err,rc=%d", rc);
-        sg_qcloud_tvs_task_running = false;
-        return rc;
+        /* sg_qcloud_tvs_task_running = false; */
+        /* return rc; */
+        goto exit;
     }
 #ifdef LOG_UPLOAD
     // _init_log_upload should be done after _setup_connect_init_params and before IOT_Template_Construct
@@ -1286,11 +1288,10 @@ int qcloud_tvs_task_start(void *priv)
         Log_i("Cloud Device Construct Success");
     } else {
         Log_e("Cloud Device Construct Failed");
-        sg_qcloud_tvs_task_running = false;
-        return QCLOUD_ERR_FAILURE;
+        /* sg_qcloud_tvs_task_running = false; */
+        /* return QCLOUD_ERR_FAILURE; */
+        goto exit;
     }
-
-    /****************添加OTA功能***********************/
 
 
 #if OTA_MQTT_ENABLE
@@ -1318,7 +1319,6 @@ int qcloud_tvs_task_start(void *priv)
     sg_ota_ctx = (void *)ota_ctx;
 #endif
 
-    /**************************************************/
 
 
 #ifdef MULTITHREAD_ENABLED
@@ -1356,9 +1356,11 @@ int qcloud_tvs_task_start(void *priv)
                                               QCLOUD_IOT_MQTT_COMMAND_TIMEOUT);
         if (rc != QCLOUD_RET_SUCCESS) {
             Log_e("Report system info fail, err: %d", rc);
+            goto exit;
         }
     } else {
         Log_e("Get system info fail, err: %d", rc);
+        goto exit;
     }
 
 #if OTA_MQTT_ENABLE
@@ -1368,6 +1370,7 @@ int qcloud_tvs_task_start(void *priv)
     rc = IOT_Template_GetStatus_sync(client, QCLOUD_IOT_MQTT_COMMAND_TIMEOUT);
     if (rc != QCLOUD_RET_SUCCESS) {
         Log_e("Get data status fail, err: %d", rc);
+        goto exit;
     } else {
         Log_d("Get data status success");
     }
@@ -1436,6 +1439,11 @@ int qcloud_tvs_task_start(void *priv)
 
 exit:
 
+#ifdef MULTITHREAD_ENABLED
+    cancel_addrinfo();
+    IOT_Template_Stop_Yield_Thread(client);
+#endif
+
 #if OTA_MQTT_ENABLE
     if (NULL != ota_ctx) {
         HAL_Free(ota_ctx);
@@ -1445,11 +1453,6 @@ exit:
     if (NULL != h_ota) {
         IOT_OTA_Destroy(h_ota);
     }
-#endif
-
-#ifdef MULTITHREAD_ENABLED
-    cancel_addrinfo();
-    IOT_Template_Stop_Yield_Thread(client);
 #endif
     rc = IOT_Template_Destroy(client);
     sg_client = NULL;

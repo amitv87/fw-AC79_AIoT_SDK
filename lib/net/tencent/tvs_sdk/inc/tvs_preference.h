@@ -10,6 +10,8 @@
 
 int tvs_preference_module_init();
 
+int tvs_preference_module_uninit();
+
 int tvs_preference_get_number_value(const char *name, int *value, int default_value);
 
 const char *tvs_preference_get_string_value(const char *name);

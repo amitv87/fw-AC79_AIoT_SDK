@@ -231,3 +231,10 @@ int tvs_audio_recorder_thread_init()
     TVS_LOCKER_INIT
     return 0;
 }
+
+int tvs_audio_recorder_thread_uninit()
+{
+    TVS_LOCKER_UNINIT
+    return 0;
+}
+

@@ -41,6 +41,9 @@ extern "C" {
 //#include "utils_base64.h"
 #include "mbedtls/base64.h"
 #include "utils_list.h"
+extern bool sg_qcloud_tvs_task_running;
+
+static void *mqtt_thread_sem;
 
 static uint16_t _get_random_start_packet_id(void)
 {
@@ -291,10 +294,13 @@ static void _mqtt_yield_thread(void *ptr)
 
     mqtt_client->yield_thread_running   = false;
     mqtt_client->yield_thread_exit_code = rc;
+    sg_qcloud_tvs_task_running = false;
 
 #ifdef LOG_UPLOAD
     IOT_Log_Upload(true);
 #endif
+
+    os_wrapper_post_signal(mqtt_thread_sem);
 
 }
 
@@ -316,8 +322,13 @@ int IOT_MQTT_StartLoop(void *pClient)
         Log_e("create mqtt yield thread fail: %d", rc);
         return QCLOUD_ERR_FAILURE;
     }
+    mqtt_thread_sem = os_wrapper_create_signal_mutex(0);
+    if (!mqtt_thread_sem) {
+        Log_e("create mqtt thread sem fail!");
+        return QCLOUD_ERR_FAILURE;
+    }
 
-    HAL_SleepMs(500);
+    /* HAL_SleepMs(500); */
     return QCLOUD_RET_SUCCESS;
 }
 
@@ -327,7 +338,9 @@ void IOT_MQTT_StopLoop(void *pClient)
 
     Qcloud_IoT_Client *mqtt_client = (Qcloud_IoT_Client *)pClient;
     mqtt_client->yield_thread_running    = false;
-    HAL_SleepMs(1000);
+    cancel_addrinfo();
+    os_wrapper_wait_signal(mqtt_thread_sem);
+    os_wrapper_delete_signal_mutex(&mqtt_thread_sem);
     return;
 }
 

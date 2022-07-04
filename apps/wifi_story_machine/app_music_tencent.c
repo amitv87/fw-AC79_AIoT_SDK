@@ -68,6 +68,7 @@ struct __wechat_url {
 
 /**********************************/
 #define MANUAL_STOP_ALARM  1//用户手动停止闹钟
+#define ALARM_TIMEOUT	3*1000	//网络闹钟超时时间设置
 
 extern u8 alarm_rings;	//闹钟响铃标志位
 extern void alarm_rings_stop(int tvs_alert_stop_reason);
@@ -76,12 +77,16 @@ extern int tts_volume_change(void);
 extern void set_default_length();	//进入配网，设置默认最大数据包长度
 extern bool read_BTCombo(void);
 extern int speech_open_check(void);
+extern u8 alarm_interrupt_mode; //0. 关闭语音识别 响应闹钟 1. 无视闹钟 继续当前语音识别
 
+static u8 local_alarm_flag;
+static int alarm_timeout_id;
 static const struct music_dec_ops net_music_dec_ops;
 static void dec_server_event_handler(void *priv, int argc, int *argv);
 static int _play_voice_prompt(const char *fname, void *dec_end_handler);
 static struct server *net_server;	//网络歌曲解码服务
 static int __net_music_dec_play_pause(u8 notify);
+static void app_music_ai_listen_stop(void);
 
 
 /************************************/
@@ -710,7 +715,7 @@ static int local_music_dec_file(void *file, int breakpoint, void *handler, int a
     __this->file = (FILE *)file;
     __this->cmp_file = (void *)file;
 
-    if (!__this->play_voice_prompt) {
+    if (!__this->play_voice_prompt && !alarm_rings) {
         __this->dec_ops = &local_music_dec_ops;
     }
 
@@ -1290,7 +1295,9 @@ static int net_music_dec_stop(int save_breakpoint)
         /* sys_timer_del(__this->wait_download); */
         wait_completion_del(__this->wait_download);
         __this->wait_download = 0;
-        __this->wait_download_suspend = 1;
+        if (!alarm_rings) {
+            __this->wait_download_suspend = 1;
+        }
     } else {
         if (save_breakpoint) {
             int url_len = strlen(__this->url) + 1;
@@ -1784,16 +1791,65 @@ static int __play_net_music(const char *url)
     return net_music_dec_file((void *)url, 0, net_music_dec_end, 0);
 }
 
+static void net_timeout_func(void *priv)
+{
+    alarm_loop_handler(1);
+}
 static int alarm_loop_handler(int arg)
 {
-    puts("alarm_music_dec_end\n");
+    puts("alarm_music_end\n");
+    FILE *file = NULL;
 
-    net_music_dec_stop(0);
-    return net_music_dec_file((void *)__this->url, 0, alarm_loop_handler, 0);
+    if (local_alarm_flag) {
+        local_music_dec_stop(0);
+        file = fopen(CONFIG_VOICE_PROMPT_FILE_PATH"reminder.mp3", "r");	//本地铃声mp3
+        if (!file) {
+            printf("fopen alarm file failed\n\r");
+            return -1;
+        }
+        return local_music_dec_file(file, 0, alarm_loop_handler, 0);
+    } else {
+        net_music_dec_stop(0);
+        if (!net_dhcp_ready() || arg == 1) {
+            file = fopen(CONFIG_VOICE_PROMPT_FILE_PATH"schedule.mp3", "r");	//正在为您切换本地铃声mp3
+            if (!file) {
+                printf("fopen alarm file failed\n\r");
+                return -1;
+            }
+            local_alarm_flag = 1;
+            return local_music_dec_file(file, 0, alarm_loop_handler, 0);
+        }
+        return net_music_dec_file(__this->url, 0, alarm_loop_handler, 0);
+    }
 }
 
 static int app_music_play_net_music(void *url)
 {
+    if (alarm_rings) {
+        //如果有提示音,先停止提示音,闹铃优先
+        if (__this->play_voice_prompt) {
+            if (!__this->key_disable) {
+                key_event_enable();
+            }
+            local_music_dec_stop(0);
+            __this->play_voice_prompt = 0;
+        }
+        //检查当前是否有网络
+        if (net_dhcp_ready()) {
+            alarm_timeout_id = sys_timeout_add(NULL, net_timeout_func, ALARM_TIMEOUT);
+
+            return net_music_dec_file(url, 0, alarm_loop_handler, 0);
+        } else {
+            FILE *file = fopen(CONFIG_VOICE_PROMPT_FILE_PATH"reminder.mp3", "r");
+            if (!file) {
+                printf("fopen alarm file failed\n\r");
+                return -1;
+            }
+            local_alarm_flag = 1;
+            return local_music_dec_file(file, 0, alarm_loop_handler, 0);
+        }
+    }
+
     if (__this->play_voice_prompt) {
         if (__this->dec_end_handler != (void *)app_music_shutdown) {
             set_dec_end_handler(__this->dec_end_file, __play_net_music, (int)url, -1);
@@ -1805,9 +1861,6 @@ static int app_music_play_net_music(void *url)
         return net_music_dec_file(url, 1, net_music_dec_end, 0);
     }
 
-    if (alarm_rings) {
-        return net_music_dec_file(url, 0, alarm_loop_handler, 0);
-    }
 
     return net_music_dec_file(url, 0, net_music_dec_end, 0);
 }
@@ -1864,6 +1917,7 @@ static void ai_server_event_handler(void *priv, int argc, int *argv)
         if (__this->ai_connected) {
             __this->ai_connected = 0;
             if (__this->mode == NET_MUSIC_MODE) {
+                net_music_dec_stop(0);
                 app_music_play_voice_prompt("SerDiscon.mp3", __this->dec_ops->dec_breakpoint);
             }
         }
@@ -1909,15 +1963,25 @@ static void ai_server_event_handler(void *priv, int argc, int *argv)
                     __this->dec_end_handler = NULL;
                 }
             } else if (!alarm_rings && !__this->play_tts && AUDIO_DEC_START == __this->dec_ops->dec_status(0)) {
-                __this->dec_ops->dec_play_pause(0);	//这个是服务器下发的消息 无需上报
+                net_music_dec_play_pause(0);	//这个是服务器下发的消息 无需上报
             } else if (alarm_rings) {
-                __this->dec_ops->dec_stop(1);	//闹钟响了，保存断点
+                net_music_dec_stop(1);	//闹钟响了，保存断点
             }
         }
         break;
     case AI_SERVER_EVENT_STOP:
+        if (alarm_timeout_id) {
+            sys_timeout_del(alarm_timeout_id);
+            alarm_timeout_id = 0;
+        }
         if (__this->dec_ops == &net_music_dec_ops && !strcmp((const char *)argv[2], __this->ai_name)) {
-            __this->dec_ops->dec_stop(0);
+            if (local_alarm_flag) {
+                local_music_dec_stop(0);
+                local_alarm_flag = 0;
+                __this->dec_ops = &net_music_dec_ops;
+            } else {
+                net_music_dec_stop(0);
+            }
         }
         break;
     case AI_SERVER_EVENT_RESUME_PLAY:
@@ -2121,6 +2185,15 @@ static int app_music_ai_listen_start(u8 voice_mode, u8 enable_vad)
             app_music_play_voice_prompt("AiTransFail.mp3", __this->dec_ops->dec_breakpoint);
         }
         return -1;
+    }
+    if (alarm_rings) {
+        if (local_alarm_flag) {
+            local_music_dec_stop(0);
+            local_alarm_flag = 0;
+            __this->dec_ops = &net_music_dec_ops;
+        } else {
+            net_music_dec_stop(0);
+        }
     }
 
     if (__this->mode == BT_MUSIC_MODE) {
@@ -2414,6 +2487,9 @@ static void dec_server_event_handler(void *priv, int argc, int *argv)
         break;
     case AUDIO_SERVER_EVENT_CURR_TIME:
         log_d("play_time: %d\n", argv[1]);
+        if (alarm_rings && alarm_timeout_id) {
+            sys_timer_re_run(alarm_timeout_id);
+        }
         __this->play_time = argv[1];
         if (__this->dec_ops == &net_music_dec_ops) {
             __this->save_play_time = __this->play_time; //保存下播放进度
@@ -2456,9 +2532,9 @@ static int __play_voice_prompt(const char *fname, void *dec_end_handler, int sav
     //将网络播歌暂停
     if (__this->dec_ops == &net_music_dec_ops) {
         if (__this->play_voice_prompt) {
-            local_music_dec_ops.dec_stop(0);
-        } else if (__this->dec_ops->dec_status(0) == AUDIO_DEC_START) {
-            __this->dec_ops->dec_play_pause(0);	//进入语音唤醒的时候先暂停网络歌曲播放
+            local_music_dec_stop(0);
+        } else if (__get_dec_status(0) == AUDIO_DEC_START) {
+            net_music_dec_play_pause(0);	//进入语音唤醒的时候先暂停网络歌曲播放
         }
         if (dec_end_handler == net_music_dec_ops.dec_breakpoint) {
             dec_end_handler = __net_music_dec_play_pause;
@@ -3638,10 +3714,35 @@ static int app_music_net_event_handler(struct net_event *event)
             canceladdrinfo();
             __this->_net_dhcp_ready = 0;
 
+            if (alarm_rings) {
+                if (alarm_timeout_id) {
+                    sys_timeout_del(alarm_timeout_id);
+                    alarm_timeout_id = 0;
+                }
+                if (local_alarm_flag) {
+                    local_music_dec_stop(0);
+                    local_alarm_flag = 0;
+                    __this->dec_ops = &net_music_dec_ops;
+                } else {
+                    net_music_dec_stop(0);
+                }
+                alarm_rings_stop(2);	//用户手动停止,任何按键都停止
+            }
+
             if (__this->net_connected && !is_in_config_network_state() && !__this->reconnecting && __this->mode == NET_MUSIC_MODE) {
                 app_music_play_voice_prompt("NetDisc.mp3", NULL);
             }
             __this->net_connected = 0;
+            if (__this->ai_server) {
+                __this->cancel_dns_timer = sys_timer_add_to_task("sys_timer", NULL, cancel_dns_timer, 1000);
+            }
+            if (__this->ai_server) {
+                server_close(__this->ai_server);
+                __this->ai_server = NULL;
+                __this->ai_connected = 0;
+                sys_timer_del(__this->cancel_dns_timer);
+                __this->cancel_dns_timer = 0;
+            }
             return false;
         case NET_EVENT_SMP_CFG_TIMEOUT:
             if (is_in_config_network_state()) {
@@ -3879,5 +3980,81 @@ REGISTER_APPLICATION(app_music) = {
     .ops 	= &app_music_ops,
     .state  = APP_STA_DESTROY,
 };
+
+#endif
+
+//以下为测试例子 不是功能
+#if 0
+u8 test_flag;
+
+static int cnt_test = 0;
+static int key_test1()
+{
+    void *test = NULL;
+    while (1) {
+
+        os_time_dly(3000);
+        /* printf("---%s---%s---%d test_flag = %d\n\r",__FILE__,__func__,__LINE__,test_flag); */
+        if (test_flag != 0) {
+            printf("---%s---%s---%d test_flag = %d  cnt = %d\n\r", __FILE__, __func__, __LINE__, test_flag, cnt_test++);
+            malloc_stats();
+            malloc_dump();
+        }
+#if 0
+        for (int i = 0; i < 30; i++) {
+            test = zalloc(4 * 1024);
+            if (!test) {
+                printf("---%s---%s---%d fail %d\n\r", __FILE__, __func__, __LINE__, i);
+                app_music_shutdown(0);
+            }
+            test = NULL;
+        }
+#endif
+        if (!test_flag) {
+            net_music_dec_stop(0);
+            __this->net_connected = 0;
+            if (__this->ai_server) {
+                __this->cancel_dns_timer = sys_timer_add_to_task("sys_timer", NULL, cancel_dns_timer, 1000);
+            }
+            if (__this->ai_server) {
+                server_close(__this->ai_server);
+                __this->ai_server = NULL;
+                __this->ai_connected = 0;
+                sys_timer_del(__this->cancel_dns_timer);
+                __this->cancel_dns_timer = 0;
+            }
+            wifi_off();
+
+            __this->bt_music_enable = 1;
+#ifdef CONFIG_LOW_POWER_ENABLE
+            low_power_hw_unsleep_lock();
+            btctrler_task_init_bredr();
+            low_power_hw_unsleep_unlock();
+#endif
+            bt_connection_enable();
+
+            test_flag = ~test_flag;
+        } else {
+
+            __this->bt_music_enable = 0;
+            bt_connection_disable();
+#ifdef CONFIG_LOW_POWER_ENABLE
+            os_time_dly(50);
+            btctrler_task_close_bredr();
+#endif
+
+            wifi_on();
+            test_flag = ~test_flag;
+        }
+    }
+}
+#include "cJSON_common/cJSON.h"
+static int key_test()
+{
+    thread_fork("key_test", 20, 1024, 20, 0, key_test1, NULL);
+}
+
+late_initcall(key_test);
+
 
 #endif

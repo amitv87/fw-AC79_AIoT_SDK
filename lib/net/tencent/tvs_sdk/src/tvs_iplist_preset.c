@@ -134,6 +134,17 @@ int tvs_iplist_preset_init()
     return 0;
 }
 
+int tvs_iplist_preset_uninit()
+{
+    if (g_preset_ip_list) {
+        TVS_FREE(g_preset_ip_list);
+        g_preset_ip_list = NULL;
+        g_preset_ip_count = 0;
+    }
+
+    TVS_LOCKER_UNINIT
+    return 0;
+}
 /*static void* g_tvs_iplist_preset_timer = NULL;
 #define DO_REFRESH_TIMER     40  // 更新IP-LIST的时间间隔
 

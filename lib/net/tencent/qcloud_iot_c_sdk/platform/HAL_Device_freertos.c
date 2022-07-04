@@ -37,13 +37,17 @@
 
 #ifdef DEBUG_DEV_INFO_USED
 /* product Id  */
-static char sg_product_id[MAX_SIZE_OF_PRODUCT_ID + 1] =  "BWBTAK8PMS";	//请跟腾讯方获取
+/* static char sg_product_id[MAX_SIZE_OF_PRODUCT_ID + 1] = "BWBTAK8PMS";	//请跟腾讯方获取 */
+static char sg_product_id[MAX_SIZE_OF_PRODUCT_ID + 1] =  "ICL8PECHR7";	//请跟腾讯方获取
+
 
 /* device name */
 #if USE_MAC_DEVICE_NAME
 static char sg_device_name[MAX_SIZE_OF_DEVICE_NAME + 1] = "";	//请跟腾讯方获取
 #else
-static char sg_device_name[MAX_SIZE_OF_DEVICE_NAME + 1] = "51595800000A";	//请跟腾讯方获取
+/* static char sg_device_name[MAX_SIZE_OF_DEVICE_NAME + 1] = "51595800000A";	//请跟腾讯方获取 */
+static char sg_device_name[MAX_SIZE_OF_DEVICE_NAME + 1] = "5159000000I";	//请跟腾讯方获取
+
 #endif
 
 /* region */
@@ -64,7 +68,9 @@ static char sg_device_privatekey_file_name[MAX_SIZE_OF_DEVICE_SECRET_FILE_NAME +
 #if USE_MAC_DEVICE_NAME
 static char sg_device_secret[MAX_SIZE_OF_DEVICE_SECRET + 1] =   "YOUR_IOT_PSK";	//请跟腾讯方获取
 #else
-static char sg_device_secret[MAX_SIZE_OF_DEVICE_SECRET + 1] =   "euUkNITZG6HiYqr6qOl01w==";// "YOUR_IOT_PSK";	//请跟腾讯方获取
+/* static char sg_device_secret[MAX_SIZE_OF_DEVICE_SECRET + 1] =  "euUkNITZG6HiYqr6qOl01w==";// "YOUR_IOT_PSK";	//请跟腾讯方获取 */
+static char sg_device_secret[MAX_SIZE_OF_DEVICE_SECRET + 1] =   "swVy5rR62O2hO7sxjmu9xg==";// "YOUR_IOT_PSK";	//请跟腾讯方获取
+
 #endif
 
 #endif

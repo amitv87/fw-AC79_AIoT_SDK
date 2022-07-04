@@ -16,6 +16,8 @@ typedef struct {
 
 int tvs_speech_manager_init();
 
+int tvs_speech_manager_init();
+
 int tvs_speech_manager_stop_capture(char *dialog_id);
 
 int tvs_speech_manager_start(tvs_speech_manager_config *speech_config,

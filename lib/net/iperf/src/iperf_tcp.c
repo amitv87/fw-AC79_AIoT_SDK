@@ -220,7 +220,7 @@ iperf_tcp_listen(struct iperf_test *test)
                 return -1;
             }
             if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, &opt, sizeof(opt)) < 0) {
-                puts("lwip not support SD_SNDBUF\n");
+                puts("IPERF lwip not support SD_SNDBUF\n");
 
                 /*saved_errno = errno;*/
                 /*close(s);*/
@@ -249,7 +249,7 @@ iperf_tcp_listen(struct iperf_test *test)
             unsigned int rate = test->settings->rate / 8;
             if (rate > 0) {
                 if (test->debug) {
-                    printf("Setting application pacing to %u\n", rate);
+                    printf("Setting application pacing to %uKB\n", rate / 1024);
                 }
             }
         }
@@ -309,7 +309,7 @@ iperf_tcp_listen(struct iperf_test *test)
     /* Read back and verify the sender socket buffer size */
     optlen = sizeof(sndbuf_actual);
     if (getsockopt(s, SOL_SOCKET, SO_SNDBUF, &sndbuf_actual, &optlen) < 0) {
-        puts("lwip not support SD_SNDBUF\n");
+        puts("IPERF lwip not support SD_SNDBUF\n");
         sndbuf_actual = test->settings->socket_bufsize;//modify by shunjian
 //	saved_errno = errno;
 //	close(s);
@@ -565,7 +565,7 @@ iperf_tcp_connect(struct iperf_test *test)
         unsigned int rate = test->settings->rate / 8;
         if (rate > 0) {
             if (test->debug) {
-                printf("Setting application pacing to %u\n", rate);
+                printf("Setting application pacing to %uKB\n", rate / 1024);
             }
         }
     }

@@ -30,9 +30,12 @@
 #include "qcloud_iot_export_error.h"
 #include "qcloud_iot_export_log.h"
 #include "qcloud_iot_import.h"
+#include "tvs_api_config.h"
 
 /* lwIP socket handle start from 0 */
 #define LWIP_SOCKET_FD_SHIFT 3
+
+extern bool sg_qcloud_tvs_task_running;
 
 static uint32_t _time_left(uint32_t t_end, uint32_t t_now)
 {
@@ -49,18 +52,26 @@ static uint32_t _time_left(uint32_t t_end, uint32_t t_now)
 
 uintptr_t HAL_TCP_Connect(const char *host, uint16_t port)
 {
-    int             ret;
+    int ret, savefl, sock_err, timeout_cnt;
+    fd_set rdset, wrset, errset;
     struct addrinfo hints, *addr_list, *cur;
     int             fd = 0;
 
     char port_str[6];
     HAL_Snprintf(port_str, 6, "%d", port);
 
+    struct timeval tv = {0, 100 * 1000};
+
     memset(&hints, 0x00, sizeof(hints));
     hints.ai_family   = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
 
+
+    timeout_cnt = HAL_TCP_TIMEOUT / 10;
+    if (!sg_qcloud_tvs_task_running && read_BTCombo()) {
+        return 0;
+    }
     ret = getaddrinfo(host, port_str, &hints, &addr_list);
     if (ret) {
         Log_e("getaddrinfo(%s:%s) error", host, port_str);
@@ -74,14 +85,44 @@ uintptr_t HAL_TCP_Connect(const char *host, uint16_t port)
             continue;
         }
 
+        //保存下fcntl参数
+        savefl = fcntl(fd, F_GETFL, 0);
+        //设置connect非阻塞
+        fcntl(fd, F_SETFL, savefl | O_NONBLOCK);
+
         if (connect(fd, cur->ai_addr, cur->ai_addrlen) == 0) {
             ret = fd + LWIP_SOCKET_FD_SHIFT;
             break;
         }
 
+        while (1) {
+
+            FD_ZERO(&rdset);
+            FD_ZERO(&wrset);
+            FD_ZERO(&errset);
+            FD_SET(fd, &rdset);
+            FD_SET(fd, &wrset);
+            FD_SET(fd, &errset);
+
+            ret = select(fd + 1, &rdset, &wrset, &errset, &tv);
+            if (ret < 0 || FD_ISSET(fd, &errset) || (!sg_qcloud_tvs_task_running && read_BTCombo())) {
+                ret = 0;
+                break;
+            } else if (ret == 0) {
+                if (--timeout_cnt == 0) {
+                    break;
+                }
+            } else if (FD_ISSET(fd, &rdset) || FD_ISSET(fd, &wrset)) {
+                ret = fd + LWIP_SOCKET_FD_SHIFT;
+                goto exit;
+            }
+        }
+
         closesocket(fd);
         ret = 0;
     }
+exit:
+    fcntl(fd, F_SETFL, savefl);
 
     if (ret == 0) {
         Log_e("failed to connect with TCP server: %s:%s", host, port_str);
@@ -106,11 +147,11 @@ int HAL_TCP_Disconnect(uintptr_t fd)
     fd -= LWIP_SOCKET_FD_SHIFT;
 
     /* Shutdown both send and receive operations. */
-    rc = shutdown((int)fd, 2);
-    if (0 != rc) {
-        Log_e("shutdown error: %s", strerror(errno));
-        return -1;
-    }
+    /* rc = shutdown((int)fd, 2); */
+    /* if (0 != rc) { */
+    /* Log_e("shutdown error: %s", strerror(errno)); */
+    /* return -1; */
+    /* } */
 
     rc = closesocket((int)fd);
     if (0 != rc) {

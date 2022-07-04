@@ -27,6 +27,7 @@ static void net_check();
 static u8 ai_connected = 0;
 static int tc_tvs_pid = 0;
 static int net_check_pid = 0;
+static volatile u8 lock_inited = 0;
 u8 net_connected = 0;
 
 
@@ -42,8 +43,6 @@ void *BTCombo_mutex;
 
 extern int qcloud_tvs_task_start(void *priv);
 extern void qcloud_tvs_task_stop(void);
-extern void tvs_dns_refresh_stop();
-extern void tvs_ping_refresh_stop();
 extern void tvs_platform_adapter_on_network_state_changed(bool connect);
 extern bool tvs_ping_one();
 extern bool sg_qcloud_tvs_task_running;
@@ -299,6 +298,7 @@ static void tvs_api_impl_init(void *priv)
 
     //互斥锁初始化,回调注册，语音，设备信息配置写入
     tvs_api_init(&api_callback, &config, &qua);
+    lock_inited = 1;
 
     //关闭https功能
     extern void tvs_config_enable_https(bool enable);
@@ -401,6 +401,7 @@ static void tvs_api_impl_init(void *priv)
             tvs_api_stop_all_activity();
             break;
         case TC_QUIT:
+            printf("tc_tvs_task exit.\n\r");
             return;
         default:
             break;
@@ -450,14 +451,17 @@ static void qcloud_tvs_task_connect()
 }
 static int tc_tvs_check(void)
 {
-    if (net_connected) {
-        qcloud_tvs_task_connect();
-        return AI_STAT_CONNECTED;
+    if (lock_inited) {
+        if (net_connected) {
+            qcloud_tvs_task_connect();
+            return AI_STAT_CONNECTED;
+        } else {
+            qcloud_tvs_task_disconnect();
+            return AI_STAT_DISCONNECTED;
+        }
     } else {
-        qcloud_tvs_task_disconnect();
         return AI_STAT_DISCONNECTED;
     }
-
 }
 
 static int tc_tvs_connect(void)
@@ -467,10 +471,10 @@ static int tc_tvs_connect(void)
     if (!tc_tvs_pid) {
         thread_fork("tc_tvs_task", 20, 1100, 64, &tc_tvs_pid, tvs_api_impl_init, NULL);
     }
+
     if (!net_check_pid) {
         thread_fork("net_check", 20, 1024, 0, &net_check_pid, net_check, NULL);
     }
-
 
     return 0;
 }
@@ -479,14 +483,12 @@ static int tc_tvs_disconnect(void)
 {
 
     ai_connected = 0;
-    while (get_current_node()) {
-        tvs_api_stop_all_activity();	//关闭所有活动
-        os_time_dly(50);
-    }
     qcloud_tvs_task_stop();
-    tvs_ping_refresh_stop();	//关闭ping定时器
-    tvs_dns_refresh_stop();		//关闭dns定时器
     tvs_platform_adapter_on_network_state_changed(false);
+    tvs_uninit_alert();
+    tvs_api_uninit();
+    lock_inited = 0;
+    tvs_taskq_post(TC_QUIT);
 
     return 0;
 }

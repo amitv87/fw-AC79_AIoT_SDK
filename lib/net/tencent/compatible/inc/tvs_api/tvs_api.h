@@ -113,6 +113,13 @@ int tvs_api_start_text_to_speech_ex(tvs_api_tts_param *tts_param);
  */
 int tvs_api_init(tvs_api_callback *api_callbacks, tvs_default_config *config, tvs_product_qua *produce_qua);
 
+
+/**
+ * @brief 注销SDK
+ *
+ */
+int tvs_api_uninit();
+
 /**
  * @brief 监听后台下发的语音转文本结果
  *

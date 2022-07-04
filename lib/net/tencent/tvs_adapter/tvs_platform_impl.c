@@ -86,9 +86,16 @@ static void enc_server_event_handler(void *priv, int argc, int *argv)
         break;
     }
 }
+__attribute__((weak)) void *get_asr_read_input_cb(void)
+{
+    return NULL;
+}
+
+
 
 static int mic_record_start(int sample_rate, int channel)
 {
+
     int err = -1;
     union audio_req req = {0};
     OS_SEM mic_sem;
@@ -104,6 +111,25 @@ static int mic_record_start(int sample_rate, int channel)
     }
     server_register_event_handler_to_task(record_hdl.enc_server, NULL, enc_server_event_handler, "tc_tvs_task");
 
+#if RECORD_USE_PCM_ENABLE
+    //mic数据采集配置
+    req.enc.cmd				=	AUDIO_ENC_OPEN;	//命令
+    req.enc.channel			=	1;				//采样通道数目
+    req.enc.volume			=	100;			//录音音量
+    req.enc.output_buf		=	NULL;			//缓存buf
+    req.enc.output_buf_len	=	20 * 1024;		//缓存buf大小
+    req.enc.sample_rate		=	16000;			//采样率
+    req.enc.frame_size 		= 	640;
+    req.enc.format			=	"speex";			//录音数据格式
+    req.enc.sample_source 	=   "virtual";	//采样源
+    req.enc.vfs_ops			=	&record_vfs_ops;//文件操作方法集
+    req.enc.msec			=	15 * 1000;				//采样时间
+    req.enc.read_input		= 	get_asr_read_input_cb();		//这个为从算法那边拿去数据的函数
+    req.enc.frame_head_reserve_len = 1;
+    /* req.enc.use_vad			=	1; */
+
+#else
+
     //mic数据采集配置
     req.enc.cmd				=	AUDIO_ENC_OPEN;	//命令
     req.enc.channel			=	channel;		//采样通道数目
@@ -118,11 +144,15 @@ static int mic_record_start(int sample_rate, int channel)
     req.enc.msec			=	15 * 1000;				//采样时间
     req.enc.frame_head_reserve_len = 1;
     //req.enc.use_vad			=	1;
+
+#endif
+
+
 #if 1
     os_sem_create(&mic_sem, 0);
     ai_server_event_notify(&tc_tvs_api, &mic_sem, AI_SERVER_EVENT_MIC_OPEN);
     os_sem_pend(&mic_sem, 0);
-    /* os_sem_del(&mic_sem, 1); */
+    os_sem_del(&mic_sem, 1);
 #endif
     record_hdl.rec_state = RECORDER_START;
     //发送录音请求

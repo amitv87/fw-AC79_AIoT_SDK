@@ -762,8 +762,6 @@ typedef int cs_dirent_dummy;
 #include <windows.h>
 #endif
 
-int gettimeofday(struct timeval *tv, void *tz);
-
 double cs_time(void) WEAK;
 double cs_time(void)
 {

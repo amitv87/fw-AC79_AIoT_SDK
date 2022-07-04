@@ -3,5 +3,5 @@
 .global lib_tmallgenie_version
 
 lib_tmallgenie_version:
-.long 185779155 
-.asciz "TMALLGENIE-@20211120-$137952d"
+.long 205249838 
+.asciz "TMALLGENIE-@20220703-$a6c087f"

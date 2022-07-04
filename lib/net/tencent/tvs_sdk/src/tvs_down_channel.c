@@ -30,6 +30,9 @@ typedef struct {
     tvs_multi_param multi_param;
 } tvs_down_channel_param;
 
+static u8 down_running = 0;
+
+static void *g_down_pid = NULL;
 
 TVS_LOCKER_DEFINE
 
@@ -110,7 +113,7 @@ void tvs_down_channel_thread(void *param)
 {
     int fail_count = 0;
     int wait_long = 120;
-    while (1) {
+    while (down_running) {
         if (!tvs_down_channel_can_connect()) {
             fail_count = 0;
             // 建立下行通道的前提条件不满足，则等待
@@ -148,9 +151,24 @@ void tvs_down_channel_init()
         g_waiter_mutex = os_wrapper_create_signal_mutex(0);
     }
 
+    down_running = 1;
     if (tvs_config_is_down_channel_enable()) {
-        os_wrapper_start_thread(tvs_down_channel_thread, NULL, "down", 3, 1024);
+        g_down_pid = os_wrapper_start_thread(tvs_down_channel_thread, NULL, "down", 3, 1024);
     }
+}
+
+void tvs_down_channel_uninit()
+{
+    down_running = 0;
+
+    tvs_down_channel_notify();
+
+    os_wrapper_thread_delete(&g_down_pid);
+
+    os_wrapper_delete_signal_mutex(&g_waiter_mutex);
+
+    TVS_LOCKER_UNINIT
+
 }
 
 void tvs_down_channel_system_sync()

@@ -114,6 +114,13 @@ long os_wrapper_get_forever_time();
  */
 void *os_wrapper_create_signal_mutex(int init_count);
 
+
+/**
+ * @brief 删除二值信号量
+ *
+ */
+void os_wrapper_delete_signal_mutex(void **mutex);
+
 /**
  * @brief 二值信号量等待信号
  *
@@ -131,7 +138,6 @@ bool os_wrapper_wait_signal(void *mutex, long time_ms);
  */
 void os_wrapper_post_signal(void *mutex);
 
-void os_wrapper_delete_signal(void *mutex);
 
 /**
  * @brief 创建互斥量，一般用于保护公共变量，处理线程安全问题
@@ -140,6 +146,16 @@ void os_wrapper_delete_signal(void *mutex);
  * @return 互斥量的句柄
  */
 void *os_wrapper_create_locker_mutex();
+
+
+
+/**
+ * @brief 删除互斥量，一般用于保护公共变量，处理线程安全问题
+ *
+ * @param
+ * @return 互斥量的句柄
+ */
+void os_wrapper_del_locker_mutex(void **_mutex);
 
 /**
  * @brief 互斥量加锁
@@ -158,7 +174,6 @@ bool os_wrapper_lock_mutex(void *mutex, long time_ms);
  */
 void os_wrapper_unlock_mutex(void *mutex);
 
-void os_wrapper_delete_mutex(void *mutex);
 
 /**
  * @brief 睡眠

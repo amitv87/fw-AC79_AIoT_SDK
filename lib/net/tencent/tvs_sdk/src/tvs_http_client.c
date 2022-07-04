@@ -5,6 +5,7 @@
 #include "tvs_ip_provider.h"
 #include "tvs_echo.h"
 #include "string.h"
+#include "tvs_api_config.h"
 
 // 用于统计一共发送/接收了多少数据，用于流量统计
 static unsigned long g_total_send_recv = 0;
@@ -60,10 +61,11 @@ static void on_http_event_handler(struct mg_connection *connection, int event_ty
     case MG_EV_SEND:
         // 流量统计
         g_total_send_recv += (unsigned long)(*((int *) event_data));
+#if PRINTF_MG_EV
         TVS_LOG_PRINTF("%s %lu bytes\n", MG_EV_RECV == event_type ? "recv" : "send", g_total_send_recv);
 
         TVS_LOG_PRINTF("%s %d bytes\n", MG_EV_RECV == event_type ? "recv" : "send", (*((int *) event_data)));
-
+#endif
         if (!param->not_check_timer) {
             // 每次收到或者发送数据，刷新timer
             http_set_timer(connection, 15);

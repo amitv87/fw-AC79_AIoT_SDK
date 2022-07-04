@@ -40,6 +40,8 @@
 #include "generic/list.h"
 #include "os/os_api.h"
 #include "device/device.h"
+#include "system/includes.h"
+#include "event/net_event.h"
 
 
 #ifdef __GNUC__
@@ -49,7 +51,12 @@
 #error "ntp.h: Your compiler does not support packed attribute"
 #endif
 
+#if NTP_ERR_INFO_ON
 #define NTP_ERR_PRINTF	printf
+#else
+#define NTP_ERR_PRINTF
+#endif
+
 
 #if NTP_DBUG_INFO_ON
 #define NTP_DBG_PRINTF             printf
@@ -597,9 +604,7 @@ void ntp_client_uninit(void)
     ntp_data.close_flag = 0;
 }
 #endif
-void ntp_client_init(void)
-{
-}
+
 
 static inline void analysis_ntp_protocol_ext(ntp_timestamp_t ts, struct tm *s_tm)
 {
@@ -615,6 +620,202 @@ static inline void analysis_ntp_protocol_ext(ntp_timestamp_t ts, struct tm *s_tm
     s_tm->tm_mon = mo;
     s_tm->tm_year = y - 1900;
 }
+
+extern u32 t_compensate_ms;
+extern time_t t_compensate;
+extern time_t source_timer;
+extern u8 local_time_init_flag;
+
+static u8 net_time_init_flag = 0;
+static u8 ntp_time_exit = 0;
+static volatile u8 ntp_time_running = 0;
+static OS_SEM ntp_sem;
+
+static void ntp_client_init(void)
+{
+    os_sem_create(&ntp_sem, 0);
+}
+
+late_initcall(ntp_client_init);
+
+u8 ntp_client_get_time_status(void)
+{
+    return net_time_init_flag;
+}
+
+void ntp_client_get_time_clear(void)
+{
+    net_time_init_flag = 0;
+}
+
+void ntp_client_get_time_exit(void)
+{
+    ntp_time_exit = 1;
+    os_sem_post(&ntp_sem);
+}
+
+void ntp_client_get_time(const char *host)
+{
+    if (ntp_time_running) {
+        NTP_ERR_PRINTF("ntp_client_get_time is still running...\n");
+        return ;
+    }
+    ntp_time_running = 1;
+
+    time_t t;
+    struct sys_time st;
+    struct tm pt;
+    int timeout_cnt = 0, ret = 0;
+
+    ntp_time_exit = 0;
+    os_sem_set(&ntp_sem, 0);
+
+    memset(&pt, 0, sizeof(struct tm));
+
+    while (!ntp_time_exit) {
+        if (!host) {
+            ret = ntp_client_get_time_all(&pt, 4000);
+        } else {
+            ret = ntp_client_get_time_once(host, &pt, 4000);
+        }
+        if (!ret) {
+            source_timer = mktime(&pt);
+            t_compensate = (time_t)timer_get_sec();
+            t_compensate_ms = timer_get_ms();
+            void *fd = dev_open("rtc", NULL);
+            if (fd) {
+                time_t t_timer = source_timer + 28800;
+                localtime_r(&t_timer, &pt);
+                memset(&st, 0, sizeof(struct sys_time));
+                st.year = pt.tm_year + 1900;
+                st.month = pt.tm_mon + 1;
+                st.day = pt.tm_mday;
+                st.hour = pt.tm_hour;
+                st.min = pt.tm_min;
+                st.sec = pt.tm_sec;
+                printf("set_sys_time : %d-%d-%d,%d:%d:%d\n", st.year, st.month, st.day, st.hour, st.min, st.sec);
+                dev_ioctl(fd, IOCTL_SET_SYS_TIME, (u32)&st);
+                dev_close(fd);
+            }
+            //notify
+            struct net_event evt = {0};
+            evt.arg = "net";
+            evt.event = NET_NTP_GET_TIME_SUCC;
+            net_event_notify(NET_EVENT_FROM_USER, &evt);
+
+            local_time_init_flag = 1;
+            net_time_init_flag = 1;
+            break;
+        } else {
+            if (timeout_cnt > 10) {
+                timeout_cnt = 0;
+            }
+            os_sem_pend(&ntp_sem, ++timeout_cnt * 100);
+        }
+    }
+    ntp_time_running = 0;
+}
+
+int ntp_client_get_time_all(struct tm *s_tm, int recv_to)
+{
+    if (!recv_to) {
+        recv_to = 2000;
+    }
+    if (s_tm == NULL) {
+        return -1;
+    }
+
+    /****/
+    struct hostent *hp[NTP_HOST_NUM] = {0};     /* host information */
+    struct sockaddr_in servaddr[NTP_HOST_NUM] = {0};
+
+    const int port = NTP_PORT;
+    int j = 0;
+    int ret = -1;
+    ntp_packet_t server_msg = {0};
+    ntp_packet_t client_msg = NTP_REQUEST_MSG;
+
+    struct sockaddr_in localaddr;
+    int fd;
+    char ipaddr[20];
+    u8 cnt = 10;
+
+    if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        NTP_ERR_PRINTF("cannot create ntp socket\n");
+        return -1;
+    }
+
+    /* fill in the server's address and data */
+    for (int i = 0; i < NTP_HOST_NUM; i++) {
+        servaddr[i].sin_family = AF_INET;
+        servaddr[i].sin_port = htons(port);
+    }
+
+
+    Get_IPAddress(1, ipaddr);
+
+    localaddr.sin_family = AF_INET;
+    localaddr.sin_port = htons(port);
+    localaddr.sin_addr.s_addr = inet_addr(ipaddr);
+    if (bind(fd, (struct sockaddr *)&localaddr, sizeof(localaddr)) < 0) {
+        NTP_ERR_PRINTF("ntp bind fail \n");
+        goto fail;
+    }
+
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const void *)&recv_to, sizeof(recv_to));
+    /* look up the address of the server given its name */
+
+    int inactive_host = 0;
+    for (int i = 0; i < NTP_HOST_NUM; i++) {
+        hp[i] = gethostbyname(ntp_host[i]);
+        if (!hp[i]) {
+            NTP_ERR_PRINTF("could not obtain ntp address of %s\n", ntp_host[i]);
+            inactive_host++;
+            continue;
+        }
+        /* put the host's address into the server address structure */
+        memcpy((void *)&servaddr[i].sin_addr, hp[i]->h_addr_list[0], hp[i]->h_length);
+    }
+    if (inactive_host >= NTP_HOST_NUM) {
+        goto fail;
+    }
+
+    NTP_DBG_PRINTF("sending data..\n");
+
+    /* send a message to the server */
+    for (int i = 0; i < NTP_HOST_NUM; i++) {
+        cnt = 10;
+        do {
+            if (!servaddr[i].sin_addr.s_addr) {
+                continue;
+            }
+            if (sendto(fd, &client_msg, sizeof(client_msg), 0, (struct sockaddr *)&servaddr[i], sizeof(servaddr[i])) < 0) {
+                NTP_ERR_PRINTF("ntp sendto failed\n");
+                goto fail;
+            }
+        } while (--cnt > 0);
+
+        NTP_DBG_PRINTF("recieving data..\n");
+
+    }
+    j = recv(fd, &server_msg, sizeof(server_msg), 0);
+    if (j > 0) {
+        NTP_DBG_PRINTF("received: %u out of %lu bytes \n", j, sizeof(server_msg));
+        analysis_ntp_protocol_ext(server_msg.recieve_timestamp, s_tm);
+        ntp_get_time(s_tm);
+        ret = 0;
+        /* break; */
+    } else {
+        NTP_ERR_PRINTF("recieving data err: %d\n", j);
+    }
+
+fail:
+    closesocket(fd);
+
+    return ret;
+}
+
+
 
 int ntp_client_get_time_once(const char *host, struct tm *s_tm, int recv_to)
 {

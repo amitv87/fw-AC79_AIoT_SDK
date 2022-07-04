@@ -81,6 +81,24 @@ bool tvs_core_check_session_id(int session_id)
 extern int tvs_audio_provider_initialize();
 extern int tvs_audio_recorder_thread_init();
 
+int tvs_core_uninit(void)
+{
+    tvs_ip_provider_uninit();
+    executor_service_uninit();
+    tvs_audio_recorder_thread_uninit();
+    tvs_media_player_inner_uninit();
+    tvs_speech_manager_uninit();
+    tvs_down_channel_uninit();
+    tvs_authorizer_uninit();
+    tvs_config_uninit();
+    tvs_preference_module_uninit();
+    tvs_state_manager_uninit();
+
+    TVS_LOCKER_UNINIT
+
+    return 0;
+}
+
 int tvs_core_initialize(tvs_api_callback *callback, tvs_default_config *default_config, tvs_product_qua *qua)
 {
     TVS_LOG_PRINTF("%s, start\n", __func__);
@@ -243,22 +261,25 @@ char *tvs_core_generate_client_id(const char *tvs_product_id, const char *tvs_ds
 }
 
 extern void tvs_ping_refresh_start();
+extern void tvs_ping_refresh_stop();
 
 void tvs_core_notify_net_state_changed(bool connected)
 {
-    TVS_LOG_PRINTF("%s, conn %d\n", __func__, connected);
 
     bool valid = tvs_config_is_network_valid();
     if (valid == connected) {
-        TVS_LOG_PRINTF("%s, net work state is not changed\n", __func__);
+        /* TVS_LOG_PRINTF("%s, net work state is not changed\n", __func__); */
         return;
     }
+    TVS_LOG_PRINTF("%s, conn %d\n", __func__, connected);
 
     tvs_config_set_network_valid(connected);    //更改全局变量的值为connected
     tvs_ip_provider_on_network_changed(connected);
     if (connected) {
         tvs_authorizer_start_inner();
         tvs_ping_refresh_start();
+    } else {
+        tvs_ping_refresh_stop();	//关闭ping定时器
     }
     tvs_down_channel_notify();
 }

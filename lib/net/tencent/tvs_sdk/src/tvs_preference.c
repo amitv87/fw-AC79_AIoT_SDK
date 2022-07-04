@@ -31,6 +31,17 @@ int tvs_preference_module_init()
     return 0;
 }
 
+int tvs_preference_module_uninit()
+{
+    TVS_LOCKER_UNINIT
+
+    if (g_tvs_preference_root) {
+        cJSON_Delete(g_tvs_preference_root);
+        g_tvs_preference_root = NULL;
+    }
+    return 0;
+}
+
 int tvs_preference_init()
 {
 

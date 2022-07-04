@@ -76,8 +76,7 @@ static void tvs_thread_function(void *param)
     thread->func(thread);
     tvs_thread_lock(thread);
     thread->loop_running = false;
-    thread->thread_handle = NULL;
-    thread->start = false;
+    /* thread->thread_handle = NULL; */
     tvs_thread_unlock(thread);
     if (thread->end_func != NULL) {
         // 执行end_fuc
@@ -90,9 +89,8 @@ static void tvs_thread_function(void *param)
     }
     // 解锁，
     os_wrapper_unlock_mutex(thread->runner_mutex);
-    /* os_wrapper_delete_mutex(thread->runner_mutex); */
-    /* os_wrapper_delete_mutex(thread->locker_mutex); */
-    os_wrapper_thread_delete(NULL);
+    thread->start = false;
+    /* os_wrapper_thread_delete(NULL); */
 }
 
 tvs_thread_handle_t *tvs_thread_new(thread_func func, thread_end_func end_func)
@@ -111,29 +109,61 @@ tvs_thread_handle_t *tvs_thread_new(thread_func func, thread_end_func end_func)
     return thread;
 }
 
+void tvs_thread_uninit(void **_thread)
+{
+    tvs_thread_handle_t *thread = (tvs_thread_handle_t *)*_thread;
+
+    os_wrapper_lock_mutex(thread->runner_mutex, os_wrapper_get_forever_time());
+
+    if (*_thread) {
+        os_wrapper_thread_delete(&thread->thread_handle);
+        /* if (thread->param != NULL) { */
+        /* TVS_FREE(thread->param); */
+        /* thread->param = NULL; */
+        /* } */
+        os_wrapper_del_locker_mutex(&thread->runner_mutex);
+        os_wrapper_del_locker_mutex(&thread->locker_mutex);
+        free(*_thread);
+        *_thread = NULL;
+    }
+}
+
 void tvs_thread_start_now(tvs_thread_handle_t *thread, const char *name, int prior, int stack_depth)
 {
+    //if(thread == NULL){
+    //	return;
+    //}
+    //if(thread->exit){
+    //os_wrapper_unlock_mutex(thread->runner_mutex);
+    //	return;
+    //}
     // 开始执行线程
-    thread->thread_handle = os_wrapper_start_thread(tvs_thread_function, thread, name, prior, stack_depth);
+    if (!thread->thread_handle) {
+        thread->thread_handle = os_wrapper_start_thread(tvs_thread_function, thread, name, prior, stack_depth);
 
-    if (thread->thread_handle == NULL) {
-        // 线程创建失败，需要解锁
-        os_wrapper_unlock_mutex(thread->runner_mutex);
+        if (thread->thread_handle == NULL) {
+            // 线程创建失败，需要解锁
+            os_wrapper_unlock_mutex(thread->runner_mutex);
+        }
     }
 }
 
 // 准备启动线程
-void tvs_thread_start_prepare(tvs_thread_handle_t *thread, void *param, int param_size)
+int tvs_thread_start_prepare(tvs_thread_handle_t *thread, void *param, int param_size)
 {
     if (NULL == thread) {
-        return;
+        return -1;
     }
 
+    //if(thread->exit){
+    //	return -1;
+    //}
     // 加锁，为了避免同一个线程的两个实例并发，如果一个实例正在运行，那么另一个实例会因此等待
     // 如果其他线程调用了join，也会因此等待
     os_wrapper_lock_mutex(thread->runner_mutex, os_wrapper_get_forever_time());
 
     tvs_thread_lock(thread);
+    os_wrapper_thread_delete(&thread->thread_handle);
     thread->start = true;
     if (thread->param != NULL) {
         TVS_FREE(thread->param);
@@ -148,6 +178,8 @@ void tvs_thread_start_prepare(tvs_thread_handle_t *thread, void *param, int para
     }
     thread->loop_running = true;
     tvs_thread_unlock(thread);
+
+    return 0;
 }
 
 // 线程是否停止
