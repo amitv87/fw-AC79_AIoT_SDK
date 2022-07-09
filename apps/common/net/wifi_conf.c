@@ -55,6 +55,9 @@ const u16 MAX_PACKETS_IN_PS_QUEUE	= 16; //配置WiFi驱动最大发送power-save
 const u8 RFIinitUseTrimValue = 1;//记忆wifi rf 初始化使用vm记忆的trim的值,可大大降低wifi初始化时间
 
 const u8 ntp_get_time_init = 1;	//连上网后调用ntp向ntp_host列表所有服务器获取时间, 0为关闭, 1为开启
+
+const u8 CONFIG_SDIO_SLAVE_MODE = 0; //wifi模块作为sdio从机
+
 /*--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 
 static void print_debug_ipv4(u32 daddr, u32 saddr)
