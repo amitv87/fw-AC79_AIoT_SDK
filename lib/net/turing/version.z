@@ -3,5 +3,10 @@
 .global lib_turing_version
 
 lib_turing_version:
-.long __TIMESTAMPNUM__
-.asciz "TURING-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "TURING-*modified*-@{DATE}-${COMMID}"
+#endif

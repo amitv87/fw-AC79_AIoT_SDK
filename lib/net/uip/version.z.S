@@ -3,5 +3,10 @@
 .global lib_uip_version
 
 lib_uip_version:
-.long 204705965 
-.asciz "UIP-@20220627-$308111e"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "UIP-*modified*-@20220727-$cb4de2d"
+#endif

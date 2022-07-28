@@ -221,7 +221,19 @@ c_SRC_FILES := \
 
 
 # 需要编译的 .S 文件
-S_SRC_FILES :=
+S_SRC_FILES := \
+	../../../../../include_lib/btctrler/version.z.S \
+	../../../../../include_lib/btstack/version.z.S \
+	../../../../../include_lib/driver/version.z.S \
+	../../../../../include_lib/media/version.z.S \
+	../../../../../include_lib/net/version.z.S \
+	../../../../../include_lib/server/version.z.S \
+	../../../../../include_lib/system/version.z.S \
+	../../../../../include_lib/update/version.z.S \
+	../../../../../include_lib/utils/version.z.S \
+	../../../../../lib/net/version.z.S \
+	../../../../../lib/server/version.z.S \
+	../../../../../lib/utils/version.z.S \
 
 
 # 需要编译的 .s 文件

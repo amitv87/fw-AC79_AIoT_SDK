@@ -3,5 +3,10 @@
 .global lib_btmesh_version
 
 lib_btmesh_version:
-.long __TIMESTAMPNUM__
-.asciz "BTMESH-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "BTMESH-*modified*-@{DATE}-${COMMID}"
+#endif

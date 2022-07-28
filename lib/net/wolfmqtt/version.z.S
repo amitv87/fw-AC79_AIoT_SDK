@@ -3,5 +3,10 @@
 .global lib_wolfmqtt_version
 
 lib_wolfmqtt_version:
-.long 204705966 
-.asciz "WOLFMQTT-@20220627-$308111e"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "WOLFMQTT-*modified*-@20220727-$cb4de2d"
+#endif

@@ -3,5 +3,10 @@
 .global lib_wolfssl_version
 
 lib_wolfssl_version:
-.long __TIMESTAMPNUM__
-.asciz "WOLFSSL-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "WOLFSSL-*modified*-@{DATE}-${COMMID}"
+#endif

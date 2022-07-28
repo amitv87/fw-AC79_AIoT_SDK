@@ -170,8 +170,10 @@
 <Unit filename="../../../../../include_lib/btctrler/btcontroller_modules.h" />
 <Unit filename="../../../../../include_lib/btctrler/classic/hci_lmp.h" />
 <Unit filename="../../../../../include_lib/btctrler/hci_transport.h" />
+<Unit filename="../../../../../include_lib/btctrler/version.z.S" />
 <Unit filename="../../../../../include_lib/btstack/avctp_user.h" />
 <Unit filename="../../../../../include_lib/btstack/btstack_typedef.h" />
+<Unit filename="../../../../../include_lib/btstack/version.z.S" />
 <Unit filename="../../../../../include_lib/driver/cpu/wl82/asm/WL82.h" />
 <Unit filename="../../../../../include_lib/driver/cpu/wl82/asm/adc_api.h" />
 <Unit filename="../../../../../include_lib/driver/cpu/wl82/asm/audio.h" />
@@ -246,6 +248,8 @@
 <Unit filename="../../../../../include_lib/driver/device/video/fb.h" />
 <Unit filename="../../../../../include_lib/driver/device/video/video.h" />
 <Unit filename="../../../../../include_lib/driver/device/video/video_ioctl.h" />
+<Unit filename="../../../../../include_lib/driver/version.z.S" />
+<Unit filename="../../../../../include_lib/media/version.z.S" />
 <Unit filename="../../../../../include_lib/net/http/http_cli.h" />
 <Unit filename="../../../../../include_lib/net/json_c/arraylist.h" />
 <Unit filename="../../../../../include_lib/net/json_c/json.h" />
@@ -288,8 +292,10 @@
 <Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/sockets.h" />
 <Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/stats.h" />
 <Unit filename="../../../../../include_lib/net/server/net_server.h" />
+<Unit filename="../../../../../include_lib/net/version.z.S" />
 <Unit filename="../../../../../include_lib/net/wifi/wifi_connect.h" />
 <Unit filename="../../../../../include_lib/server/audio_dev.h" />
+<Unit filename="../../../../../include_lib/server/version.z.S" />
 <Unit filename="../../../../../include_lib/system/app_core.h" />
 <Unit filename="../../../../../include_lib/system/app_msg.h" />
 <Unit filename="../../../../../include_lib/system/bank_switch.h" />
@@ -337,11 +343,13 @@
 <Unit filename="../../../../../include_lib/system/sys_time.h" />
 <Unit filename="../../../../../include_lib/system/task.h" />
 <Unit filename="../../../../../include_lib/system/timer.h" />
+<Unit filename="../../../../../include_lib/system/version.z.S" />
 <Unit filename="../../../../../include_lib/system/wait.h" />
 <Unit filename="../../../../../include_lib/update/dual_bank_updata_api.h" />
 <Unit filename="../../../../../include_lib/update/uart_update.h" />
 <Unit filename="../../../../../include_lib/update/update.h" />
 <Unit filename="../../../../../include_lib/update/update_loader_download.h" />
+<Unit filename="../../../../../include_lib/update/version.z.S" />
 <Unit filename="../../../../../include_lib/utils/crypto_toolbox/endian.h" />
 <Unit filename="../../../../../include_lib/utils/event/event.h" />
 <Unit filename="../../../../../include_lib/utils/event/key_event.h" />
@@ -350,5 +358,9 @@
 <Unit filename="../../../../../include_lib/utils/fs/fs_file_name.h" />
 <Unit filename="../../../../../include_lib/utils/fs/sdfile.h" />
 <Unit filename="../../../../../include_lib/utils/syscfg/syscfg_id.h" />
+<Unit filename="../../../../../include_lib/utils/version.z.S" />
+<Unit filename="../../../../../lib/net/version.z.S" />
+<Unit filename="../../../../../lib/server/version.z.S" />
+<Unit filename="../../../../../lib/utils/version.z.S" />
 </Project>
 </CodeBlocks_project_file>

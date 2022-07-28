@@ -3,5 +3,10 @@
 .global lib_mongoose_version
 
 lib_mongoose_version:
-.long __TIMESTAMPNUM__
-.asciz "MONGOOSE-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "MONGOOSE-*modified*-@{DATE}-${COMMID}"
+#endif

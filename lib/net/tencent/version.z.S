@@ -3,5 +3,10 @@
 .global lib_tencent_version
 
 lib_tencent_version:
-.long 204705949 
-.asciz "TENCENT-@20220627-$308111e"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "TENCENT-*modified*-@20220727-$cb4de2d"
+#endif

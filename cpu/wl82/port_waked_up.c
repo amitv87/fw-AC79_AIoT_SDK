@@ -128,6 +128,7 @@ void *port_wakeup_reg(PORT_EVENT_E event, unsigned int gpio, PORT_EDGE_E edge, v
 
     if (i == sizeof(g_wakeup_work) / sizeof(struct port_wakeup_work)) {
         spin_unlock(&lock);
+        printf("[error]>PORT_WAKED_ID_NUM to less = %d", PORT_WAKED_ID_NUM);
         return NULL;
     }
 

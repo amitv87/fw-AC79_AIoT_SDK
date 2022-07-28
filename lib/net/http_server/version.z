@@ -3,5 +3,10 @@
 .global lib_http_server_version
 
 lib_http_server_version:
-.long __TIMESTAMPNUM__
-.asciz "HTTP_SERVER-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "HTTP_SERVER-*modified*-@{DATE}-${COMMID}"
+#endif

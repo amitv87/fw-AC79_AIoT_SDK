@@ -7,16 +7,15 @@ extern char __VERSION_END[];
 
 const char *sdk_version(void)
 {
-    return "1.0.3.8";
+    return "1.0.3.9";
 }
 
 static int app_version_check()
 {
     char *version;
 
-    printf("================= SDK Version %s ===============\n", sdk_version());
+    printf("================= SDK Version    %s     ===============\n", sdk_version());
     for (version = __VERSION_BEGIN; version < __VERSION_END;) {
-        version += 4;
         printf("%s\n", version);
         version += strlen(version) + 1;
     }

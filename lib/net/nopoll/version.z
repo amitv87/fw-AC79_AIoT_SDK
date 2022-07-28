@@ -4,5 +4,10 @@
 .global lib_nopoll_version
 
 lib_nopoll_version:
-.long __TIMESTAMPNUM__
-.asciz "libnopoll-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "LIBNOPOLL-*modified*-@{DATE}-${COMMID}"
+#endif

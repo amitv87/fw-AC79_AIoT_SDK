@@ -3,5 +3,10 @@
 .global lib_mpeg_version
 
 lib_mpeg_version:
-.long __TIMESTAMPNUM__
-.asciz "MPEG-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "MPEG-*modified*-@{DATE}-${COMMID}"
+#endif

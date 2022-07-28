@@ -3,5 +3,10 @@
 .global lib_aliyun_version
 
 lib_aliyun_version:
-.long __TIMESTAMPNUM__
-.asciz "ALIYUN-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "ALIYUN-*modified*-@{DATE}-${COMMID}"
+#endif

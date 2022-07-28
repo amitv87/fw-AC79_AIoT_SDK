@@ -3,5 +3,10 @@
 .global lib_zliblite_version
 
 lib_zliblite_version:
-.long 204705971 
-.asciz "ZLIBLITE-@20220627-$308111e"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "ZLIBLITE-*modified*-@20220727-$cb4de2d"
+#endif

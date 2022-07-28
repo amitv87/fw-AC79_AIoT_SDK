@@ -36,6 +36,9 @@ struct usb_audio_play {
     u32 usb_audio_remain_len;
     OS_SEM sem;
     int (*put_buf)(const usb_dev usb_id, void *ptr, u32 len, u8 channel, u32 sample_rate);
+    u16 vol_min;
+    u16 vol_max;
+    u16 vol_res;
 };
 struct usb_audio_mic {
     u32 sample_rate;
@@ -47,6 +50,9 @@ struct usb_audio_mic {
     u8 *buffer;
     cbuffer_t usb_audio_record_cbuf;
     int (*get_buf)(const usb_dev usb_id, void *ptr, u32 len, u8 channel, u32 sample_rate);
+    u16 vol_min;
+    u16 vol_max;
+    u16 vol_res;
 };
 struct usb_audio_info {
     struct usb_audio_play player;
@@ -309,7 +315,7 @@ static struct audio_device_t *__find_control_interface(const struct usb_host_dev
 static u32 play_vol_convert(u16 v)
 {
     //固定音量表,更换声卡需要修改音量表
-#if UAC_VOLUME_STANDARD_REQUEST
+#if 0
     const u16 vol_table[] = {
         //0-100
         0xd300, //0
@@ -363,11 +369,50 @@ void set_usb_audio_play_volume(const usb_dev usb_id, u16 vol)
         return;
     }
 
-    if (usb_audio_volume_control(host_dev, featureUnitID, 1, play_vol_convert(vol), audio->interface_num)) {
-        usb_audio_volume_control(host_dev, featureUnitID, 0, play_vol_convert(vol), audio->interface_num);
+#if UAC_VOLUME_STANDARD_REQUEST
+    __this->player.vol_min = 0xe3a0;
+    __this->player.vol_max = 0xff0f;
+    __this->player.vol_res = 0x46;
+
+    if (usb_audio_volume_control_get_min(host_dev, featureUnitID, 0, &__this->player.vol_min, audio->interface_num)) {
+        usb_audio_volume_control_get_min(host_dev, featureUnitID, 1, &__this->player.vol_min, audio->interface_num);
+    }
+    if (usb_audio_volume_control_get_max(host_dev, featureUnitID, 0, &__this->player.vol_max, audio->interface_num)) {
+        usb_audio_volume_control_get_max(host_dev, featureUnitID, 1, &__this->player.vol_max, audio->interface_num);
+    }
+    if (usb_audio_volume_control_get_res(host_dev, featureUnitID, 0, &__this->player.vol_res, audio->interface_num)) {
+        usb_audio_volume_control_get_res(host_dev, featureUnitID, 1, &__this->player.vol_res, audio->interface_num);
+    }
+
+    log_info("uac host player get vol min : 0x%x", __this->player.vol_min);
+    log_info("uac host player get vol max : 0x%x", __this->player.vol_max);
+    log_info("uac host player get vol res : 0x%x", __this->player.vol_res);
+
+    u16 volume;
+
+    if (__this->player.vol_max > __this->player.vol_min) {
+        volume = __this->player.vol_min + (__this->player.vol_max - __this->player.vol_min) * 100 / vol;
     } else {
+        volume = __this->player.vol_min + (0xffff - __this->player.vol_min + __this->player.vol_max) * 100 / vol;
+    }
+
+    if (vol == 100) {
+        volume = __this->player.vol_max;
+    }
+    if (vol == 0) {
+        volume = __this->player.vol_min;
+    }
+
+    if (usb_audio_volume_control(host_dev, featureUnitID, 0, volume, audio->interface_num)) {
+        usb_audio_volume_control(host_dev, featureUnitID, 1, volume, audio->interface_num);
+        usb_audio_volume_control(host_dev, featureUnitID, 2, volume, audio->interface_num);
+    }
+#else
+    if (usb_audio_volume_control(host_dev, featureUnitID, 0, play_vol_convert(vol), audio->interface_num)) {
+        usb_audio_volume_control(host_dev, featureUnitID, 1, play_vol_convert(vol), audio->interface_num);
         usb_audio_volume_control(host_dev, featureUnitID, 2, play_vol_convert(vol), audio->interface_num);
     }
+#endif
 
     if (vol == 0) {
         __this->player.mute = 1;
@@ -628,7 +673,7 @@ void usb_audio_start_play(const usb_dev usb_id, u8 channel, u8 bit_reso, u32 sam
     //端点分配
     u32 host_ep = usb_get_ep_num(usb_id, USB_DIR_OUT, USB_ENDPOINT_XFER_ISOC);
     ASSERT(host_ep != -1, "ep not enough");
-    ep_out_dma_buf[usb_id] = usb_h_alloc_ep_buffer(usb_id, host_ep, as_t->ep_max_packet_size);
+    ep_out_dma_buf[usb_id] = usb_h_alloc_ep_buffer(usb_id, host_ep, as_t->ep_max_packet_size + 64);  //预留64个字节防止硬件越界访问
     ASSERT(ep_out_dma_buf[usb_id] != NULL);
     as_t->host_ep = host_ep;
 
@@ -720,7 +765,7 @@ void usb_audio_resume_play(const usb_dev usb_id)
 static u32 record_vol_convert(u16 v)
 {
     //固定音量表,更换声卡需要修改音量表
-#if UAC_VOLUME_STANDARD_REQUEST
+#if 0
     const u16 vol_table[] = {
         //0-100
         0xf400,
@@ -774,10 +819,50 @@ void set_usb_audio_record_volume(const usb_dev usb_id, u16 vol)
         return;
     }
 
+#if UAC_VOLUME_STANDARD_REQUEST
+    __this->microphone.vol_min = 0xe3a0;
+    __this->microphone.vol_max = 0xff0f;
+    __this->microphone.vol_res = 0x46;
+
+    if (usb_audio_volume_control_get_min(host_dev, featureUnitID, 0, &__this->microphone.vol_min, audio->interface_num)) {
+        usb_audio_volume_control_get_min(host_dev, featureUnitID, 1, &__this->microphone.vol_min, audio->interface_num);
+    }
+    if (usb_audio_volume_control_get_max(host_dev, featureUnitID, 0, &__this->microphone.vol_max, audio->interface_num)) {
+        usb_audio_volume_control_get_max(host_dev, featureUnitID, 1, &__this->microphone.vol_max, audio->interface_num);
+    }
+    if (usb_audio_volume_control_get_res(host_dev, featureUnitID, 0, &__this->microphone.vol_res, audio->interface_num)) {
+        usb_audio_volume_control_get_res(host_dev, featureUnitID, 1, &__this->microphone.vol_res, audio->interface_num);
+    }
+
+    log_info("uac host microphone get vol min : 0x%x", __this->microphone.vol_min);
+    log_info("uac host microphone get vol max : 0x%x", __this->microphone.vol_max);
+    log_info("uac host microphone get vol res : 0x%x", __this->microphone.vol_res);
+
+    u16 volume;
+
+    if (__this->microphone.vol_max > __this->microphone.vol_min) {
+        volume = __this->microphone.vol_min + (__this->microphone.vol_max - __this->microphone.vol_min) * 100 / vol;
+    } else {
+        volume = __this->microphone.vol_min + (0xffff - __this->microphone.vol_min + __this->microphone.vol_max) * 100 / vol;
+    }
+
+    if (vol == 100) {
+        volume = __this->microphone.vol_max;
+    }
+    if (vol == 0) {
+        volume = __this->microphone.vol_min;
+    }
+
+    if (usb_audio_volume_control(host_dev, featureUnitID, 0, volume, audio->interface_num)) {
+        usb_audio_volume_control(host_dev, featureUnitID, 1, volume, audio->interface_num);
+        usb_audio_volume_control(host_dev, featureUnitID, 2, volume, audio->interface_num);
+    }
+#else
     if (usb_audio_volume_control(host_dev, featureUnitID, 0, record_vol_convert(vol), audio->interface_num)) {
         usb_audio_volume_control(host_dev, featureUnitID, 1, record_vol_convert(vol), audio->interface_num);
         usb_audio_volume_control(host_dev, featureUnitID, 2, record_vol_convert(vol), audio->interface_num);
     }
+#endif
 }
 
 static u32 write_file_len[USB_MAX_HW_NUM];
@@ -932,7 +1017,7 @@ void usb_audio_start_record(const usb_dev usb_id, u8 channel, u8 bit_reso, u32 s
     u32 host_ep = usb_get_ep_num(usb_id, USB_DIR_IN, USB_ENDPOINT_XFER_ISOC);
     ASSERT(host_ep != -1, "ep not enough");
     host_ep = host_ep | USB_DIR_IN;
-    ep_in_dma_buf[usb_id] = usb_h_alloc_ep_buffer(usb_id, host_ep, as_t->ep_max_packet_size);
+    ep_in_dma_buf[usb_id] = usb_h_alloc_ep_buffer(usb_id, host_ep, as_t->ep_max_packet_size + 64);  //预留64个字节防止硬件越界访问
     ASSERT(ep_in_dma_buf[usb_id] != NULL);
     as_t->host_ep = host_ep & 0x0f;
 

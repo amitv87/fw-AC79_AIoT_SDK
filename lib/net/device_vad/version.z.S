@@ -3,5 +3,10 @@
 .global lib_device_vad_version
 
 lib_device_vad_version:
-.long 204705943 
-.asciz "LIBVAD-@20220627-$308111e"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "LIBVAD-*modified*-@20220727-$cb4de2d"
+#endif

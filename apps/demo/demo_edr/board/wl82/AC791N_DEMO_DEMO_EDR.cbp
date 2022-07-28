@@ -192,6 +192,7 @@
 <Unit filename="../../../../../include_lib/btctrler/classic/lmp_config.h" />
 <Unit filename="../../../../../include_lib/btctrler/hci_transport.h" />
 <Unit filename="../../../../../include_lib/btctrler/port/wl82/btcontroller_config.h" />
+<Unit filename="../../../../../include_lib/btctrler/version.z.S" />
 <Unit filename="../../../../../include_lib/btstack/a2dp_media_codec.h" />
 <Unit filename="../../../../../include_lib/btstack/avctp_user.h" />
 <Unit filename="../../../../../include_lib/btstack/bluetooth.h" />
@@ -207,6 +208,7 @@
 <Unit filename="../../../../../include_lib/btstack/le/le_user.h" />
 <Unit filename="../../../../../include_lib/btstack/le/sm.h" />
 <Unit filename="../../../../../include_lib/btstack/third_party/common/spp_user.h" />
+<Unit filename="../../../../../include_lib/btstack/version.z.S" />
 <Unit filename="../../../../../include_lib/driver/cpu/wl82/asm/WL82.h" />
 <Unit filename="../../../../../include_lib/driver/cpu/wl82/asm/adc_api.h" />
 <Unit filename="../../../../../include_lib/driver/cpu/wl82/asm/audio.h" />
@@ -283,12 +285,14 @@
 <Unit filename="../../../../../include_lib/driver/device/video/fb.h" />
 <Unit filename="../../../../../include_lib/driver/device/video/video.h" />
 <Unit filename="../../../../../include_lib/driver/device/video/video_ioctl.h" />
+<Unit filename="../../../../../include_lib/driver/version.z.S" />
 <Unit filename="../../../../../include_lib/media/media_develop/media/application/audio_drc.h" />
 <Unit filename="../../../../../include_lib/media/media_develop/media/application/audio_eq.h" />
 <Unit filename="../../../../../include_lib/media/media_develop/media/application/eq_config.h" />
 <Unit filename="../../../../../include_lib/media/media_develop/media/application/eq_func_define.h" />
 <Unit filename="../../../../../include_lib/media/media_develop/media/cpu/wl82/asm/hw_eq.h" />
 <Unit filename="../../../../../include_lib/media/media_develop/media/sw_drc.h" />
+<Unit filename="../../../../../include_lib/media/version.z.S" />
 <Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/port/arch/cc.h" />
 <Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/port/arch/cpu.h" />
 <Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/port/lwip.h" />
@@ -311,9 +315,11 @@
 <Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/prot/ethernet.h" />
 <Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/prot/ieee.h" />
 <Unit filename="../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip/stats.h" />
+<Unit filename="../../../../../include_lib/net/version.z.S" />
 <Unit filename="../../../../../include_lib/net/wifi/wifi_connect.h" />
 <Unit filename="../../../../../include_lib/server/audio_dev.h" />
 <Unit filename="../../../../../include_lib/server/audio_server.h" />
+<Unit filename="../../../../../include_lib/server/version.z.S" />
 <Unit filename="../../../../../include_lib/system/app_core.h" />
 <Unit filename="../../../../../include_lib/system/app_msg.h" />
 <Unit filename="../../../../../include_lib/system/bank_switch.h" />
@@ -360,11 +366,13 @@
 <Unit filename="../../../../../include_lib/system/sys_time.h" />
 <Unit filename="../../../../../include_lib/system/task.h" />
 <Unit filename="../../../../../include_lib/system/timer.h" />
+<Unit filename="../../../../../include_lib/system/version.z.S" />
 <Unit filename="../../../../../include_lib/system/wait.h" />
 <Unit filename="../../../../../include_lib/update/dual_bank_updata_api.h" />
 <Unit filename="../../../../../include_lib/update/uart_update.h" />
 <Unit filename="../../../../../include_lib/update/update.h" />
 <Unit filename="../../../../../include_lib/update/update_loader_download.h" />
+<Unit filename="../../../../../include_lib/update/version.z.S" />
 <Unit filename="../../../../../include_lib/utils/crypto_toolbox/endian.h" />
 <Unit filename="../../../../../include_lib/utils/event/bt_event.h" />
 <Unit filename="../../../../../include_lib/utils/event/device_event.h" />
@@ -377,5 +385,9 @@
 <Unit filename="../../../../../include_lib/utils/syscfg/config_target.h" />
 <Unit filename="../../../../../include_lib/utils/syscfg/config_transport.h" />
 <Unit filename="../../../../../include_lib/utils/syscfg/syscfg_id.h" />
+<Unit filename="../../../../../include_lib/utils/version.z.S" />
+<Unit filename="../../../../../lib/net/version.z.S" />
+<Unit filename="../../../../../lib/server/version.z.S" />
+<Unit filename="../../../../../lib/utils/version.z.S" />
 </Project>
 </CodeBlocks_project_file>

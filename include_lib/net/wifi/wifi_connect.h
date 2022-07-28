@@ -537,5 +537,12 @@ extern void wifi_set_long_retry(u8  retry);
  */
 extern void wifi_set_short_retry(u8  retry);
 
+/**
+ * @brief wifi 最大backoff范围设置
+ *
+ * @param cwmax 为最大backoff范围
+ */
+extern void wifi_backoff_cfg(u8 cwmax);
+
 #endif  //_WIFI_CONNECT_H_
 

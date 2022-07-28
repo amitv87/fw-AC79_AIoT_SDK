@@ -3,5 +3,10 @@
 .global lib_wt_version
 
 lib_wt_version:
-.long 204705984 
-.asciz "WT-@20220627-$308111e"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "WT-*modified*-@20220727-$cb4de2d"
+#endif

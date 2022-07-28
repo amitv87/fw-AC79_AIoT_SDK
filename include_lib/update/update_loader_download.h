@@ -97,6 +97,7 @@ enum {
     UPDATE_RESULT_OTA_TWS_CRC_ERROR,            //对耳校验失败
     UPDATE_RESULT_OTA_APP_EXIT,             //升级过程APP强制退出
     UPDATE_RESULT_TWS_NO_CONNECT,           //对耳未连接
+    UPDATE_RESULT_UPDATE_FILE_SAME,     //升级相同固件
 };
 
 #include "system/task.h"

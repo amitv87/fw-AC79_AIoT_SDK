@@ -3,5 +3,10 @@
 .global lib_mqtt_version
 
 lib_mqtt_version:
-.long 204705962 
-.asciz "MQTT-@20220627-$308111e"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "MQTT-*modified*-@20220727-$cb4de2d"
+#endif

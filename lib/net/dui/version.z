@@ -3,5 +3,10 @@
 .global lib_dui_version
 
 lib_dui_version:
-.long __TIMESTAMPNUM__
-.asciz "DUI-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "DUI-*modified*-@{DATE}-${COMMID}"
+#endif

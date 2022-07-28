@@ -326,7 +326,6 @@
 <Unit filename="../../../../apps/wifi_ipc/include/video_rt_tutk.h" />
 <Unit filename="../../../../apps/wifi_ipc/include/video_system.h" />
 <Unit filename="../../../../apps/wifi_ipc/spi_video.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="../../../../apps/wifi_ipc/version.z.S" />
 <Unit filename="../../../../apps/wifi_ipc/video_rec.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/wifi_ipc/wifi/ctp_cmd.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/wifi_ipc/wifi/ftpd_vfs_reg.c"><Option compilerVer="CC"/></Unit>
@@ -351,8 +350,10 @@
 <Unit filename="../../../../include_lib/btctrler/btcontroller_modules.h" />
 <Unit filename="../../../../include_lib/btctrler/classic/hci_lmp.h" />
 <Unit filename="../../../../include_lib/btctrler/hci_transport.h" />
+<Unit filename="../../../../include_lib/btctrler/version.z.S" />
 <Unit filename="../../../../include_lib/btstack/avctp_user.h" />
 <Unit filename="../../../../include_lib/btstack/btstack_typedef.h" />
+<Unit filename="../../../../include_lib/btstack/version.z.S" />
 <Unit filename="../../../../include_lib/driver/cpu/wl82/asm/WL82.h" />
 <Unit filename="../../../../include_lib/driver/cpu/wl82/asm/adc_api.h" />
 <Unit filename="../../../../include_lib/driver/cpu/wl82/asm/audio.h" />
@@ -442,7 +443,9 @@
 <Unit filename="../../../../include_lib/driver/device/video/video_ioctl.h" />
 <Unit filename="../../../../include_lib/driver/device/video/video_ppbuf.h" />
 <Unit filename="../../../../include_lib/driver/device/video/videobuf.h" />
+<Unit filename="../../../../include_lib/driver/version.z.S" />
 <Unit filename="../../../../include_lib/media/media_develop/media/application/eq_func_define.h" />
+<Unit filename="../../../../include_lib/media/version.z.S" />
 <Unit filename="../../../../include_lib/net/ftpserver/stupid-ftpd.h" />
 <Unit filename="../../../../include_lib/net/http/http_cli.h" />
 <Unit filename="../../../../include_lib/net/http/http_server.h" />
@@ -501,9 +504,11 @@
 <Unit filename="../../../../include_lib/net/tutk/IOTCAPIs.h" />
 <Unit filename="../../../../include_lib/net/tutk/P2PCam/AVFRAMEINFO.h" />
 <Unit filename="../../../../include_lib/net/tutk/P2PCam/AVIOCTRLDEFs.h" />
+<Unit filename="../../../../include_lib/net/version.z.S" />
 <Unit filename="../../../../include_lib/net/wifi/wifi_connect.h" />
 <Unit filename="../../../../include_lib/server/audio_dev.h" />
 <Unit filename="../../../../include_lib/server/audio_server.h" />
+<Unit filename="../../../../include_lib/server/version.z.S" />
 <Unit filename="../../../../include_lib/server/video_engine_server.h" />
 <Unit filename="../../../../include_lib/server/video_server.h" />
 <Unit filename="../../../../include_lib/server/vpkg_server.h" />
@@ -555,12 +560,14 @@
 <Unit filename="../../../../include_lib/system/sys_time.h" />
 <Unit filename="../../../../include_lib/system/task.h" />
 <Unit filename="../../../../include_lib/system/timer.h" />
+<Unit filename="../../../../include_lib/system/version.z.S" />
 <Unit filename="../../../../include_lib/system/wait.h" />
 <Unit filename="../../../../include_lib/update/dual_bank_updata_api.h" />
 <Unit filename="../../../../include_lib/update/net_update.h" />
 <Unit filename="../../../../include_lib/update/uart_update.h" />
 <Unit filename="../../../../include_lib/update/update.h" />
 <Unit filename="../../../../include_lib/update/update_loader_download.h" />
+<Unit filename="../../../../include_lib/update/version.z.S" />
 <Unit filename="../../../../include_lib/utils/crypto_toolbox/endian.h" />
 <Unit filename="../../../../include_lib/utils/event/device_event.h" />
 <Unit filename="../../../../include_lib/utils/event/event.h" />
@@ -570,6 +577,10 @@
 <Unit filename="../../../../include_lib/utils/fs/fs_file_name.h" />
 <Unit filename="../../../../include_lib/utils/fs/sdfile.h" />
 <Unit filename="../../../../include_lib/utils/syscfg/syscfg_id.h" />
+<Unit filename="../../../../include_lib/utils/version.z.S" />
 <Unit filename="../../../../include_lib/utils/yuv_soft_scalling.h" />
+<Unit filename="../../../../lib/net/version.z.S" />
+<Unit filename="../../../../lib/server/version.z.S" />
+<Unit filename="../../../../lib/utils/version.z.S" />
 </Project>
 </CodeBlocks_project_file>

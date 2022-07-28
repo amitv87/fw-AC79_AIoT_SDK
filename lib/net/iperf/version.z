@@ -3,5 +3,10 @@
 .global lib_iperf_version
 
 lib_iperf_version:
-.long __TIMESTAMPNUM__
-.asciz "IPERF-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "IPERF-*modified*-@{DATE}-${COMMID}"
+#endif

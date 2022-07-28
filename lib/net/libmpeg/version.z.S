@@ -3,5 +3,10 @@
 .global lib_mpeg_version
 
 lib_mpeg_version:
-.long 204705952 
-.asciz "MPEG-@20220627-$308111e"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "MPEG-*modified*-@20220727-$cb4de2d"
+#endif

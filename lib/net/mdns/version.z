@@ -3,5 +3,10 @@
 .global lib_mdns_version
 
 lib_mdns_version:
-.long __TIMESTAMPNUM__
-.asciz "MDNS-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "MDNS-*modified*-@{DATE}-${COMMID}"
+#endif

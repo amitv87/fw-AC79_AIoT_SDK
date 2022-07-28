@@ -3,5 +3,10 @@
 .global lib_aliyun_version
 
 lib_aliyun_version:
-.long 204705941 
-.asciz "ALIYUN-@20220627-$308111e"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "ALIYUN-*modified*-@20220727-$cb4de2d"
+#endif

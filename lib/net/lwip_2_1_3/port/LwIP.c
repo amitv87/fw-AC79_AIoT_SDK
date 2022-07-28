@@ -58,7 +58,7 @@ int __attribute__((weak)) set_phy_stats_cb(u8 id, void (*f)(enum phy_state))
     return 0;
 }
 
-void __attribute__((weak)) socket_send_but_netif_busy_hook(int s, char type_udp)
+int __attribute__((weak)) socket_send_but_netif_busy_hook(int s, char type_udp)
 {
 }
 

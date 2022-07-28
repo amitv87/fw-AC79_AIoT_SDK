@@ -3,5 +3,10 @@
 .global lib_lwip_2_1_3_version
 
 lib_lwip_2_1_3_version:
-.long __TIMESTAMPNUM__
-.asciz "LWIP_2_1_3-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "LWIP_2_1_3-*modified*-@{DATE}-${COMMID}"
+#endif

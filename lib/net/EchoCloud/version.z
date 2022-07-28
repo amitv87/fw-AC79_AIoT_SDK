@@ -3,5 +3,10 @@
 .global lib_echocloud_version
 
 lib_echocloud_version:
-.long __TIMESTAMPNUM__
-.asciz "ECHOCLOUD-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "ECHOCLOUD-*modified*-@{DATE}-${COMMID}"
+#endif

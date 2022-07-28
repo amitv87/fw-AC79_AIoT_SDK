@@ -3,5 +3,10 @@
 .global lib_duer_version
 
 lib_duer_version:
-.long __TIMESTAMPNUM__
-.asciz "DUER-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "DUER-*modified*-@{DATE}-${COMMID}"
+#endif

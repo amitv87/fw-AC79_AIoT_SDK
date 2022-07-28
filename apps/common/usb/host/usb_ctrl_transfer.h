@@ -383,4 +383,14 @@ int usb_audio_volume_control(struct usb_host_device *host_dev, u8 feature_id, u8
   */
 int usb_audio_mute_control(struct usb_host_device *host_dev, u8 feature_id, u8 mute, u8 interface_num);
 
+int usb_audio_volume_control_get_cur(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u16 *volume, u8 interface_num);
+
+int usb_audio_volume_control_get_min(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u16 *volume, u8 interface_num);
+
+int usb_audio_volume_control_get_max(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u16 *volume, u8 interface_num);
+
+int usb_audio_volume_control_get_res(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u16 *volume, u8 interface_num);
+
+int usb_audio_mute_control_get_cur(struct usb_host_device *host_dev, u8 feature_id, u8 *mute, u8 interface_num);
+
 #endif

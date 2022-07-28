@@ -58,6 +58,8 @@ const u8 ntp_get_time_init = 1;	//连上网后调用ntp向ntp_host列表所有�
 
 const u8 CONFIG_SDIO_SLAVE_MODE = 0; //wifi模块作为sdio从机
 
+const u8 WIFI_TX_FULL_WAIT_MODE = 0; // 可以设置为0,1,2, 数值越大一定程度上会提高wifi的吞吐率，但同时会加大wifi线程占据cpu的比重
+
 /*--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 
 static void print_debug_ipv4(u32 daddr, u32 saddr)
@@ -126,15 +128,16 @@ int lwip_low_level_output_filter(u8 *pkg, u32 len)
     }
     return 0;
 }
-void socket_send_but_netif_busy_hook(int s, char type_udp)
+int socket_send_but_netif_busy_hook(int s, char type_udp)
 {
     if (type_udp) {
         putbyte('$');
-        os_time_dly(30); //根据实际应用发送情况调节, 针对UDP多释放一下CPU, 一方面有利于系统其他线程顺畅运行, 另一方面防止猛发送导致网络拥塞加剧
+        /* os_time_dly(30); //根据实际应用发送情况调节, 针对UDP多释放一下CPU, 一方面有利于系统其他线程顺畅运行, 另一方面防止猛发送导致网络拥塞加剧 */
     } else {
         putbyte('|');
-        os_time_dly(2);
+        /* os_time_dly(2); */
     }
+    return 0;
 }
 int wifi_recv_pkg_and_soft_filter(u8 *pkg, u32 len)  //通过软件过滤无用数据帧减轻cpu压力,pkg[20]就是对应抓包工具第一个字节的802.11 MAC Header 字段
 {

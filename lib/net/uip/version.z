@@ -3,5 +3,10 @@
 .global lib_uip_version
 
 lib_uip_version:
-.long __TIMESTAMPNUM__
-.asciz "UIP-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "UIP-*modified*-@{DATE}-${COMMID}"
+#endif

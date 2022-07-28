@@ -3,5 +3,10 @@
 .global lib_cjson_version
 
 lib_cjson_version:
-.long __TIMESTAMPNUM__
-.asciz "CJSON-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "CJSON-*modified*-@{DATE}-${COMMID}"
+#endif

@@ -3,5 +3,10 @@
 .global lib_wolfmqtt_version
 
 lib_wolfmqtt_version:
-.long __TIMESTAMPNUM__
-.asciz "WOLFMQTT-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "WOLFMQTT-*modified*-@{DATE}-${COMMID}"
+#endif

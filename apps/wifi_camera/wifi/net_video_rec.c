@@ -818,6 +818,33 @@ static void net_video_rec_set_bitrate(unsigned int bits_rate)
     server_request(__this_net->net_video_rec, VIDEO_REQ_REC, &req);
 }
 
+//u8  app_jpeg_spec_set_quality(u16 width, u8 q)//值720P录像图传VGA开这个函数
+//{
+//    return 6;
+//}
+/*
+ *双路应用层使用小内存YUV大小:根据传参的width可知是实时流或录像分辨率的宽进行区分
+ *返回值:设定双路的YUV大小(默认200K左右，最小为16行对应YUV大小)(0:1帧对应YUV大小)
+ */
+u32 app_jpeg_spec_set_large_image_yuv_size(u16 width)
+{
+    return 200 * 1024;
+}
+/*双路应用层动态码率修改:根据传参的width可知是实时流或录像分辨率的宽进行区分
+ 返回值:动态码率设置值(0:原始请求设置的码率)
+ */
+u32 app_jpeg_spec_abr_set(u16 width, u32 fps, u32 abr_kbps)
+{
+    return 0;
+}
+/*单路应用层动态码率修改:根据传参的width可知是实时流或录像分辨率的宽进行区分
+ 返回值:动态码率设置值(0:原始请求设置的码率)
+ */
+u32 app_jpeg_abr_set(u16 width, u32 fps, u32 abr_kbps)
+{
+    return 0;
+}
+
 /*码率控制，根据具体分辨率设置*/
 static int net_video_rec_get_abr(u32 width)
 {
@@ -893,7 +920,11 @@ static int net_video_rec0_start()
     u16 max_one_line_strnum;
     char buf[128];
 
+#if NET_VIDEO_SHARE_CHANNEL
     if (__this && __this->state == VIDREC_STA_START) {
+#if (!defined CONFIG_NO_SDRAM_ENABLE)
+        net_video_rec_free_buf();//使用sdram共用通道释放内存以节省内存，不带sdram则录像和实时流已共用
+#endif
         union video_req req = {0};
         u8 path[48];
         __this_net->net_video_rec = __this->video_rec0;
@@ -925,6 +956,7 @@ static int net_video_rec0_start()
         }
         return err;
     }
+#endif
 
     if (!__this_net->net_video_rec) {
 #ifdef CONFIG_UVC_VIDEO2_ENABLE
@@ -1070,10 +1102,13 @@ static int net_video_rec0_stop(u8 close)
     int err = 0;
     printf("\nnet video rec0 stop\n");
     __this_net->net_state = VIDREC_STA_STOPING;
+#if NET_VIDEO_SHARE_CHANNEL
     if (__this && __this->state == VIDREC_STA_START) {
         err = stream_protocol_task_kill();
         __this_net->net_video_rec = NULL;
-    } else {
+    } else
+#endif
+    {
         req.rec.channel = 1;
         req.rec.state = VIDEO_STATE_STOP;
         err = server_request(__this_net->net_video_rec, VIDEO_REQ_REC, &req);

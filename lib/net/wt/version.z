@@ -3,5 +3,10 @@
 .global lib_wt_version
 
 lib_wt_version:
-.long __TIMESTAMPNUM__
-.asciz "WT-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "WT-*modified*-@{DATE}-${COMMID}"
+#endif

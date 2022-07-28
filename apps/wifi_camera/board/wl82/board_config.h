@@ -6,8 +6,8 @@
  */
 
 // #define CONFIG_BOARD_7911B_DEVELOP_AERIAL
-#define CONFIG_BOARD_7915B
-/*#define CONFIG_BOARD_7916A*/
+/*#define CONFIG_BOARD_7915B*/
+#define CONFIG_BOARD_7916A
 
 #ifdef CONFIG_BOARD_7915B
 #define __FLASH_SIZE__    (8 * 1024 * 1024)
@@ -37,24 +37,16 @@
 #define __FLASH_SIZE__    (8 * 1024 * 1024)
 #define __SDRAM_SIZE__    (8 * 1024 * 1024)
 
-//#define CONFIG_VIDEO1_ENABLE                    //spi video
-
 #define TCFG_SD0_ENABLE                     1
 #define TCFG_ADKEY_ENABLE                   1           //AD按键
-#define CONFIG_OSC_RTC_ENABLE                           //RTC时钟开关
 //#define CONFIG_PRESS_LONG_KEY_POWERON                   //长按开关机功能
 
 #define CONFIG_CAMERA_H_V_EXCHANGE          1
 
-#define TCFG_DEBUG_PORT                     IO_PORTB_08
-#define TCFG_DAC_MUTE_PORT                  0xff
-#define TCFG_DAC_MUTE_VALUE                 0
-
 #define TCFG_SD_PORTS                       'A'			//SD0/SD1的ABCD组(默认为开发板SD0-D),注意:IO占用问题
-#define TCFG_SD_DAT_WIDTH                   4			//1:单线模式, 4:四线模式
-#define TCFG_SD_DET_MODE                    SD_CLK_DECT	//检测模式:命令检测，时钟检测，IO检测
-#define TCFG_SD_DET_IO                      IO_PORTB_08	//SD_DET_MODE为SD_IO_DECT时有效
-#define TCFG_SD_DET_IO_LEVEL                0			//IO检卡上线的电平(0/1),SD_DET_MODE为SD_IO_DECT时有效
+#define TCFG_SD_DAT_WIDTH                   1			//1:单线模式, 4:四线模式
+#define TCFG_SD_DET_MODE                    SD_CMD_DECT	//检测模式:命令检测，时钟检测，IO检测
+#define TCFG_SD_DET_IO                      0	//SD_DET_MODE为SD_IO_DECT时有效
 #define TCFG_SD_CLK                         30000000		//SD时钟
 
 //*********************************************************************************//

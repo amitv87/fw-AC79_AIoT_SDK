@@ -3,5 +3,10 @@
 .global lib_tmallgenie_version
 
 lib_tmallgenie_version:
-.long __TIMESTAMPNUM__
-.asciz "TMALLGENIE-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "TMALLGENIE-*modified*-@{DATE}-${COMMID}"
+#endif

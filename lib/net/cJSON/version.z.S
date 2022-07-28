@@ -3,5 +3,10 @@
 .global lib_cjson_version
 
 lib_cjson_version:
-.long 204705941 
-.asciz "CJSON-@20220627-$308111e"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "CJSON-*modified*-@20220727-$cb4de2d"
+#endif

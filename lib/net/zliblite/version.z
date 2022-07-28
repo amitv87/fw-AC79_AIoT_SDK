@@ -3,5 +3,10 @@
 .global lib_zliblite_version
 
 lib_zliblite_version:
-.long __TIMESTAMPNUM__
-.asciz "ZLIBLITE-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "ZLIBLITE-*modified*-@{DATE}-${COMMID}"
+#endif

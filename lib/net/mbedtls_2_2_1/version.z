@@ -3,5 +3,10 @@
 .global lib_mbedtls_2_2_1_version
 
 lib_mbedtls_2_2_1_version:
-.long __TIMESTAMPNUM__
-.asciz "MBEDTLS_2_2_1-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "MBEDTLS_2_2_1-*modified*-@{DATE}-${COMMID}"
+#endif

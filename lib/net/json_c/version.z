@@ -3,5 +3,10 @@
 .global lib_json_c_version
 
 lib_json_c_version:
-.long __TIMESTAMPNUM__
-.asciz "JSON_C-@{DATE}-${COMMID}"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "JSON_C-*modified*-@{DATE}-${COMMID}"
+#endif

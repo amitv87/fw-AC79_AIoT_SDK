@@ -3,5 +3,10 @@
 .global lib_wolfssl_version
 
 lib_wolfssl_version:
-.long 204705970 
-.asciz "WOLFSSL-@20220627-$308111e"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "WOLFSSL-*modified*-@20220727-$cb4de2d"
+#endif

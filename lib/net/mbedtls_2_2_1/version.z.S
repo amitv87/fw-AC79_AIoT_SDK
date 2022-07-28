@@ -3,5 +3,10 @@
 .global lib_mbedtls_2_2_1_version
 
 lib_mbedtls_2_2_1_version:
-.long 204705959 
-.asciz "MBEDTLS_2_2_1-@20220627-$308111e"
+
+#ifdef CONFIG_RELEASE_ENABLE
+
+#else
+.asciz __FILE__
+.asciz "MBEDTLS_2_2_1-*modified*-@20220727-$cb4de2d"
+#endif
