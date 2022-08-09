@@ -109,6 +109,7 @@ typedef struct websocket_struct {
     u8 msg_write;
     u8 msg_read;
     u8 *recv_buf;
+    u32 recv_buf_size;
     u64 recv_len;
     u32 recv_time_out;
     u32 payload_data_len;

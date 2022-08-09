@@ -110,7 +110,7 @@ DEFINES := \
 	-DCONFIG_VIDEO_OSD_EN \
 	-DCONFIG_SFC_ENABLE \
 	-DCONFIG_AUDIO_ENABLE \
-	-DCONFIG_NO_SDRAM_ENABLE \
+	-DCONFIG_UI_ENABLE \
 	-DCONFIG_VIDEO_ENABLE=1 \
 	-DCONFIG_VIDEO0_ENABLE=1 \
 	-DCONFIG_NET_ENABLE=1 \
@@ -398,8 +398,8 @@ LFLAGS := \
 	../../../../cpu/wl82/liba/libaec.a \
 	../../../../cpu/wl82/liba/libdns.a \
 	../../../../cpu/wl82/liba/media_app.a \
-	../../../../cpu/wl82/liba/wl_wifi_ap_sfc.a \
-	../../../../cpu/wl82/liba/lwip_2_1_3_sfc.a \
+	../../../../cpu/wl82/liba/wl_wifi_ap.a \
+	../../../../cpu/wl82/liba/lwip_2_1_3.a \
 	../../../../cpu/wl82/liba/stream_media_server.a \
 	../../../../cpu/wl82/liba/libmbedtls_2_2_1.a \
 	../../../../cpu/wl82/liba/iperf.a \
@@ -410,7 +410,13 @@ LFLAGS := \
 	../../../../cpu/wl82/liba/ftpserver.a \
 	../../../../cpu/wl82/liba/net_server.a \
 	../../../../cpu/wl82/liba/libqrcode.a \
+	../../../../cpu/wl82/liba/lib_mp3_dec.a \
 	--end-group \
+	../../../../cpu/wl82/liba/video_dec_server.a \
+	../../../../cpu/wl82/liba/ui.a \
+	../../../../cpu/wl82/liba/res.a \
+	../../../../cpu/wl82/liba/font.a \
+	../../../../cpu/wl82/liba/ui_draw.a \
 	-T../../../../cpu/wl82/sdk.ld \
 	-M=../../../../cpu/wl82/tools/sdk.map \
 	--plugin-opt=mcpu=r3 \

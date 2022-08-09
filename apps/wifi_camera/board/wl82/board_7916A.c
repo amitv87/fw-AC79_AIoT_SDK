@@ -282,15 +282,28 @@ static const struct spiflash_platform_data spiflash_data = {
     .sfc_run_mode   = SFC_FAST_READ_DUAL_OUTPUT_MODE,
 };
 
+//*********************************************************************************//
+//                                   UI模块配置                                    //
+//*********************************************************************************//
 #ifdef CONFIG_UI_ENABLE //注意使用UI不能使用SD卡D口 建议使用A口 io冲突问题
+#if TCFG_LCD_ILI9481_ENABLE
+#define EMI_BAUD		EMI_BAUD_DIV8
+#endif
+#if TCFG_LCD_ILI9341_ENABLE
+#define EMI_BAUD  		EMI_BAUD_DIV8
+#endif
 static const struct emi_platform_data emi_data = {
     .bits_mode      = EMI_8BITS_MODE,
-    .baudrate       = EMI_BAUD_DIV5,			//clock = HSB_CLK / (baudrate + 1) , HSB分频
+    .baudrate       = EMI_BAUD,			//clock = HSB_CLK / (baudrate + 1) , HSB分频
     .colection      = EMI_FALLING_COLT,		//EMI_FALLING_COLT / EMI_RISING_COLT : 下降沿 上升沿 采集数据
     .time_out       = 1 * 1000,				//最大写超时时间ms
     .th             = EMI_TWIDTH_NO_HALF,
     .ts             = 0,
-    .tw             = EMI_BAUD_DIV5 / 2,
+#if TCFG_LCD_ILI9481_ENABLE
+    .tw             = EMI_BAUD_DIV5 ,
+#else
+    .tw             = EMI_BAUD / 2,
+#endif
     .data_bit_en    = 0,					//0默认根据bits_mode数据位来配置
 };
 static const struct ui_lcd_platform_data pdata = {
@@ -308,6 +321,7 @@ const struct ui_devices_cfg ui_cfg_data = {
     .private_data = (void *) &pdata,
 };
 #endif
+//**********************************END*******************************************//
 
 static const struct dac_platform_data dac_data = {
     .sw_differ = 1,

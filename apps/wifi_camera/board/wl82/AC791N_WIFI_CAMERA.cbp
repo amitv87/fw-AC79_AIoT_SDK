@@ -40,7 +40,7 @@
 <Add option="-DCONFIG_VIDEO_OSD_EN" />
 <Add option="-DCONFIG_SFC_ENABLE" />
 <Add option="-DCONFIG_AUDIO_ENABLE" />
-<Add option="-DCONFIG_NO_SDRAM_ENABLE" />
+<Add option="-DCONFIG_UI_ENABLE" />
 <Add option="-DCONFIG_VIDEO_ENABLE=1" />
 <Add option="-DCONFIG_VIDEO0_ENABLE=1" />
 <Add option="-DCONFIG_NET_ENABLE=1" />
@@ -151,8 +151,8 @@
 <Add option="../../../../cpu/wl82/liba/libaec.a" />
 <Add option="../../../../cpu/wl82/liba/libdns.a" />
 <Add option="../../../../cpu/wl82/liba/media_app.a" />
-<Add option="../../../../cpu/wl82/liba/wl_wifi_ap_sfc.a" />
-<Add option="../../../../cpu/wl82/liba/lwip_2_1_3_sfc.a" />
+<Add option="../../../../cpu/wl82/liba/wl_wifi_ap.a" />
+<Add option="../../../../cpu/wl82/liba/lwip_2_1_3.a" />
 <Add option="../../../../cpu/wl82/liba/stream_media_server.a" />
 <Add option="../../../../cpu/wl82/liba/libmbedtls_2_2_1.a" />
 <Add option="../../../../cpu/wl82/liba/iperf.a" />
@@ -163,7 +163,13 @@
 <Add option="../../../../cpu/wl82/liba/ftpserver.a" />
 <Add option="../../../../cpu/wl82/liba/net_server.a" />
 <Add option="../../../../cpu/wl82/liba/libqrcode.a" />
+<Add option="../../../../cpu/wl82/liba/lib_mp3_dec.a" />
 <Add option="--end-group" />
+<Add option="../../../../cpu/wl82/liba/video_dec_server.a" />
+<Add option="../../../../cpu/wl82/liba/ui.a" />
+<Add option="../../../../cpu/wl82/liba/res.a" />
+<Add option="../../../../cpu/wl82/liba/font.a" />
+<Add option="../../../../cpu/wl82/liba/ui_draw.a" />
 <Add option="-T../../../../cpu/wl82/sdk.ld" />
 <Add option="-M=../../../../cpu/wl82/tools/sdk.map" />
 <Add library="C:\JL\pi32\pi32v2-lib\r3\libm.a" />
@@ -260,6 +266,7 @@
 <Unit filename="../../../../apps/common/ui/GUI_GIF.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/ui/font/fontinit.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/ui/gif_api.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/common/ui/include/GUI_GIF_Private.h" />
 <Unit filename="../../../../apps/common/ui/include/lcd_config.h" />
 <Unit filename="../../../../apps/common/ui/include/lcd_drive.h" />
 <Unit filename="../../../../apps/common/ui/include/lcd_te_driver.h" />
@@ -625,6 +632,7 @@
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_browser.h" />
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_button.h" />
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_camera.h" />
+<Unit filename="../../../../include_lib/utils/ui/ui/ui_circle.h" />
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_core.h" />
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_grid.h" />
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_number.h" />

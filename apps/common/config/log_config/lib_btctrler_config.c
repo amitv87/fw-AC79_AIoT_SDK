@@ -66,6 +66,9 @@ const int config_force_bt_pwr_tab_using_normal_level  = 0;
 const int config_bredr_afh_user           = 0;
 const int config_btctler_bredr_master     = 0;
 const int config_btctler_dual_a2dp		  = 0;
+const int config_btctler_role_switch_fail_disconnect = 1;
+const int config_btctler_role_switch_fail_back_to_slave = 0;
+
 const u8 rx_fre_offset_adjust_enable      = 1;
 const int config_fix_fre_enable           = 0;
 const int ble_disable_wait_enable         = 1;

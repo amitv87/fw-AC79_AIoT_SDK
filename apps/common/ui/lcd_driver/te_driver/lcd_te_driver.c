@@ -105,7 +105,7 @@ static int lcd_TE_wakeup_send_data_init(void)//TE初始化
         printf("port_wakeup_reg fail.\n");
     }
 
-    return thread_fork("TE_wakeup_send_data_task", 28, 512, 32, NULL, TE_wakeup_send_data_task, NULL);
+    return thread_fork("TE_wakeup_send_data_task", 9, 512, 32, NULL, TE_wakeup_send_data_task, NULL);
 }
 late_initcall(lcd_TE_wakeup_send_data_init);//开机就创建TE数据发送线程
 
@@ -137,7 +137,7 @@ static int send_data_init(void)//数据发送初始化
     os_sem_create(&te_ready_sem, 0);
     os_sem_create(&send_ok_sem, 0);
 
-    return thread_fork("no_te_send_data_task", 28, 512, 32, NULL, no_te_send_data_task, NULL);
+    return thread_fork("no_te_send_data_task", 9, 512, 32, NULL, no_te_send_data_task, NULL);
 }
 late_initcall(send_data_init);//开机就创建数据发送线程
 #endif

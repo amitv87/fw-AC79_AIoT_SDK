@@ -379,7 +379,7 @@ static int picture_compose_task_init(void)
 
     lbuf_handle_test = lib_system_lbuf_test_init(LCD_YUV420_DATA_SIZE * 2 + 128);
 
-    return thread_fork("picture_compose_task", 27, 512, 32, NULL, picture_compose_task, NULL);
+    return thread_fork("picture_compose_task", 8, 512, 32, NULL, picture_compose_task, NULL);
 }
 late_initcall(picture_compose_task_init);
 #endif

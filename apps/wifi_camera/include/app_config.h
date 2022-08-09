@@ -305,7 +305,8 @@
 #if TCFG_LCD_ENABLE
 #define TCFG_LCD_HX8357_ENABLE              0
 #define TCFG_LCD_ST7789S_ENABLE			    0
-#define TCFG_LCD_ILI9341_ENABLE	        	1
+#define TCFG_LCD_ILI9341_ENABLE	        	0
+#define TCFG_LCD_ILI9481_ENABLE	        	1
 #define TCFG_LCD_ST7789V_ENABLE			    0
 #define TCFG_LCD_ST7735S_ENABLE			    0
 #define TCFG_LCD_480x272_8BITS			    0
@@ -317,7 +318,8 @@
 #define HORIZONTAL_SCREEN                   1//1为使能横屏配置
 #endif
 
-#if TCFG_LCD_ST7789S_ENABLE || TCFG_LCD_ILI9341_ENABLE
+
+#if TCFG_LCD_ST7789S_ENABLE || TCFG_LCD_ILI9341_ENABLE || TCFG_LCD_ILI9481_ENABLE
 #define USE_LCD_TE                          1
 #endif
 
