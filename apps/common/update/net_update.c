@@ -216,7 +216,7 @@ int net_fread(void *fd, char *buf, int len)
 {
     struct net_update *net_update = (struct net_update *)fd;
     if (net_update && !net_update->write_to_flash && net_update->fd) {
-        fread(buf, 1, len, net_update->fd);
+        return fread(buf, 1, len, net_update->fd);
     }
     return 0;
 }
