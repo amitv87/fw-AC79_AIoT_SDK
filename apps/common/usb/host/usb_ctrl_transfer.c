@@ -598,7 +598,7 @@ int usb_audio_sampling_frequency_control(struct usb_host_device *host_dev, u32 e
                            &sampe_rate,
                            3);
 }
-int usb_audio_volume_control(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u16 volume, u8 interface_num)
+int usb_audio_volume_control_set_cur(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u16 volume, u8 interface_num)
 {
     log_info("%s featureID:%d vol:%x", __func__, feature_id, volume);
     return usb_control_msg(host_dev,
@@ -649,25 +649,44 @@ int usb_audio_volume_control_get_res(struct usb_host_device *host_dev, u8 featur
                            volume,
                            2);
 }
-int usb_audio_mute_control(struct usb_host_device *host_dev, u8 feature_id, u8 mute, u8 interface_num)
+int usb_audio_mute_control_set_cur(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u8 mute, u8 interface_num)
 {
-    log_info("%s featureID:%d mute:%d", __func__, feature_id, mute);
     return usb_control_msg(host_dev,
                            1,
                            USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                           0x0100,
+                           0x0100 | channel_num,
                            feature_id << 8 | interface_num,
                            &mute,
                            1);
 }
-int usb_audio_mute_control_get_cur(struct usb_host_device *host_dev, u8 feature_id, u8 *mute, u8 interface_num)
+int usb_audio_mute_control_get_cur(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u8 *mute, u8 interface_num)
 {
     return usb_control_msg(host_dev,
                            0x81,
                            USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                           0x0100,
+                           0x0100 | channel_num,
                            feature_id << 8 | interface_num,
                            mute,
+                           1);
+}
+int usb_audio_agc_control_set_cur(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u8 agc, u8 interface_num)
+{
+    return usb_control_msg(host_dev,
+                           1,
+                           USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                           0x0700 | channel_num,
+                           feature_id << 8 | interface_num,
+                           &agc,
+                           1);
+}
+int usb_audio_agc_control_get_cur(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u8 *agc, u8 interface_num)
+{
+    return usb_control_msg(host_dev,
+                           0x81,
+                           USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                           0x0700 | channel_num,
+                           feature_id << 8 | interface_num,
+                           agc,
                            1);
 }
 

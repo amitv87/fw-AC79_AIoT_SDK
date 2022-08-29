@@ -74,7 +74,7 @@ int system_wakeup_reset(void)
     if (!sys_rst_rs) {
         sys_rst_rs = system_reset_reason_check();
     }
-    if (sys_rst_rs & (SYS_RST_PORT_WKUP | SYS_RST_ALM_WKUP)) {
+    if (sys_rst_rs & (SYS_RST_PORT_WKUP | SYS_RST_ALM_WKUP | SYS_RST_VDDIO_PWR_ON)) {
         return true;
     }
     return false;

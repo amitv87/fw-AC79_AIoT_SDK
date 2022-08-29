@@ -127,14 +127,16 @@ struct imd_rgb_platform_data {
     u8 irq_en;//true/false
     u8 req_buf_waite;//底层buff更新是否需要等待在中断更新：小分辨率等待，大分辨率不等带
     u8 data_out_mode;//enum imd_data_out_mode 输出输出大小端
-    u8 data_format;//enum imd_rgb_format
+    u8 data_in_format;//enum imd_rgb_format
+    u8 data_out_format;//enum imd_rgb_format
     u8 pll_clk_div;//enum imd_pll_clk_div
     u8 clk_edge;//IMD_CLK_UPDATE_H/IMD_CLK_UPDATE_L
     u8 de_edge;//IMD_DE_H/IMD_DE_L
     u8 hsync_edge;//IMD_HSYN_H/IMD_HSYN_L
     u8 vsync_edge;//IMD_VSYN_H/IMD_VSYN_L
     u8 data_shift_en;//RGB666数据右移位2位(先右移在按照MSB/LSB输出)
-    u8 double_buffer;//底层使用双buffer切换
+    u8 double_buffer;//应用层一个buffer,底层一个buffer 双buffer切换
+    u8 new_double_buffer;//应用层使用双buffer切换
     u16 hsync_forward;//行前沿宽度周期个数
     u16 hsync_behind;//行后沿宽度周期个数
     u16 hsync_time;//行同步脉冲宽度周期
@@ -157,9 +159,11 @@ typedef struct imd_rgb {
     u8 start;
     u8 data_shift_en;//rgb666移位
     u8 soft_kst;
-    u8 double_buffer;//底层使用双buffer切换
+    u8 double_buffer;//应用层一个buffer,底层一个buffer 双buffer切换
     u8 req_buf_waite;//是否需要等待imd中断更新数据，小分辨率需要等待，大分辨率不需要
     volatile u8 req_upate;
+    volatile u8 new_upate;
+    volatile u8 send_ok;
     volatile u8 upating;
     OS_SEM sem;
     OS_MUTEX mtx;
@@ -181,5 +185,8 @@ typedef struct imd_rgb {
 	};
 
 extern const struct device_operations imd_dev_ops;
+
+void set_imd_first_show_buf_addr(void *buf);//使用应用层双buf时需要先设置第一次显示的地址
+void set_imd_show_buf_addr(void *addr);//使用应用层双buf 传入更新显示地址
 
 #endif

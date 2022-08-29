@@ -99,7 +99,7 @@ static void spi_test_task(void *p)
     dev_ioctl(spi_hdl, IOCTL_SPI_SEND_BYTE, data);//发送一个字节
 
     //4.读取一个字节
-    data = dev_ioctl(spi_hdl, IOCTL_SPI_READ_BYTE, 0);//读取一个字节
+    dev_ioctl(spi_hdl, IOCTL_SPI_READ_BYTE, &data);//读取一个字节
 
     buf = malloc(1024);
     if (!buf) {

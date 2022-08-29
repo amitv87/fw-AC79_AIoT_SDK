@@ -28,6 +28,7 @@
 #define SPI_UNIDIR_MODE			BIT(10) //单向：只用SPI_DO一根线数据传输（一般只用于作为从机接收数据）
 #define SPI_BIDIR_MODE			BIT(11) //双向：用SPI_DO/DI两根线数据传输
 #define SPI_WR_UNUSE_SEM		BIT(12) //SPI读写等待不使用信号量
+#define SPI_SCLK_PORT_HD		BIT(13) //SPI CLK时钟开启强电流强驱
 
 #define IOCTL_SPI_SET_CS            _IOW('S', 1, 1)
 #define IOCTL_SPI_SEND_BYTE         _IOW('S', 2, 1)

@@ -7,10 +7,10 @@
 
 static void poweroff_test(void)
 {
-    void power_set_soft_poweroff(void);
+    void power_set_soft_poweroff(u32 ms);
     os_time_dly(200);
     printf("---> poweroff_test \n\n");
-    power_set_soft_poweroff();
+    power_set_soft_poweroff(0);
 }
 static int c_main(void)
 {

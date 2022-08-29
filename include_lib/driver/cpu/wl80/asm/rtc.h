@@ -74,5 +74,8 @@ u32 rtc_wkup_reason();
 
 void rtc_poweroff();
 
+void soft_off_and_alarm_reset(void);
+
+
 #endif
 

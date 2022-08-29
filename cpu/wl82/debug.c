@@ -10,9 +10,12 @@
 #include "app_config.h"
 
 
+extern const char *os_current_task_rom();
+extern void log_output_release_deadlock(void);
 extern void exception_irq_handler();
 extern void sdtap_init(u32 ch);
-extern void wdt_clear(void);
+extern void __wdt_clear(void);
+extern void __cpu_reset(void);
 static u8 debug_index;
 
 static const char *const debug_msg[32] = {
@@ -108,7 +111,9 @@ static void trace_call_stack()
 
 void exception_analyze(int *sp)
 {
-    /* log_output_release_deadlock(); */ //TODO
+
+    log_output_release_deadlock();
+
     printf("\r\n\r\n---------------------exception error ------------------------\r\n\r\n");
 
     u32 cpu_id = current_cpu_id();
@@ -153,7 +158,9 @@ void exception_analyze(int *sp)
     for (int i = 0; i < 32; i++) {
         if (q32DSP(cpu_id)->EMU_MSG & BIT(i)) {
             printf("%s\r\n", emu_msg[31 - i]);
-            printf("current_task : %s\r\n", os_current_task());
+            if (os_current_task_rom()) {
+                printf("current_task : %s\r\n", os_current_task_rom());
+            }
             if (i == 3) {
                 printf("usp limit %x  %x\r\n",
                        q32DSP(cpu_id)->EMU_USP_L, q32DSP(cpu_id)->EMU_USP_H);
@@ -221,13 +228,15 @@ void exception_analyze(int *sp)
     }
     printf("system_reset...\r\n\r\n\r\n");
     log_flush();    //只能在异常中断里调用
-    wdt_clear();
+    __wdt_clear();
 #ifdef SDTAP_DEBUG
     sdtap_init(2);//防止IO被占据,重新初始化SDTAP
     while (1);
 #endif
 #ifndef CONFIG_FPGA_ENABLE
-    cpu_reset();
+    while (1) {
+        __cpu_reset();
+    }
 #endif
 }
 ___interrupt

@@ -368,7 +368,7 @@ int usb_audio_sampling_frequency_control(struct usb_host_device *host_dev, u32 e
   * usb_audio_volume_control(host_dev , feature_id , channel_num , volume);
   * @encode
   */
-int usb_audio_volume_control(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u16 volume, u8 interface_num);
+int usb_audio_volume_control_set_cur(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u16 volume, u8 interface_num);
 
 /**@brief   USB音频静音控制
   * @param[in]  usb_host_device定义的结构体指针
@@ -381,7 +381,9 @@ int usb_audio_volume_control(struct usb_host_device *host_dev, u8 feature_id, u8
   * usb_audio_mute_control(host_dev , feature_id , channel_num , volume);
   * @encode
   */
-int usb_audio_mute_control(struct usb_host_device *host_dev, u8 feature_id, u8 mute, u8 interface_num);
+int usb_audio_mute_control_set_cur(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u8 mute, u8 interface_num);
+
+int usb_audio_mute_control_get_cur(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u8 *mute, u8 interface_num);
 
 int usb_audio_volume_control_get_cur(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u16 *volume, u8 interface_num);
 
@@ -391,6 +393,8 @@ int usb_audio_volume_control_get_max(struct usb_host_device *host_dev, u8 featur
 
 int usb_audio_volume_control_get_res(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u16 *volume, u8 interface_num);
 
-int usb_audio_mute_control_get_cur(struct usb_host_device *host_dev, u8 feature_id, u8 *mute, u8 interface_num);
+int usb_audio_agc_control_set_cur(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u8 agc, u8 interface_num);
+
+int usb_audio_agc_control_get_cur(struct usb_host_device *host_dev, u8 feature_id, u8 channel_num, u8 *agc, u8 interface_num);
 
 #endif

@@ -8,5 +8,5 @@ lib_uc_httpc_version:
 
 #else
 .asciz __FILE__
-.asciz "UC_HTTPC-*modified*-@20220727-$cb4de2d"
+.asciz "UC_HTTPC-*modified*-@20220826-$5abe746"
 #endif

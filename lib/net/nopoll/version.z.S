@@ -9,5 +9,5 @@ lib_nopoll_version:
 
 #else
 .asciz __FILE__
-.asciz "LIBNOPOLL-*modified*-@20220727-$cb4de2d"
+.asciz "LIBNOPOLL-*modified*-@20220826-$5abe746"
 #endif

@@ -8,5 +8,5 @@ lib_device_vad_version:
 
 #else
 .asciz __FILE__
-.asciz "LIBVAD-*modified*-@20220727-$cb4de2d"
+.asciz "LIBVAD-*modified*-@20220826-$5abe746"
 #endif

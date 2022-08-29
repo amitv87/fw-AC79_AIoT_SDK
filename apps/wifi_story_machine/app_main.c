@@ -76,10 +76,10 @@ const struct task_info task_info_table[] = {
     {"adpcm_encoder",       13,      512,   0     },
     {"echo_deal",           11,     1024,   32    },
     {"uac_sync",            20,      512,   0     },
-    {"uac_play0",            7,      768,   0     },
-    {"uac_play1",            7,      768,   0     },
-    {"uac_record0",          7,      768,   32    },
-    {"uac_record1",          7,      768,   32    },
+    {"uac_play0",           26,      512,   32    },
+    {"uac_play1",           26,      512,   32    },
+    {"uac_record0",         26,      512,   0     },
+    {"uac_record1",         26,      512,   0     },
 #if CPU_CORE_NUM > 1
     {"#C0usb_msd0",          1,      512,   128   },
 #else

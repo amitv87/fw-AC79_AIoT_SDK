@@ -9,6 +9,9 @@
 #include "timer.h"
 #include "fs/fs.h"
 #include "os/os_api.h"
+#include "device/device.h"
+#include "asm/includes.h"
+
 
 //=======================net_update==========================================================
 #define NET_UPDATE_STATE_NONE	0
@@ -63,7 +66,13 @@ static int dual_bank_verify_hdl(int result)
 static void net_update_system_reset(void *priv)
 {
     printf("cpu reset ....\n\n");
-    system_reset();
+
+    if (get_power_keep_state() & POWER_KEEP_RTC) { //需要使用软关机唤醒的方式复位,否则系统复位会导致RTC时间掉
+        power_set_soft_poweroff(10);//first pwoer off 10ms will power on
+    } else {
+        system_reset();
+    }
+
 }
 static int net_update_doing_callback(void *result)
 {

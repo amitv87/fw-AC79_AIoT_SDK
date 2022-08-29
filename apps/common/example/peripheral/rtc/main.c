@@ -9,7 +9,7 @@
 #endif
 
 #ifdef USE_RTC_TEST_DEMO
-//当应用层不定义该函数时，系统默认时间为SDK发布时间，当RTC设置时间小于SDK发布时间则设置无效
+/*//当应用层不定义该函数时，系统默认时间为SDK发布时间，当RTC设置时间小于SDK发布时间则设置无效*/
 static void *rtc_hdl;
 
 static void time_print(void)//网络时间获取方法
@@ -38,17 +38,31 @@ static void time_print(void)//网络时间获取方法
     }
 }
 
+static void power_off_test(void)
+{
+    power_set_soft_poweroff(0);
+}
+
+
+static void cpu_reset_test(void)
+{
+    /*cpu_reset();*/
+    system_reset();
+}
 /* 闹钟响了进行这个函数 */
 static void alarm_rings(void *priv)
 {
     printf("alarm clock is rings!!!!!!!!!!!!!!!");
     /* 测试闹钟关机唤醒  使能唤醒 1 设置时间10秒  system will off set 1*/
-#if 1
-    alarm_wkup_ctrl(1, 10, 1); //打开闹钟闹钟唤醒功能 设置10s 一次
-    power_set_soft_poweroff();
+    /*alarm_wkup_ctrl(1, 10); //打开闹钟闹钟唤醒功能 设置10s 一次*/
+#ifdef CONFIG_OSC_RTC_ENABLE                //RTC时钟开关
+
+    alarm_wkup_ctrl(1, 10, 0); //使用外部RTC电源 关机
 #else
-    alarm_wkup_ctrl(1, 10, 0); //打开闹钟闹钟唤醒功能 设置10s 一次
+    alarm_wkup_ctrl(1, 10, 1); //使用内部RTC电源 关机
 #endif
+
+    sys_timeout_add(NULL, power_off_test, 50);//唤醒回调是处在中断当中不能使用关机函数
 }
 
 static void time_rtc_test_task(void *p)
@@ -73,31 +87,25 @@ static void time_rtc_test_task(void *p)
     /* 打印时间信息 */
     printf("frist_time_get_sys_time: %d-%d-%d %d:%d:%d\n", test_rtc_time.year, test_rtc_time.month, test_rtc_time.day, test_rtc_time.hour, test_rtc_time.min, test_rtc_time.sec);
     /* 赋值时间信息 */
-    test_rtc_time.year = 2023;
-    test_rtc_time.month = 8;
-    test_rtc_time.day = 24;
-    test_rtc_time.hour = 14;
-    test_rtc_time.min = 23;
     test_rtc_time.sec = 0;
     /* 设置时间信息  */
     dev_ioctl(rtc_hdl, IOCTL_SET_SYS_TIME, (u32)&test_rtc_time);
     printf("set_sys_time: %d-%d-%d %d:%d:%d\n", test_rtc_time.year, test_rtc_time.month, test_rtc_time.day, test_rtc_time.hour, test_rtc_time.min, test_rtc_time.sec);
     /* 获取时间星期 */
-    u8 weekday = dev_ioctl(rtc_hdl, IOCTL_GET_WEEKDAY, (u32)&test_rtc_time);
+    /*u8 weekday = dev_ioctl(rtc_hdl, IOCTL_GET_WEEKDAY, (u32)&test_rtc_time);*/
     /* 打开闹钟开关 */
     extern void set_alarm_ctrl(u8 set_alarm);
     set_alarm_ctrl(1);
     /* 赋值闹钟时间信息 */
-    test_rtc_time.year = 2023;
-    test_rtc_time.month = 8;
-    test_rtc_time.day = 24;
-    test_rtc_time.hour = 14;
-    test_rtc_time.min = 23;
-    test_rtc_time.sec = 18;
+    test_rtc_time.sec = 59;
     /* 设置闹钟 */
     dev_ioctl(rtc_hdl, IOCTL_SET_ALARM, (u32)&test_rtc_time);
 
+    /*sys_timeout_add(NULL, cpu_reset_test, 4000);*/
+
     while (1) {
+        int get_rtc_vddio();
+        get_rtc_vddio();
         os_time_dly(100);//just test this dly
         dev_ioctl(rtc_hdl, IOCTL_GET_SYS_TIME, (u32)&test_rtc_time);
         printf("get_sys_time: %d-%d-%d %d:%d:%d\n", test_rtc_time.year, test_rtc_time.month, test_rtc_time.day, test_rtc_time.hour, test_rtc_time.min, test_rtc_time.sec);
@@ -106,7 +114,7 @@ static void time_rtc_test_task(void *p)
     }
 
 #else
-//def CONFIG_WIFI_ENABLE //网络时间,当不需要网络时间则不需以下代码操作
+    //def CONFIG_WIFI_ENABLE //网络时间,当不需要网络时间则不需以下代码操作
     while (wifi_get_sta_connect_state() != WIFI_STA_NETWORK_STACK_DHCP_SUCC) {
         printf("Waitting STA Connected...\r\n");
         //当网络连接成功前, 获取的是同步网络时间前的RTC时间
@@ -120,6 +128,7 @@ static void time_rtc_test_task(void *p)
         time_print();  //当网络连接成功前, 获取的是同步网络时间前的RTC时间
         os_time_dly(300);
     }
+
 #endif
 }
 
@@ -129,4 +138,4 @@ static int c_main(void)
     return 0;
 }
 late_initcall(c_main);
-#endif
+/*#endif*/

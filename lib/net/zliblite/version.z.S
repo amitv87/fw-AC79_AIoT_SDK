@@ -8,5 +8,5 @@ lib_zliblite_version:
 
 #else
 .asciz __FILE__
-.asciz "ZLIBLITE-*modified*-@20220727-$cb4de2d"
+.asciz "ZLIBLITE-*modified*-@20220826-$5abe746"
 #endif

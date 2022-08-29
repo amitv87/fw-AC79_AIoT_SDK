@@ -8,5 +8,5 @@ lib_mdns_version:
 
 #else
 .asciz __FILE__
-.asciz "MDNS-*modified*-@20220727-$cb4de2d"
+.asciz "MDNS-*modified*-@20220826-$5abe746"
 #endif

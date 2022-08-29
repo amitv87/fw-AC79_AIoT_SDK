@@ -1003,8 +1003,8 @@ void input_key_handler(u8 key_status, u8 key_number)
     }
 
     if ((key_number == 1) && (key_status == KEY_EVENT_LONG)) {
-        extern void power_set_soft_poweroff(void);
-        power_set_soft_poweroff();
+        extern void power_set_soft_poweroff(u32 ms);
+        power_set_soft_poweroff(0);
         return;
     }
 

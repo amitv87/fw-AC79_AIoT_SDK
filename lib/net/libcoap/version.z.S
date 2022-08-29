@@ -8,5 +8,5 @@ lib_coap_version:
 
 #else
 .asciz __FILE__
-.asciz "COAP-*modified*-@20220727-$cb4de2d"
+.asciz "COAP-*modified*-@20220826-$5abe746"
 #endif

@@ -8,5 +8,5 @@ lib_tencent_version:
 
 #else
 .asciz __FILE__
-.asciz "TENCENT-*modified*-@20220727-$cb4de2d"
+.asciz "TENCENT-*modified*-@20220826-$5abe746"
 #endif

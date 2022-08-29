@@ -8,5 +8,5 @@ lib_mongoose_version:
 
 #else
 .asciz __FILE__
-.asciz "MONGOOSE-*modified*-@20220727-$cb4de2d"
+.asciz "MONGOOSE-*modified*-@20220826-$5abe746"
 #endif

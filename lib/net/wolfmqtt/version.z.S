@@ -8,5 +8,5 @@ lib_wolfmqtt_version:
 
 #else
 .asciz __FILE__
-.asciz "WOLFMQTT-*modified*-@20220727-$cb4de2d"
+.asciz "WOLFMQTT-*modified*-@20220826-$5abe746"
 #endif

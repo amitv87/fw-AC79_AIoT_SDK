@@ -8,5 +8,5 @@ lib_mqtt_version:
 
 #else
 .asciz __FILE__
-.asciz "MQTT-*modified*-@20220727-$cb4de2d"
+.asciz "MQTT-*modified*-@20220826-$5abe746"
 #endif

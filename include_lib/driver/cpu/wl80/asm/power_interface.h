@@ -199,7 +199,7 @@ u8 power_is_low_power_probe(void);
 
 u8 power_is_low_power_post(void);
 
-void power_set_soft_poweroff(void);
+void power_set_soft_poweroff(u32 ms);
 
 void power_set_mode(u8 mode);
 

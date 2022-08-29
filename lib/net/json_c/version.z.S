@@ -8,5 +8,5 @@ lib_json_c_version:
 
 #else
 .asciz __FILE__
-.asciz "JSON_C-*modified*-@20220727-$cb4de2d"
+.asciz "JSON_C-*modified*-@20220826-$5abe746"
 #endif

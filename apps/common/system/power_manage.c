@@ -393,7 +393,7 @@ __attribute__((weak)) void sys_power_poweroff_wait_powerkey_up(void)
 void sys_power_poweroff(void)
 {
     sys_power_poweroff_wait_powerkey_up();
-    power_set_soft_poweroff();
+    power_set_soft_poweroff(0);
 }
 
 int sys_power_get_battery_voltage(void)
@@ -411,7 +411,7 @@ void sys_power_init(void)
     vbat_check_init();
 
     if (get_vbat_level() <= LOW_POWER_SHUTDOWN) {
-        power_set_soft_poweroff();
+        power_set_soft_poweroff(0);
     }
 #ifdef CONFIG_AUTO_SHUTDOWN_ENABLE
     u8 auto_off_time = 0;

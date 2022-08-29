@@ -26,7 +26,7 @@
 
 static FILE *play_file = NULL;
 
-int usb_audio_play_put_buf(void *ptr, u32 len)
+int usb_audio_record_get_buf(void *ptr, u32 len)
 {
     int ret = 0;
     if (ptr == NULL && len == 0) {
@@ -59,7 +59,7 @@ int usb_audio_play_put_buf(void *ptr, u32 len)
 
 static FILE *record_file = NULL;
 
-int usb_audio_record_get_buf(void *ptr, u32 len)
+int usb_audio_play_put_buf(void *ptr, u32 len)
 {
 #if (TEST_FILE_ENABLE)
     int ret = 0;

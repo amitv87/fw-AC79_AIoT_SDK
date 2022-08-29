@@ -8,5 +8,5 @@ lib_echocloud_version:
 
 #else
 .asciz __FILE__
-.asciz "ECHOCLOUD-*modified*-@20220727-$cb4de2d"
+.asciz "ECHOCLOUD-*modified*-@20220826-$5abe746"
 #endif

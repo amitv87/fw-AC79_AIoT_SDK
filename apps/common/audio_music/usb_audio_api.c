@@ -769,7 +769,7 @@ static int usb_host_audio_speaker_close(struct usb_host_spk_handle *hdl)
     return 0;
 }
 
-static int usb_host_audio_play_put_buf(const usb_dev usb_id, void *ptr, u32 len, u8 channel, u32 sample_rate)
+static int usb_host_audio_record_get_buf(const usb_dev usb_id, void *ptr, u32 len, u8 channel, u32 sample_rate)
 {
     struct usb_host_mic_handle *hdl = uac_host_mic_handle[usb_id];
 
@@ -794,7 +794,7 @@ static int usb_host_audio_play_put_buf(const usb_dev usb_id, void *ptr, u32 len,
     return len;
 }
 
-static int usb_host_audio_record_get_buf(const usb_dev usb_id, void *ptr, u32 len, u8 channel, u32 sample_rate)
+static int usb_host_audio_play_put_buf(const usb_dev usb_id, void *ptr, u32 len, u8 channel, u32 sample_rate)
 {
     struct usb_host_spk_handle *hdl = uac_host_spk_handle[usb_id];
 

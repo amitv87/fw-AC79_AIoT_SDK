@@ -16,11 +16,14 @@
 
 #include "typedef.h"
 
-
 extern void p33_lock(void);
 extern void p33_unlock(void);
+
 #define p33_cs_h(x)        do{p33_lock();if(x&BIT(15)){JL_P33->SPI_CON |= BIT(0)|BIT(8);}else{JL_P33->SPI_CON  &= ~BIT(8);JL_P33->SPI_CON  |= BIT(0);}}while(0)
 #define p33_cs_l           do{JL_P33->SPI_CON  &= ~(BIT(0)|BIT(8));p33_unlock();}while(0)
+
+#define __p33_cs_h(x)      do{if(x&BIT(15)){JL_P33->SPI_CON |= BIT(0)|BIT(8);}else{JL_P33->SPI_CON &= ~BIT(8);JL_P33->SPI_CON |= BIT(0);}}while(0)
+#define __p33_cs_l         do{JL_P33->SPI_CON  &= ~(BIT(0)|BIT(8));}while(0)
 
 #define P33_OR              0b001
 #define P33_AND             0b010

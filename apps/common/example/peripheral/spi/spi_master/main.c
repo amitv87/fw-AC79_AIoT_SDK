@@ -47,7 +47,7 @@ static void spi_test_task(void *p)
 
     //4.读取一个字节
     spi_cs(0);
-    data = dev_ioctl(spi_hdl, IOCTL_SPI_READ_BYTE, 0);//读取一个字节
+    dev_ioctl(spi_hdl, IOCTL_SPI_READ_BYTE, &data);//读取一个字节
     spi_cs(1);
     os_time_dly(100);
 

@@ -8,5 +8,5 @@ lib_aliyun_version:
 
 #else
 .asciz __FILE__
-.asciz "ALIYUN-*modified*-@20220727-$cb4de2d"
+.asciz "ALIYUN-*modified*-@20220826-$5abe746"
 #endif

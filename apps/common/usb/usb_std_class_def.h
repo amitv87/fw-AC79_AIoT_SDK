@@ -216,8 +216,4 @@
 #define HOST_MIC_VOLUME             100
 #endif
 
-#ifndef UAC_VOLUME_STANDARD_REQUEST
-#define UAC_VOLUME_STANDARD_REQUEST 1
-#endif
-
 #endif

@@ -78,10 +78,10 @@ const struct task_info task_info_table[] = {
 #endif
     {"usb_msd1",             1,      512,   128   },
     {"uac_sync",            20,      512,   0     },
-    {"uac_play0",            7,      768,   0     },
-    {"uac_play1",            7,      768,   0     },
-    {"uac_record0",          7,      768,   32    },
-    {"uac_record1",          7,      768,   32    },
+    {"uac_record0",         26,      768,   0     },
+    {"uac_record1",         26,      768,   0     },
+    {"uac_play0",           26,      768,   32    },
+    {"uac_play1",           26,      768,   32    },
 #ifdef CONFIG_WIFI_ENABLE
     {"tasklet",             10,     WIFI_TASKLET_STK_SIZE,   0,		 wifi_tasklet_tcb_stk_q	 },//通过调节任务优先级平衡WIFI收发占据总CPU的比重
     {"RtmpMlmeTask",        17,     WIFI_MLME_STK_SIZE,  	 0, 	 wifi_mlme_tcb_stk_q	 },

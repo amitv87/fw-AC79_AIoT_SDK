@@ -23,6 +23,7 @@
 #define log_info(...)
 #endif
 
+static OS_SEM touch_sem;
 
 extern int ui_touch_msg_post(struct touch_event *event);
 
@@ -314,33 +315,19 @@ static void tpd_up(int x, int y)
 
 static void GT911_interrupt(void)
 {
+    os_sem_post(&touch_sem);
+}
+
+static int GT911_init(void)
+{
     u8 status = 0;
     static u16 touch_x = 0;
     static u16 touch_y = 0;
     static u8 touch_status = 0;
 
-
-    rdGT911Reg(GT_GSTID_REG, &status);	//读取触摸点的状态   // BIT7表示有数据 ,bit0-3 表示触摸点个数
-
-    if (status != 0x80) { //有触摸值
-        if (status > 127) { //有一个触摸点按下
-            get_GT911_xy(GT_TP1_REG, &touch_x, &touch_y);
-            tpd_down(touch_x, touch_y);//做触摸运算
-            touch_status = 1;//标记触摸按下
-        }
-    } else {
-        if (touch_status) { //这样做的目的是使得发消息做处理只有一次
-            tpd_up(touch_x, touch_y);//做触摸运算
-        }
-        touch_status = 0;//标记触摸抬起
-    }
-    status = 0;
-    wrGT911Reg(GT_GSTID_REG, status); //清标志
-}
-
-static int GT911_init(void)
-{
     iic = dev_open("iic0", NULL);
+
+    os_sem_create(&touch_sem, 0);
 
     extern const struct ui_devices_cfg ui_cfg_data;
     static const struct ui_lcd_platform_data *pdata;
@@ -361,6 +348,29 @@ static int GT911_init(void)
     if (get_GT911_pid()) {
         log_info("[err]>>>>>GT911 err!!!");
         return 1;
+    }
+
+    while (1) {
+        os_sem_pend(&touch_sem, 0);
+
+        rdGT911Reg(GT_GSTID_REG, &status);	//读取触摸点的状态   // BIT7表示有数据 ,bit0-3 表示触摸点个数
+
+        if (status != 0x80) { //有触摸值
+            if (status > 127) { //有一个触摸点按下
+                get_GT911_xy(GT_TP1_REG, &touch_x, &touch_y);
+                tpd_down(touch_x, touch_y);//做触摸运算
+                touch_status = 1;//标记触摸按下
+            }
+        } else {
+            if (touch_status) { //这样做的目的是使得发消息做处理只有一次
+                tpd_up(touch_x, touch_y);//做触摸运算
+            }
+
+            touch_status = 0;//标记触摸抬起
+        }
+
+        status = 0;
+        wrGT911Reg(GT_GSTID_REG, status); //清标志
     }
 
     return 0;
