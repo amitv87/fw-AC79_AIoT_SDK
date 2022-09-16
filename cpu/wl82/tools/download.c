@@ -75,20 +75,6 @@ rm isd_config.ini
 
 #else
 
-
-
-
-
-REM master分支只用于测试/研发/尝试最新特性,量产用途务必使用release分支,如果你明白自己在干什么,请删除 cpu/wl82/tools/download.c 的本行和下一行
-exit /b -1
-REM  再次声明 master分支只用于测试/研发/尝试最新特性,量产用途务必使用release分支,如果你明白自己在干什么,请删除 cpu/wl82/tools/download.c 的本行和下一行
-exit /b -1
-
-
-
-
-
-
 @echo off
 
 @echo *********************************************************************
