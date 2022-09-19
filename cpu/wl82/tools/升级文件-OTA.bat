@@ -26,6 +26,12 @@ echo. 因为一些工具会利用到这个设置参数。                                        
 echo. 设置时请在对应 ``cpu/(wl80或wl82)/tools/isd_config_rule.c``文件下修改BR22_TWS_VERSION参数； >> upgrade\readme(升级前请阅读).txt
 echo.                                                                                             >> upgrade\readme(升级前请阅读).txt
 echo.                                                                                             >> upgrade\readme(升级前请阅读).txt
+echo. 注意事项二：                                                                                >> upgrade\readme(升级前请阅读).txt
+echo. 已经出货的产品需要进行跨版本升级（如：1.0.3.10版本升级到1.1.0），出现升级失败时，可以将     >> upgrade\readme(升级前请阅读).txt
+echo. 新版本的tools替换成旧版本的tools进行尝试。由于不同版本uboot存在差异，可能会出现跨版本升级   >> upgrade\readme(升级前请阅读).txt
+echo. 时文件校验失败的情况。                                                                      >> upgrade\readme(升级前请阅读).txt
+echo.                                                                                             >> upgrade\readme(升级前请阅读).txt
+echo.                                                                                             >> upgrade\readme(升级前请阅读).txt
 echo. 请阅读文档：https://doc.zh-jieli.com/AC79/zh-cn/master/module_example/system/update.html    >> upgrade\readme(升级前请阅读).txt
 
 ::再复制文件
