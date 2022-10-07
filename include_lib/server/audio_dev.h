@@ -5,7 +5,7 @@
 #include "typedef.h"
 #include "device/device.h"
 #include "generic/circular_buf.h"
-
+#include "os/os_api.h"
 
 #define MAX_AUDIO_ADC_CHANNEL_NUM	4
 
@@ -99,7 +99,7 @@ struct audio_format {
     u8 no_header : 1;
     u8 sample_depth : 3;
     u8 dns_enable : 1;
-    u8 reserve : 1;
+    u8 wait_sem : 1;
 
     u16 vad_start_threshold;
     u16 vad_stop_threshold;
@@ -112,6 +112,7 @@ struct audio_format {
     const char *sample_source;
     u32(*read_input)(u8 *buf, u32 len);
     struct aec_s_attr *aec_attr;
+    OS_SEM *sem;
 };
 
 struct audio_subdevice_ops {

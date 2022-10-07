@@ -8,5 +8,5 @@ lib_iperf_version:
 
 #else
 
-.asciz "IPERF-*modified*--@20220916-$d1adac0"
+.asciz "IPERF-*modified*--@20220930-$eb81a39"
 #endif

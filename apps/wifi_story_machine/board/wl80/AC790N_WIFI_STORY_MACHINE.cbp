@@ -85,7 +85,6 @@
 <Add directory="../../../../apps/common/ui/include" />
 <Add directory="../../../../apps/common/config/include" />
 <Add directory="../../../../apps/common/system" />
-<Add directory="../../../../apps/common/rf_fcc_tool/include" />
 <Add directory="../../../../include_lib/utils/ui" />
 <Add directory="../../../../include_lib/driver/device/video" />
 <Add directory="../../../../include_lib/media" />
@@ -101,6 +100,7 @@
 <Add directory="../../../../include_lib/net/lwip_2_1_3/lwip/app" />
 <Add directory="../../../../include_lib/net/lwip_2_1_3/lwip/app/ctp" />
 <Add directory="../../../../include_lib/net/lwip_2_1_3/lwip/app/cdp" />
+<Add directory="../../../../apps/common/rf_fcc_tool/include" />
 <Add directory="../../../../apps/common/usb" />
 <Add directory="../../../../apps/common/usb/device" />
 <Add directory="../../../../apps/common/usb/host" />

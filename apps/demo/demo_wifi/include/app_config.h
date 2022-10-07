@@ -36,6 +36,11 @@
 #define VDC14_VOL_SEL_LEVEL			        VDC14_VOL_SEL_140V   //RF1.4V电压档位
 #define SYSVDD_VOL_SEL_LEVEL				SYSVDD_VOL_SEL_126V  //内核电压档位值
 
+//*********************************************************************************//
+//                                  FCC测试相关配置                                //
+//*********************************************************************************//
+//#define RF_FCC_TEST_ENABLE//使能RF_FCC测试，详细配置见"apps/common/rf_fcc_tool/include/rf_fcc_main.h"
+
 
 
 

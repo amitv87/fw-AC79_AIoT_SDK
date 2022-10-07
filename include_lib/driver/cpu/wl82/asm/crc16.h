@@ -27,6 +27,8 @@ u8 get_vbg_trim(void);
 
 u16 get_chip_id(void);
 
+u16 CRC16_with_initval(const void *ptr, u32 len, u16 i_val);
+
 #endif
 
 

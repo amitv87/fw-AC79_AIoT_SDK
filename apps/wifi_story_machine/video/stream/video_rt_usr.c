@@ -64,14 +64,14 @@ void qr_code_net_cfg_stop(void)
         qr_decoder = NULL;
     }
 }
-static int qrcode_other_type_find(u8 *str, u8 **ssid, u8 **pwd)//配网二维码其他类型查找
+static int qrcode_other_type_find(const char *str, const char **ssid, const char **pwd)//配网二维码其他类型查找
 {
     if (!str || !ssid || !pwd) {
         return 0;
     }
-    u8 *p, *e, *s, *d;
-    u8 *fs = 0, *fp = 0;
-    const u8 *keyword[] = {
+    const char *p, *e, *s;
+    char *fs = NULL, *fp = NULL;
+    const char *keyword[] = {
         //WIFI   ssid  pwd   end;
         "WIFI:", "S:", "P:", ";",//huawei,xiaomi: WIFI:T:WPA;S:GJ1;P:8888888899;;
         NULL, NULL, NULL, NULL,
@@ -89,10 +89,10 @@ static int qrcode_other_type_find(u8 *str, u8 **ssid, u8 **pwd)//配网二维码
                         e = strstr(s, keyword[i + 3]);//查找ssid/pwd结束符
                         if (e && (e - s) > 0) {
                             if (j == 1) {
-                                fs = &s[e - s];
+                                fs = (char *)&s[e - s];
                                 *ssid = s;
                             } else {
-                                fp = &s[e - s];
+                                fp = (char *)&s[e - s];
                                 *pwd = s;
                             }
                         }

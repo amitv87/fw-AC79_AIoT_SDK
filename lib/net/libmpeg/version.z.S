@@ -8,5 +8,5 @@ lib_mpeg_version:
 
 #else
 
-.asciz "MPEG-*modified*--@20220916-$d1adac0"
+.asciz "MPEG-*modified*--@20220930-$eb81a39"
 #endif

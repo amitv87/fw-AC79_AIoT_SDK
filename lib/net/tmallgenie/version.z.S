@@ -8,5 +8,5 @@ lib_tmallgenie_version:
 
 #else
 
-.asciz "TMALLGENIE-*modified*--@20220916-$d1adac0"
+.asciz "TMALLGENIE-*modified*--@20220930-$eb81a39"
 #endif

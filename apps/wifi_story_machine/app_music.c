@@ -330,6 +330,17 @@ static int app_music_play_mix_file(const char *path)
     return 0;
 #endif
 
+#if TCFG_USER_EMITTER_ENABLE
+    if (get_bt_emitter_audio_server() && __this->dec_server) {
+        return 0;
+    }
+#endif
+#if TCFG_USER_VIRTUAL_PLAY_ENABLE
+    if (get_user_virtual_audio_server() && __this->dec_server) {
+        return 0;
+    }
+#endif
+
     log_d("play_mix_file : %s\n", path);
 
     FILE *file = fopen(path, "r");
@@ -514,6 +525,29 @@ static int local_music_dec_play_pause(u8 notify)
         return -EFAULT;
     }
 
+#ifdef CONFIG_DEC_DIGITAL_VOLUME_ENABLE
+#if TCFG_USER_EMITTER_ENABLE
+    if (get_bt_emitter_audio_server() && __this->digital_vol_hdl && __this->dec_server) {
+        if (AUDIO_DEC_START == __get_dec_status(0)) {
+            user_audio_digital_volume_set(__this->digital_vol_hdl, 0, 1);
+            user_audio_digital_volume_wait_fade_complete(__this->digital_vol_hdl, (12 + 32) * 1024);
+        } else if (AUDIO_DEC_PAUSE == __get_dec_status(0)) {
+            user_audio_digital_volume_set(__this->digital_vol_hdl, __this->volume, 1);
+        }
+    }
+#endif
+#if TCFG_USER_VIRTUAL_PLAY_ENABLE
+    if (get_user_virtual_audio_server() && __this->digital_vol_hdl && __this->dec_server) {
+        if (AUDIO_DEC_START == __get_dec_status(0)) {
+            user_audio_digital_volume_set(__this->digital_vol_hdl, 0, 1);
+            user_audio_digital_volume_wait_fade_complete(__this->digital_vol_hdl, (12 + 32) * 1024);
+        } else if (AUDIO_DEC_PAUSE == __get_dec_status(0)) {
+            user_audio_digital_volume_set(__this->digital_vol_hdl, __this->volume, 1);
+        }
+    }
+#endif
+#endif
+
 #ifdef CONFIG_DEC_ANALOG_VOLUME_ENABLE
     r.dec.attr = AUDIO_ATTR_FADE_INOUT;
 #endif
@@ -572,6 +606,14 @@ static int local_music_dec_stop(int save_breakpoint)
 #if TCFG_USER_EMITTER_ENABLE
     void *emitter = get_bt_emitter_audio_server();
     if (emitter) {
+#ifdef CONFIG_DEC_DIGITAL_VOLUME_ENABLE
+        if (__this->digital_vol_hdl) {
+            if (AUDIO_DEC_START == __get_dec_status(0)) {
+                user_audio_digital_volume_set(__this->digital_vol_hdl, 0, 1);
+                user_audio_digital_volume_wait_fade_complete(__this->digital_vol_hdl, (12 + 32) * 1024);
+            }
+        }
+#endif
         memset(&req, 0, sizeof(req));
         set_bt_emitter_virtual_hdl(NULL);
         req.enc.cmd = AUDIO_ENC_PAUSE;
@@ -583,6 +625,14 @@ static int local_music_dec_stop(int save_breakpoint)
 #if TCFG_USER_VIRTUAL_PLAY_ENABLE
     void *virtual = get_user_virtual_audio_server();
     if (virtual) {
+#ifdef CONFIG_DEC_DIGITAL_VOLUME_ENABLE
+        if (__this->digital_vol_hdl) {
+            if (AUDIO_DEC_START == __get_dec_status(0)) {
+                user_audio_digital_volume_set(__this->digital_vol_hdl, 0, 1);
+                user_audio_digital_volume_wait_fade_complete(__this->digital_vol_hdl, (12 + 32) * 1024);
+            }
+        }
+#endif
         memset(&req, 0, sizeof(req));
         set_user_virtual_play_hdl(NULL);
         req.enc.cmd = AUDIO_ENC_PAUSE;
@@ -594,6 +644,7 @@ static int local_music_dec_stop(int save_breakpoint)
 #endif
 
     __this->spectrum_fft_hdl = NULL;
+    __this->digital_vol_hdl = NULL;
 
     if (__this->dec_server) {
 #ifdef CONFIG_DEC_ANALOG_VOLUME_ENABLE
@@ -1767,6 +1818,14 @@ static int net_music_dec_stop(int save_breakpoint)
 #if TCFG_USER_EMITTER_ENABLE
         void *emitter = get_bt_emitter_audio_server();
         if (emitter) {
+#ifdef CONFIG_DEC_DIGITAL_VOLUME_ENABLE
+            if (__this->digital_vol_hdl) {
+                if (AUDIO_DEC_START == __get_dec_status(0)) {
+                    user_audio_digital_volume_set(__this->digital_vol_hdl, 0, 1);
+                    user_audio_digital_volume_wait_fade_complete(__this->digital_vol_hdl, (12 + 32) * 1024);
+                }
+            }
+#endif
             memset(&r, 0, sizeof(r));
             set_bt_emitter_virtual_hdl(NULL);
             r.enc.cmd = AUDIO_ENC_PAUSE;
@@ -1778,6 +1837,14 @@ static int net_music_dec_stop(int save_breakpoint)
 #if TCFG_USER_VIRTUAL_PLAY_ENABLE
         void *virtual = get_user_virtual_audio_server();
         if (virtual) {
+#ifdef CONFIG_DEC_DIGITAL_VOLUME_ENABLE
+            if (__this->digital_vol_hdl) {
+                if (AUDIO_DEC_START == __get_dec_status(0)) {
+                    user_audio_digital_volume_set(__this->digital_vol_hdl, 0, 1);
+                    user_audio_digital_volume_wait_fade_complete(__this->digital_vol_hdl, (12 + 32) * 1024);
+                }
+            }
+#endif
             memset(&r, 0, sizeof(r));
             set_user_virtual_play_hdl(NULL);
             r.enc.cmd = AUDIO_ENC_PAUSE;
@@ -1789,6 +1856,7 @@ static int net_music_dec_stop(int save_breakpoint)
 #endif
 
         __this->spectrum_fft_hdl = NULL;
+        __this->digital_vol_hdl = NULL;
 
         if (__this->dec_server) {
 #ifdef CONFIG_DEC_ANALOG_VOLUME_ENABLE

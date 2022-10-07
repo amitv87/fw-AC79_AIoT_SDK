@@ -75,7 +75,7 @@ const struct task_info task_info_table[] = {
     {"speex_encoder",       13,      512,   0     },
     {"mp3_encoder",         13,      768,   0     },
     {"opus_encoder",        13,     1536,   0     },
-    {"vir_dev_task",        13,      256,   0     },
+    {"vir_dev_task",        14,      256,   0     },
     {"amr_encoder",         13,     1024,   0     },
     {"cvsd_encoder",        13,      512,   0     },
     {"vad_encoder",         14,      768,   0     },

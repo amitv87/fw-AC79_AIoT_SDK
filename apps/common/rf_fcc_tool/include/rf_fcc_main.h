@@ -1,8 +1,42 @@
 #ifndef __RF_FCC_MAIN_H_
 #define __RF_FCC_MAIN_H_
 
+#include "app_config.h"
 
-#define TRIGGER_IO      IO_PORTC_00  //触发IO
+#define IO_TRIGGER_MODE      (0) //"IO检测"方式触发进入RF_FCC测试模式
+#define GPCNT_TRIGGER_MODE   (1) //"脉冲检测"方式触发进入RF_FCC测试模式
+#define UART_CMD_MODE        (2) //"串口指令"方式触发进入RF_FCC测试模式
+#define USER_DEF_MODE        (3) //"用户定义"方式触发进入RF_FCC测试模式
+#define AUTO_STARTUP_MODE    (4) //上电进入RF_FCC测试模式
+
+
+//*********************************************************************************//
+//                                  FCC测试相关配置                                //
+//*********************************************************************************//
+#ifdef RF_FCC_TEST_ENABLE
+// #define RF_FCC_IN_NORNAL_WORK    //使能在正常工作模式下进行RF_FCC测试
+
+#define CONFIG_RF_FCC_TRIGGER_MODE   AUTO_STARTUP_MODE //RF_FCC触发方式配置
+
+#define CONFIG_RF_FCC_TRIGGER_IO_PORT   IO_PORTC_01    //RF_FCC"IO检测"IO配置
+#define CONFIG_RF_FCC_TRIGGER_IO_STATE  (1)            //RF_FCC"IO检测"IO的状态配置，0:低电平触发，1:高电平触发
+#define CONFIG_RF_FCC_TRIGGER_IO_CNT    (10)           //RF_FCC"IO检测"IO的检测次数
+
+#define CONFIG_RF_FCC_GPCNT_TRIGGER_FREQ_H  (11000)    //RF_FCC"脉冲检测"频率上限，单位Hz
+#define CONFIG_RF_FCC_GPCNT_TRIGGER_FREQ_L  (9000)     //RF_FCC"脉冲检测"频率下限，单位Hz
+#define CONFIG_RF_FCC_GPCNT_TRIGGER_CNT     (10)       //RF_FCC"脉冲检测"次数
+#define CONFIG_RF_FCC_TRIGGER_GPCNT_PORT    IO_PORTC_01//RF_FCC"脉冲检测"IO
+
+#if (CONFIG_RF_FCC_TRIGGER_MODE == GPCNT_TRIGGER_MODE)
+#define TCFG_GPCNT_ENABLE
+#endif
+#endif //RF_FCC_TEST_ENABLE
+
+
+//*********************************************************************************//
+//                                  FCC相关接口说明                                //
+//*********************************************************************************//
+
 
 /**
  * @brief rf_fcc_test_init，RF_FCC测试初始化
@@ -36,19 +70,19 @@ void wifi_tx_data_test(u8 channel, u8 power, u8 rate, u8 *packet, u32 packet_len
  *
  * @param
  *
- * @note 可在外部定义同名函数，修改通信串口号
+ * @note 可在外部定义同名函数，修改返回的通信串口号("uart0"/"uart1"/"uart2")
  */
 __attribute__((weak)) const char *rf_fcc_get_uart(void);
 
 
 /**
- * @brief rf_fcc_test_init，开机检测是否进入RF_FCC测试
+ * @brief fcc_enter_user_def，开机检测是否进入RF_FCC测试
  *
  * @param
  *
  * @note 可在外部定义同名函数，修改触发方式
  */
-__attribute__((weak))u8 fcc_mode_enter_check(void *priv);
+__attribute__((weak))u8 fcc_enter_user_def(void);
 
 
 /**

@@ -767,6 +767,7 @@ void cal_gain(u8 rate, u8 gain, u8 *gain_array)
 }
 
 
+#ifdef CONFIG_BT_ENABLE
 u8 fcc_freq_adj_read(s16 *data)
 {
     if (rf_fcc_adj_res_read("offset", data)) {
@@ -777,6 +778,7 @@ u8 fcc_freq_adj_read(s16 *data)
     }
     return 0;
 }
+#endif
 
 
 u8 *fcc_common_data_deal(u8 packet_type, u8 *data, u32 len, u32 *rsp_len, u8 *reset)
@@ -1272,12 +1274,13 @@ void clear_efuse(void)
     syscfg_write(VM_XOSC_INDEX, xosc, 2);
     syscfg_write(VM_WIFI_PA_MCS_DGAIN, wifi_calibration_param.mcs_dgain, sizeof(wifi_calibration_param.mcs_dgain));
 
+#ifdef CONFIG_BT_ENABLE
     s16 adj_freq = -30;
     u8 ble_power = 6, bt_power = 8;
     rf_fcc_adj_res_write("ble", &ble_power);
     rf_fcc_adj_res_write("edr", &bt_power);
     rf_fcc_adj_res_write("offset", &adj_freq);
-
+#endif
 }
 
 
@@ -1587,7 +1590,6 @@ u8 rf_fcc_test_init(void)
 {
     u8 mode;
     u8 mac[6] = {0};
-    u32 gpio = TRIGGER_IO;
     struct FCC_HIS his = {0};
     struct host_data *host;
     struct fcc_data *fcc;
@@ -1605,6 +1607,9 @@ u8 rf_fcc_test_init(void)
         if (!fcc_enter_user_def()) {
             return 0;
         }
+#elif (CONFIG_RF_FCC_TRIGGER_MODE == AUTO_STARTUP_MODE)
+#else
+        return 0;
 #endif
     }
 
@@ -1661,7 +1666,7 @@ u8 rf_fcc_test_init(void)
         return 0;
 #endif
     } else if (mode == FCC_WIFI_MODE) {
-        wifi_set_sta_connect_timeout(10000);
+        //wifi_set_sta_connect_timeout(10000);
         wifi_set_event_callback(wifi_event_callback);
         wifi_on();
 
@@ -1676,7 +1681,8 @@ u8 rf_fcc_test_init(void)
 
 #if ((CONFIG_RF_FCC_TRIGGER_MODE == IO_TRIGGER_MODE) || \
      (CONFIG_RF_FCC_TRIGGER_MODE == GPCNT_TRIGGER_MODE) || \
-     (CONFIG_RF_FCC_TRIGGER_MODE == USER_DEF_MODE))
+     (CONFIG_RF_FCC_TRIGGER_MODE == USER_DEF_MODE) || \
+     (CONFIG_RF_FCC_TRIGGER_MODE == AUTO_STARTUP_MODE))
     return FCC_WAIT_MODE;
 #endif
     return 0;
@@ -1708,15 +1714,19 @@ static void read_res(void)
     u8 bt_power = 0, ble_power = 0;
     struct wifi_calibration_param cal = {0};
 
-    syscfg_read(CFG_BT_RF_POWER_ID, &bt_power, 1);
-    syscfg_read(CFG_BLE_RF_POWER_ID, &ble_power, 1);
+#ifdef CONFIG_BT_ENABLE
+    rf_fcc_adj_res_read("edr", &bt_power);
+    rf_fcc_adj_res_read("ble", &ble_power);
+#endif
 
     syscfg_read(VM_XOSC_INDEX, &cal.xosc_l, 2);
     syscfg_read(VM_WIFI_PA_MCS_DGAIN, &cal.mcs_dgain, sizeof(cal.mcs_dgain));
     syscfg_read(VM_WIFI_PA_DATA, &cal.pa_trim_data, sizeof(cal.pa_trim_data));
 
     log_info("=========================CAL_RES=========================\n");
+#ifdef CONFIG_BT_ENABLE
     log_info("bt_power = %d, ble_power = %d\n", bt_power, ble_power);
+#endif
     log_info("xosc_l = %d, xosc_r = %d\n", cal.xosc_l, cal.xosc_r);
     log_info("PA : \n");
     put_buf(&cal.pa_trim_data, sizeof(cal.pa_trim_data));

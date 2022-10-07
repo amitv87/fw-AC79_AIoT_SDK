@@ -299,7 +299,7 @@ struct audio_enc_req {
     u8 no_auto_start : 1;                     /*!< 请求AUDIO_ENC_OPEN时不自动运行编码器，需要主动调用AUDIO_ENC_START */
     u8 sample_depth : 3;                      /*!< 采样深度16bit或者24bit */
     u8 dns_enable : 1;                        /*!< dns降噪算法 0:不使用 1:使用 */
-    u8 reserve : 1;                           /*!< 保留位 */
+    u8 wait_sem : 1;                          /*!< 编码器数据输出时如果缓存已满即等待信号量 */
     u16 vad_start_threshold;                  /*!< VAD连续检测到声音的阈值，表示开始说话，回调AUDIO_SERVER_EVENT_SPEAK_START，单位ms，填0使用库内默认值 */
     u16 vad_stop_threshold;                   /*!< VAD连续检测到静音的阈值, 表示停止说话，回调AUDIO_SERVER_EVENT_SPEAK_STOP，单位ms,填0使用库内默认值 */
     u16 frame_size;                           /*!< 编码器输出的每一帧帧长大小，只有pcm格式编码时才有效 */

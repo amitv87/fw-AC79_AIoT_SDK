@@ -140,7 +140,7 @@ struct sfc_spi_data {
 };
 
 #define SPI0_PLATFORM_DATA_BEGIN(spi0_data) \
-    static const struct spi_io spi0_io[] = { \
+    static const struct spi_io spi0_data##_io[] = { \
         { \
             .cs_pin     = IO_PORTD_00, \
             .di_pin     = IO_PORTD_01, \
@@ -158,7 +158,7 @@ struct sfc_spi_data {
             .d3_pin     = IO_PORTC_02, \
         }, \
     }; \
-    static void __spi0_iomc_init(const struct spi_platform_data *pd) \
+    static void spi0_data##_iomc_init(const struct spi_platform_data *pd) \
     { \
         JL_IOMAP->CON1 &= ~BIT(1); \
         if (pd->port == 'A') { \
@@ -169,12 +169,12 @@ struct sfc_spi_data {
     }\
     static const struct spi_platform_data spi0_data = { \
         .irq = IRQ_SPI0_IDX, \
+        .io     = spi0_data##_io, \
+    	.init   = spi0_data##_iomc_init, \
 
 
 #define SPI0_PLATFORM_DATA_END() \
-    .io     = spi0_io, \
     .reg    = (volatile struct spi_regs *)&JL_SPI0->CON, \
-    .init   = __spi0_iomc_init, \
 };
 
 
@@ -201,7 +201,7 @@ struct sfc_spi_data {
 
 
 #define SPI1_PLATFORM_DATA_BEGIN(spi1_data) \
-    static const struct spi_io spi1_io[] = { \
+    static const struct spi_io spi1_data##_io[] = { \
         { \
             .cs_pin     = -1, \
             .di_pin     = IO_PORTB_05, \
@@ -219,7 +219,7 @@ struct sfc_spi_data {
             .d3_pin     = -1, \
         }, \
     }; \
-    static void __spi1_iomc_init(const struct spi_platform_data *pd) \
+    static void spi1_data##_iomc_init(const struct spi_platform_data *pd) \
     { \
         if (pd->port == 'A') { \
            JL_IOMAP->CON1 &= ~BIT(4); \
@@ -229,18 +229,18 @@ struct sfc_spi_data {
     }\
     static const struct spi_platform_data spi1_data = { \
         .irq = IRQ_SPI1_IDX, \
+        .io     = spi1_data##_io, \
+    	.init   = spi1_data##_iomc_init, \
 
 
 #define SPI1_PLATFORM_DATA_END() \
-    .io     = spi1_io, \
     .reg    = (volatile struct spi_regs *)&JL_SPI1->CON, \
-    .init   = __spi1_iomc_init, \
 };
 
 
 
 #define SPI2_PLATFORM_DATA_BEGIN(spi2_data) \
-    static const struct spi_io spi2_io[] = { \
+    static const struct spi_io spi2_data##_io[] = { \
         { \
             .cs_pin     = -1, \
             .di_pin     = IO_PORTH_02, \
@@ -266,7 +266,7 @@ struct sfc_spi_data {
             .d3_pin     = -1, \
         }, \
     }; \
-    static void __spi2_iomc_init(const struct spi_platform_data *pd) \
+    static void spi2_data##_iomc_init(const struct spi_platform_data *pd) \
     { \
         JL_IOMAP->CON1 &= ~(BIT(16) | BIT(17)); \
         if (pd->port == 'B') { \
@@ -277,12 +277,12 @@ struct sfc_spi_data {
     }\
     static const struct spi_platform_data spi2_data = { \
         .irq = IRQ_SPI2_IDX, \
+        .io     = spi2_data##_io, \
+        .init   = spi2_data##_iomc_init, \
 
 
 #define SPI2_PLATFORM_DATA_END() \
-    .io     = spi2_io, \
     .reg    = (volatile struct spi_regs *)&JL_SPI2->CON, \
-    .init   = __spi2_iomc_init, \
 };
 
 
@@ -290,7 +290,7 @@ struct sfc_spi_data {
 
 
 #define SPI3_PLATFORM_DATA_BEGIN(spi3_data) \
-    static const struct spi_io spi3_io[] = { \
+    static const struct spi_io spi3_data##_io[] = { \
         { \
             .cs_pin     = IO_PORTG_04, \
             .di_pin     = IO_PORTG_05, \
@@ -308,7 +308,7 @@ struct sfc_spi_data {
             .d3_pin     = IO_PORTG_09, \
         }, \
     }; \
-    static void __spi3_iomc_init(const struct spi_platform_data *pd) \
+    static void spi3_data##_iomc_init(const struct spi_platform_data *pd) \
     { \
         if (pd->port == 'A') { \
            JL_IOMAP->CON0 &= ~BIT(15); \
@@ -318,12 +318,12 @@ struct sfc_spi_data {
     }\
     static const struct spi_platform_data spi3_data = { \
         .irq = IRQ_SPI3_IDX, \
+        .io     = spi3_data##_io, \
+        .init   = spi3_data##_iomc_init, \
 
 
 #define SPI3_PLATFORM_DATA_END() \
-    .io     = spi3_io, \
     .reg    = (volatile struct spi_regs *)&JL_SPI3->CON, \
-    .init   = __spi3_iomc_init, \
 };
 
 

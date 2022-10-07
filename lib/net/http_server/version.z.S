@@ -8,5 +8,5 @@ lib_http_server_version:
 
 #else
 
-.asciz "HTTP_SERVER-*modified*--@20220916-$d1adac0"
+.asciz "HTTP_SERVER-*modified*--@20220930-$eb81a39"
 #endif

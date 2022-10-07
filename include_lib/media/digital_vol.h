@@ -7,8 +7,9 @@
  * @brief 数字音量参数结构体
  */
 typedef struct _digital_vol_open_parm {
-    unsigned char ch;  		        /*!< 通道数 */
-    unsigned char vol;  		    /*!< 当前音量大小 */
+    unsigned char ch;               /*!< 通道数 */
+    unsigned char vol;              /*!< 当前音量大小 */
+    unsigned char fade_en;          /*!< 是否使能淡入淡出 */
 } digital_vol_open_parm;
 
 
@@ -39,7 +40,7 @@ int user_audio_digital_volume_close(void *priv);
    @note     数字音量调节, 调整输入数据的幅值
 */
 /*----------------------------------------------------------------------------*/
-int user_audio_digital_volume_run(void *priv, void *data, u32 len, u32 sample_rate);
+int user_audio_digital_volume_run(void *priv, s16 *buf, int len, int sample_rate);
 
 /*----------------------------------------------------------------------------*/
 /**@brief    获取当前数字音量大小
@@ -75,4 +76,14 @@ int user_audio_digital_volume_reset_fade(void *priv);
 */
 /*----------------------------------------------------------------------------*/
 void user_audio_digital_set_volume_tab(void *priv, u16 *user_vol_tab, u8 user_vol_max);
+
+/*----------------------------------------------------------------------------*/
+/**@brief    等待淡入淡出完成
+   @param    priv 句柄
+   @param    pcm_cache_buf_size 缓存的pcm数据大小
+   @return   0:成功  -1：失败
+*/
+/*----------------------------------------------------------------------------*/
+int user_audio_digital_volume_wait_fade_complete(void *priv, u32 pcm_cache_buf_size);
+
 #endif

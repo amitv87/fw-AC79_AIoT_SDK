@@ -182,7 +182,7 @@ struct low_power_operation {
 
 void power_init(const struct low_power_param *param);
 
-void power_set_soft_poweroff(u32 ms);
+void power_set_soft_poweroff(u32 ms); //if 0 power off  dis 0 xms will power on
 
 void set_softoff_wakeup_time_ms(u32 us);
 
@@ -191,6 +191,10 @@ void power_set_proweroff(void);
 void power_set_mode(u8 mode);
 
 void power_keep_state(u8 data);
+
+u8 get_power_keep_state(void);
+
+u8 hw_low_power_idle_check(void);
 
 void power_set_callback(u8 mode, void (*powerdown_enter)(u8 step), void (*powerdown_exit)(u32), void (*soft_poweroff_enter)(void));
 

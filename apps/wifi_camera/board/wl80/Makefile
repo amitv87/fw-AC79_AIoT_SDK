@@ -187,6 +187,7 @@ INCLUDES := \
 	-I../../../../include_lib/driver/device/usb \
 	-I../../../../include_lib/driver/device/usb/device \
 	-I../../../../include_lib/driver/device/usb/host \
+	-I../../../../apps/common/rf_fcc_tool/include \
 	-I../../../../apps/common/net/testbox/include \
 	-I$(SYS_INC_DIR) \
 
@@ -236,6 +237,7 @@ c_SRC_FILES := \
 	../../../../apps/common/net/testbox/wbcp.c \
 	../../../../apps/common/net/voiceprint_cfg.c \
 	../../../../apps/common/net/wifi_conf.c \
+	../../../../apps/common/rf_fcc_tool/rf_fcc_main.c \
 	../../../../apps/common/system/device_mount.c \
 	../../../../apps/common/system/flash_write_protect.c \
 	../../../../apps/common/system/init.c \

@@ -8,5 +8,5 @@ lib_tencent_version:
 
 #else
 
-.asciz "TENCENT-*modified*--@20220916-$d1adac0"
+.asciz "TENCENT-*modified*--@20220930-$eb81a39"
 #endif

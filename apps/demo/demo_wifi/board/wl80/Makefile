@@ -155,6 +155,7 @@ INCLUDES := \
 	-I../../../../../include_lib/net/lwip_2_1_3/lwip/src/include/lwip \
 	-I../../../../../include_lib/net/lwip_2_1_3/lwip/port \
 	-I../../../../../include_lib/net/lwip_2_1_3/lwip/app \
+	-I../../../../../apps/common/rf_fcc_tool/include \
 	-I$(SYS_INC_DIR) \
 
 
@@ -171,6 +172,7 @@ c_SRC_FILES := \
 	../../../../../apps/common/net/iperf_test.c \
 	../../../../../apps/common/net/platform_cfg.c \
 	../../../../../apps/common/net/wifi_conf.c \
+	../../../../../apps/common/rf_fcc_tool/rf_fcc_main.c \
 	../../../../../apps/common/system/init.c \
 	../../../../../apps/common/system/system_reset_reason.c \
 	../../../../../apps/common/system/version.c \

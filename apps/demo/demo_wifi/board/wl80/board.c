@@ -6,6 +6,17 @@
 
 // *INDENT-OFF*
 
+UART1_PLATFORM_DATA_BEGIN(uart1_data)
+    .baudrate = 115200,
+    .port = PORTUSB_A,
+    .tx_pin = IO_PORT_USB_DPA,
+    .rx_pin = IO_PORT_USB_DMA,
+    .max_continue_recv_cnt = 1024,
+    .idle_sys_clk_cnt = 500000,
+    .clk_src = PLL_48M,
+    .flags = UART_DEBUG,
+UART1_PLATFORM_DATA_END();
+
 
 UART2_PLATFORM_DATA_BEGIN(uart2_data)
 	.baudrate = 1000000,
@@ -67,6 +78,7 @@ const struct wifi_calibration_param wifi_calibration_param = {
 #endif
 
 REGISTER_DEVICES(device_table) = {
+    {"uart1", &uart_dev_ops, (void *)&uart1_data },
 	{"uart2", &uart_dev_ops, (void *)&uart2_data },
 	{"rtc", &rtc_dev_ops, NULL},
 };

@@ -161,7 +161,6 @@ INCLUDES := \
 	-I../../../../apps/common/ui/include \
 	-I../../../../apps/common/config/include \
 	-I../../../../apps/common/system \
-	-I../../../../apps/common/rf_fcc_tool/include \
 	-I../../../../include_lib/utils/ui \
 	-I../../../../include_lib/driver/device/video \
 	-I../../../../include_lib/media \
@@ -177,6 +176,7 @@ INCLUDES := \
 	-I../../../../include_lib/net/lwip_2_1_3/lwip/app \
 	-I../../../../include_lib/net/lwip_2_1_3/lwip/app/ctp \
 	-I../../../../include_lib/net/lwip_2_1_3/lwip/app/cdp \
+	-I../../../../apps/common/rf_fcc_tool/include \
 	-I../../../../apps/common/usb \
 	-I../../../../apps/common/usb/device \
 	-I../../../../apps/common/usb/host \

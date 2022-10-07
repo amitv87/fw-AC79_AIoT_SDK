@@ -278,7 +278,6 @@
                 "${workspaceFolder}/apps/common/ui/include",
                 "${workspaceFolder}/apps/common/config/include",
                 "${workspaceFolder}/apps/common/system",
-                "${workspaceFolder}/apps/common/rf_fcc_tool/include",
                 "${workspaceFolder}/include_lib/utils/ui",
                 "${workspaceFolder}/include_lib/driver/device/video",
                 "${workspaceFolder}/include_lib/media",
@@ -294,6 +293,7 @@
                 "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/app",
                 "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/app/ctp",
                 "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/app/cdp",
+                "${workspaceFolder}/apps/common/rf_fcc_tool/include",
                 "${workspaceFolder}/apps/common/usb",
                 "${workspaceFolder}/apps/common/usb/device",
                 "${workspaceFolder}/apps/common/usb/host",
@@ -384,7 +384,6 @@
                 "${workspaceFolder}/apps/common/ui/include",
                 "${workspaceFolder}/apps/common/config/include",
                 "${workspaceFolder}/apps/common/system",
-                "${workspaceFolder}/apps/common/rf_fcc_tool/include",
                 "${workspaceFolder}/include_lib/utils/ui",
                 "${workspaceFolder}/include_lib/driver/device/video",
                 "${workspaceFolder}/include_lib/net",
@@ -399,6 +398,7 @@
                 "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/app",
                 "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/app/ctp",
                 "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/app/cdp",
+                "${workspaceFolder}/apps/common/rf_fcc_tool/include",
                 "${workspaceFolder}/apps/common/usb",
                 "${workspaceFolder}/apps/common/usb/device",
                 "${workspaceFolder}/apps/common/usb/host",
@@ -511,6 +511,7 @@
                 "${workspaceFolder}/include_lib/driver/device/usb",
                 "${workspaceFolder}/include_lib/driver/device/usb/device",
                 "${workspaceFolder}/include_lib/driver/device/usb/host",
+                "${workspaceFolder}/apps/common/rf_fcc_tool/include",
                 "${workspaceFolder}/apps/common/net/testbox/include",
                 "C:/JL/pi32/pi32v2-include"
             ],
@@ -614,6 +615,7 @@
                 "${workspaceFolder}/include_lib/driver/device/usb",
                 "${workspaceFolder}/include_lib/driver/device/usb/device",
                 "${workspaceFolder}/include_lib/driver/device/usb/host",
+                "${workspaceFolder}/apps/common/rf_fcc_tool/include",
                 "${workspaceFolder}/apps/common/net/testbox/include",
                 "C:/JL/pi32/pi32v2-include"
             ],
@@ -1935,6 +1937,7 @@
                 "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/src/include/lwip",
                 "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/port",
                 "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/app",
+                "${workspaceFolder}/apps/common/rf_fcc_tool/include",
                 "C:/JL/pi32/pi32v2-include"
             ],
             "intelliSenseMode": "clang-x86",
@@ -2006,6 +2009,7 @@
                 "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/src/include/lwip",
                 "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/port",
                 "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/app",
+                "${workspaceFolder}/apps/common/rf_fcc_tool/include",
                 "C:/JL/pi32/pi32v2-include"
             ],
             "intelliSenseMode": "clang-x86",

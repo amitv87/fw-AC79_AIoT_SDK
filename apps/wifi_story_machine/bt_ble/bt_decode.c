@@ -835,6 +835,7 @@ struct bt_emitter_vfs_handle {
     volatile u8 open;
     volatile u8 reading;
     volatile u8 wait_stop;
+    volatile u8 wait_full;
     spinlock_t lock;
     u8 suspend;
     u16 frame_size;
@@ -850,6 +851,8 @@ static struct bt_emitter_vfs_handle bt_emitter_vfs_handle;
 #define efs      (&bt_emitter_vfs_handle)
 
 #define BT_EMITTER_SYNC_TIMER JL_TIMER4
+
+extern void stack_run_loop_resume();
 
 static const u8 sbc_mute_encode_data[] = {
     0x9C, 0xB9, 0x35, 0x38, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x77, 0x76, 0xDB, 0x6E,
@@ -894,7 +897,6 @@ static void bt_emitter_isr(void)
     os_sem_post(&efs->sync_sem);
     if (efs->suspend) {
         efs->suspend = 0;
-        extern void stack_run_loop_resume();
         stack_run_loop_resume();
     }
 }
@@ -918,10 +920,9 @@ static u32 sbc_read_input(u8 *buf, u32 len)
             break;
         }
         if (efs->virtual->end) {
+            rlen = cbuf_read(efs->virtual->cbuf, buf, cbuf_get_data_size(efs->virtual->cbuf));
             efs->virtual->end = 2;
-            os_sem_post(efs->virtual->wr_sem);
-            efs->reading = 0;
-            return 0;
+            break;
         }
         os_sem_pend(efs->virtual->rd_sem, 0);
     } while (!rlen);
@@ -972,6 +973,7 @@ int a2dp_sbc_encoder_init(void *sbc_struct)
         req.enc.file = (FILE *)&efs->cbuf;
         req.enc.vir_data_wait = 1;
         req.enc.no_auto_start = 1;
+        req.enc.wait_sem = 1;
         req.enc.bitrate = ((3 - sbc->blocks) << 28) & sbc->bitpool;
         if (sbc->endian) {
             req.enc.bitrate |= BIT(31);
@@ -1043,21 +1045,32 @@ int a2dp_sbc_encoder_get_data(u8 *packet, u16 buf_len, int *frame_size)
         return 0;
     }
 
+#if 1
     if (0 != os_sem_accept(&efs->sync_sem)) {
         efs->suspend = 1;
         return 0;
+    }
+#endif
+
+    if (efs->wait_full && data_size < BT_EMITTER_CBUF_SIZE - sizeof(sbc_mute_encode_data)) {
+        number += buf_len / sizeof(sbc_mute_encode_data);
+        *frame_size = sizeof(sbc_mute_encode_data);
+        for (int i = 0; i < number; i++) {
+            memcpy(&packet[sizeof(sbc_mute_encode_data) * i], sbc_mute_encode_data, sizeof(sbc_mute_encode_data));
+        }
+        return number * sizeof(sbc_mute_encode_data);
+    } else {
+        efs->wait_full = 0;
     }
 
     if (!efs->frame_size || data_size < buf_len) {
         if (data_size > 0) {
             *frame_size = efs->frame_size;
             rlen = cbuf_read(&efs->cbuf, packet, data_size);
-            while (buf_len - rlen > efs->frame_size) {
-                memcpy(packet + rlen, sbc_mute_encode_data, sizeof(sbc_mute_encode_data));
-                rlen += sizeof(sbc_mute_encode_data);
-            }
             os_sem_set(&efs->sem, 0);
             os_sem_post(&efs->sem);
+            os_sem_post(&efs->sync_sem);
+            stack_run_loop_resume();
             putchar('N');
             return rlen;
         }
@@ -1066,6 +1079,9 @@ int a2dp_sbc_encoder_get_data(u8 *packet, u16 buf_len, int *frame_size)
         for (int i = 0; i < number; i++) {
             memcpy(&packet[sizeof(sbc_mute_encode_data) * i], sbc_mute_encode_data, sizeof(sbc_mute_encode_data));
         }
+        if (efs->virtual) {
+            putchar('M');
+        }
         return number * sizeof(sbc_mute_encode_data);
     }
 
@@ -1073,9 +1089,6 @@ int a2dp_sbc_encoder_get_data(u8 *packet, u16 buf_len, int *frame_size)
     *frame_size = efs->frame_size;
 
     rlen = cbuf_read(&efs->cbuf, packet, *frame_size * number);
-    if (rlen == 0) {
-        putchar('N');
-    }
     os_sem_set(&efs->sem, 0);
     os_sem_post(&efs->sem);
 
@@ -1089,8 +1102,12 @@ void *get_bt_emitter_audio_server(void)
 
 void set_bt_emitter_virtual_hdl(void *virtual)
 {
+    if (!virtual && efs->virtual && efs->virtual->end) {
+        os_time_dly(8);	//等待缓存数据播完才停止
+    }
     spin_lock(&efs->lock);
     efs->wait_stop = virtual ? 0 : 1;
+    efs->wait_full = virtual ? 1 : 0;
     while (efs->reading) {
         spin_unlock(&efs->lock);
         if (!virtual && efs->virtual && efs->virtual->rd_sem) {

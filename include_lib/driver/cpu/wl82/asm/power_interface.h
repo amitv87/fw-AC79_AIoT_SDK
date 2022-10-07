@@ -192,6 +192,10 @@ void power_set_mode(u8 mode);
 
 void power_keep_state(u8 data);
 
+u8 get_power_keep_state(void);
+
+u8 hw_low_power_idle_check(void);
+
 void power_set_callback(u8 mode, void (*powerdown_enter)(u8 step), void (*powerdown_exit)(u32), void (*soft_poweroff_enter)(void));
 
 void power_set_rf_sleep_max_internal_us(u32 rf_sleep_max_internal_us);
