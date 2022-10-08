@@ -3,5 +3,5 @@
 .global lib_telecom_version
 
 lib_telecom_version:
-.long 205249804 
-.asciz "TELECOM-@20220703-$a6c087f"
+.long 213594668 
+.asciz "TELECOM-@20221008-$a6c087f"

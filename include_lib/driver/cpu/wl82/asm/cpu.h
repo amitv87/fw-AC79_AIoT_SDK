@@ -82,10 +82,13 @@ extern int cpu_in_irq(void);
 __attribute__((always_inline))
 static inline int cpu_irq_disabled()
 {
-    int flag;
+    int flag, flag2;
     __asm__ volatile("%0 = icfg" : "=r"(flag));
-    /*return (flag & 0x300) != 0x300;*/
-    return ((flag & 0x300) != 0x300) || (q32DSP(current_cpu_id())->IPMASK == 7);//不可屏蔽中断
+    int first = ((flag & 0x300) != 0x300) || (q32DSP(current_cpu_id())->IPMASK == 7);//不可屏蔽中断
+    //只读一遍有可能出现实际上没关中断但又条件成立的情况，需要再读一次确保正确，读取前使用ssync也没效果，原因未知
+    __asm__ volatile("%0 = icfg" : "=r"(flag2));
+    int second = ((flag2 & 0x300) != 0x300) || (q32DSP(current_cpu_id())->IPMASK == 7);//不可屏蔽中断
+    return (first && second);
 }
 
 __attribute__((always_inline))

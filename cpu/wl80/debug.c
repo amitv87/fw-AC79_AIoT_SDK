@@ -7,8 +7,9 @@
  */
 #include "system/includes.h"
 #include "asm/debug.h"
+#include "asm/sfc_norflash_api.h"
 #include "app_config.h"
-
+#include "fs/fs.h"
 
 extern void exception_irq_handler();
 extern void sdtap_init(u32 ch);
@@ -96,18 +97,62 @@ static const char *const emu_msg[32] = {
     "misalign_err",     //0
 };
 
-static void trace_call_stack()
+#ifdef CONFIG_SAVE_EXCEPTION_LOG_IN_FLASH
+
+static u32 exception_log_flash_addr sec(.volatile_ram);
+static char exception_log_buf[640];
+
+#define LOG_PATH "mnt/sdfile/app/log"
+
+static int get_exception_log_flash_addr(void)
+{
+    struct vfs_attr file_attr;
+
+    FILE *fp = fopen(LOG_PATH, "r");
+    if (fp == NULL) {
+        return -1;
+    }
+    fget_attrs(fp, &file_attr);
+    fclose(fp);
+    exception_log_flash_addr = sdfile_cpu_addr2flash_addr(file_attr.sclust);
+    norflash_read(NULL, exception_log_buf, sizeof(exception_log_buf), exception_log_flash_addr);
+    if (exception_log_buf[0] != -1) {
+        printf("last exception log : \n%s\n", exception_log_buf);
+        norflash_ioctl(NULL, IOCTL_ERASE_SECTOR, exception_log_flash_addr);
+    }
+    memset(exception_log_buf, 0, sizeof(exception_log_buf));
+    return 0;
+}
+platform_initcall(get_exception_log_flash_addr);
+
+static void write_exception_log_to_flash(void *data, u32 len)
+{
+    extern void set_os_init_flag(u8 value);
+    set_os_init_flag(0);
+    extern void norflash_set_write_cpu_hold(u8 hold_en);
+    norflash_set_write_cpu_hold(0);
+    norflash_ioctl(NULL, IOCTL_ERASE_SECTOR, exception_log_flash_addr);
+    norflash_write(NULL, data, len, exception_log_flash_addr);
+}
+#endif
+
+static void trace_call_stack(int *len)
 {
     for (int c = 0; c < CPU_CORE_NUM; c++) {
         printf("CPU%d %x --> %x --> %x --> %x\n", c,
                q32DSP(c)->ETM_PC3, q32DSP(c)->ETM_PC2,
                q32DSP(c)->ETM_PC1, q32DSP(c)->ETM_PC0);
+#ifdef CONFIG_SAVE_EXCEPTION_LOG_IN_FLASH
+        *len += snprintf(exception_log_buf + *len, sizeof(exception_log_buf) - *len, "CPU%d %x --> %x --> %x --> %x\r\n", c,
+                         q32DSP(c)->ETM_PC3, q32DSP(c)->ETM_PC2,
+                         q32DSP(c)->ETM_PC1, q32DSP(c)->ETM_PC0);
+#endif
     }
 }
 
-
 void exception_analyze(int *sp)
 {
+    int len = 0;
     /* log_output_release_deadlock(); */ //TODO
     printf("\r\n\r\n---------------------exception error ------------------------\r\n\r\n");
 
@@ -128,7 +173,12 @@ void exception_analyze(int *sp)
                __func__, corex2(0)->DBG_MSG, q32DSP(1)->EMU_MSG, corex2(0)->C1_CON);
     }
 
-    trace_call_stack();
+#ifdef CONFIG_SAVE_EXCEPTION_LOG_IN_FLASH
+    len += snprintf(exception_log_buf + len, sizeof(exception_log_buf) - len, "CPU%d run addr = 0x%x\r\ncpu %d DEBUG_MSG = 0x%x, EMU_MSG = 0x%x C%d_CON=%x\r\n",
+                    !cpu_id, q32DSP(!cpu_id)->PCRS, cpu_id, corex2(0)->DBG_MSG, q32DSP(0)->EMU_MSG, cpu_id, cpu_id ? corex2(0)->C1_CON : corex2(0)->C0_CON);
+#endif
+
+    trace_call_stack(&len);
 
     unsigned int reti = sp[16];
     unsigned int rete = sp[17];
@@ -149,11 +199,21 @@ void exception_analyze(int *sp)
     printf("rets: 0x%x \n", rets);
     printf("reti: 0x%x \n", reti);
     printf("usp : %x, ssp : %x sp: %x\r\n\r\n", usp, ssp, _sp);
+#ifdef CONFIG_SAVE_EXCEPTION_LOG_IN_FLASH
+    len += snprintf(exception_log_buf + len, sizeof(exception_log_buf) - len, "icfg: %x\r\n", icfg);
+    len += snprintf(exception_log_buf + len, sizeof(exception_log_buf) - len, "psr : %x\r\n", psr);
+    len += snprintf(exception_log_buf + len, sizeof(exception_log_buf) - len, "rets: 0x%x\r\n", rets);
+    len += snprintf(exception_log_buf + len, sizeof(exception_log_buf) - len, "reti: 0x%x\r\n", reti);
+    len += snprintf(exception_log_buf + len, sizeof(exception_log_buf) - len, "usp : %x, ssp : %x sp: %x\r\n", usp, ssp, _sp);
+#endif
 
     for (int i = 0; i < 32; i++) {
         if (q32DSP(cpu_id)->EMU_MSG & BIT(i)) {
             printf("%s\r\n", emu_msg[31 - i]);
             printf("current_task : %s\r\n", os_current_task());
+#ifdef CONFIG_SAVE_EXCEPTION_LOG_IN_FLASH
+            len += snprintf(exception_log_buf + len, sizeof(exception_log_buf) - len, "%s\r\ncurrent_task : %s\r\n", emu_msg[31 - i], os_current_task());
+#endif
             if (i == 3) {
                 printf("usp limit %x  %x\r\n",
                        q32DSP(cpu_id)->EMU_USP_L, q32DSP(cpu_id)->EMU_USP_H);
@@ -170,6 +230,16 @@ void exception_analyze(int *sp)
            corex2(0)->PRP_MMU_ERR_RID,
            corex2(0)->PRP_MMU_ERR_WID);
 
+#ifdef CONFIG_SAVE_EXCEPTION_LOG_IN_FLASH
+    len += snprintf(exception_log_buf + len, sizeof(exception_log_buf) - len, "%s AXI_WR_INV_ID : 0x%x, AXI_RD_INV_ID : 0x%x, PRP_WR_LIMIT_ID : 0x%x, PRP_MMU_ERR_RID : 0x%x, PRP_MMU_ERR_WID : 0x%x\r\n",
+                    corex2(0)->AXI_RD_INV_ID == 0X100 ? "CPU0" : "CPU1",
+                    corex2(0)->AXI_WR_INV_ID,
+                    corex2(0)->AXI_RD_INV_ID,
+                    corex2(0)->PRP_WR_LIMIT_ID,
+                    corex2(0)->PRP_MMU_ERR_RID,
+                    corex2(0)->PRP_MMU_ERR_WID);
+#endif
+
     int i = 0;
     int j = 0;
     int num = 0;
@@ -185,40 +255,83 @@ void exception_analyze(int *sp)
                 printf("\nWR_LIMITH : 0x%x, WR_LIMITL : 0x%x\n",
                        ((volatile u32 *)(&corex2(0)->WR_LIMIT0_H))[j],
                        ((volatile u32 *)(&corex2(0)->WR_LIMIT0_L))[j]);
+#ifdef CONFIG_SAVE_EXCEPTION_LOG_IN_FLASH
+                len += snprintf(exception_log_buf + len, sizeof(exception_log_buf) - len, "PRP_MMU_ERR_WID %x %x\r\nWR_LIMITH : 0x%x, WR_LIMITL : 0x%x\r\n",
+                                corex2(0)->PRP_MMU_ERR_WID, corex2(0)->PRP_WR_LIMIT_ERR_NUM,
+                                ((volatile u32 *)(&corex2(0)->WR_LIMIT0_H))[j],
+                                ((volatile u32 *)(&corex2(0)->WR_LIMIT0_L))[j]);
+#endif
             } else if (i == 11) {
                 num = corex2(0)->C1_WR_LIMIT_ERR_NUM;
                 while (!(num & BIT(j)) && ++j < 8);
                 printf("\nWR_LIMITH : 0x%x, WR_LIMITL : 0x%x\n",
                        ((volatile u32 *)(&corex2(0)->WR_LIMIT0_H))[j],
                        ((volatile u32 *)(&corex2(0)->WR_LIMIT0_L))[j]);
+#ifdef CONFIG_SAVE_EXCEPTION_LOG_IN_FLASH
+                len += snprintf(exception_log_buf + len, sizeof(exception_log_buf) - len, "WR_LIMITH : 0x%x, WR_LIMITL : 0x%x\r\n",
+                                ((volatile u32 *)(&corex2(0)->WR_LIMIT0_H))[j],
+                                ((volatile u32 *)(&corex2(0)->WR_LIMIT0_L))[j]);
+#endif
             } else if (i == 13) {
                 num = corex2(0)->C0_WR_LIMIT_ERR_NUM;
                 while (!(num & BIT(j)) && ++j < 8);
                 printf("\nWR_LIMITH : 0x%x, WR_LIMITL : 0x%x\n",
                        ((volatile u32 *)(&corex2(0)->WR_LIMIT0_H))[j],
                        ((volatile u32 *)(&corex2(0)->WR_LIMIT0_L))[j]);
+#ifdef CONFIG_SAVE_EXCEPTION_LOG_IN_FLASH
+                len += snprintf(exception_log_buf + len, sizeof(exception_log_buf) - len, "WR_LIMITH : 0x%x, WR_LIMITL : 0x%x\r\n",
+                                ((volatile u32 *)(&corex2(0)->WR_LIMIT0_H))[j],
+                                ((volatile u32 *)(&corex2(0)->WR_LIMIT0_L))[j]);
+#endif
             } else if (i == 10) {
                 printf("\nPC_LIMIT0_H : 0x%x, PC_LIMIT0_L : 0x%x\n",
                        corex2(0)->PC_LIMIT0_H, corex2(0)->PC_LIMIT0_L);
                 printf("\nPC_LIMIT1_H : 0x%x, PC_LIMIT1_L : 0x%x\n",
                        corex2(0)->PC_LIMIT1_H, corex2(0)->PC_LIMIT1_L);
+#ifdef CONFIG_SAVE_EXCEPTION_LOG_IN_FLASH
+                len += snprintf(exception_log_buf + len, sizeof(exception_log_buf) - len, "PC_LIMIT0_H : 0x%x, PC_LIMIT0_L : 0x%x\r\nPC_LIMIT1_H : 0x%x, PC_LIMIT1_L : 0x%x\r\n",
+                                corex2(0)->PC_LIMIT0_H, corex2(0)->PC_LIMIT0_L,
+                                corex2(0)->PC_LIMIT1_H, corex2(0)->PC_LIMIT1_L);
+#endif
             } else if (i == 12) {
                 printf("\nPC_LIMIT0_H : 0x%x, PC_LIMIT0_L : 0x%x\n",
                        corex2(0)->PC_LIMIT0_H, corex2(0)->PC_LIMIT0_L);
                 printf("\nPC_LIMIT1_H : 0x%x, PC_LIMIT1_L : 0x%x\n",
                        corex2(0)->PC_LIMIT1_H, corex2(0)->PC_LIMIT1_L);
+#ifdef CONFIG_SAVE_EXCEPTION_LOG_IN_FLASH
+                len += snprintf(exception_log_buf + len, sizeof(exception_log_buf) - len, "PC_LIMIT0_H : 0x%x, PC_LIMIT0_L : 0x%x\r\nPC_LIMIT1_H : 0x%x, PC_LIMIT1_L : 0x%x\r\n",
+                                corex2(0)->PC_LIMIT0_H, corex2(0)->PC_LIMIT0_L,
+                                corex2(0)->PC_LIMIT1_H, corex2(0)->PC_LIMIT1_L);
+#endif
             } else if (i == 14) {
                 printf("JL_SDR->DBG_INFO : 0x%x ,err in JL_SDR->DBG_ADR = 0x%x, JL_SDR->DBG_START : 0x%x JL_SDR->DBG_END : 0x%x\n",
                        JL_SDR->DBG_INFO, JL_SDR->DBG_ADR, JL_SDR->DBG_START, JL_SDR->DBG_END);
+#ifdef CONFIG_SAVE_EXCEPTION_LOG_IN_FLASH
+                len += snprintf(exception_log_buf + len, sizeof(exception_log_buf) - len, "JL_SDR->DBG_INFO : 0x%x ,err in JL_SDR->DBG_ADR = 0x%x, JL_SDR->DBG_START : 0x%x JL_SDR->DBG_END : 0x%x\r\n",
+                                JL_SDR->DBG_INFO, JL_SDR->DBG_ADR, JL_SDR->DBG_START, JL_SDR->DBG_END);
+#endif
             } else if (i == 15) {
                 printf("\nAXI_RAM_LIMIT0_H : 0x%x, AXI_RAM_LIMIT0_L : 0x%x\n",
                        JL_DBG->LIMIT_H, JL_DBG->LIMIT_L);
                 printf("\nJL_DBG->WR_ALLOW_ID0 : 0x%x, JL_DBG->WR_ALLOW_ID1 : 0x%x, JL_DBG->WR_LIMIT_ID : 0x%x\n",
                        JL_DBG->WR_ALLOW_ID0, JL_DBG->WR_ALLOW_ID1, JL_DBG->WR_LIMIT_ID);
+#ifdef CONFIG_SAVE_EXCEPTION_LOG_IN_FLASH
+                len += snprintf(exception_log_buf + len, sizeof(exception_log_buf) - len, "AXI_RAM_LIMIT0_H : 0x%x, AXI_RAM_LIMIT0_L : 0x%x\r\nJL_DBG->WR_ALLOW_ID0 : 0x%x, JL_DBG->WR_ALLOW_ID1 : 0x%x, JL_DBG->WR_LIMIT_ID : 0x%x\r\n",
+                                JL_DBG->LIMIT_H, JL_DBG->LIMIT_L,
+                                JL_DBG->WR_ALLOW_ID0, JL_DBG->WR_ALLOW_ID1, JL_DBG->WR_LIMIT_ID);
+#endif
             }
             printf("exception reason : %s \n", debug_msg[i]);
+#ifdef CONFIG_SAVE_EXCEPTION_LOG_IN_FLASH
+            len += snprintf(exception_log_buf + len, sizeof(exception_log_buf) - len, "exception reason : %s \n", debug_msg[i]);
+#endif
         }
     }
+#ifdef CONFIG_SAVE_EXCEPTION_LOG_IN_FLASH
+    printf("exception log buf len : %d\n", len);
+    write_exception_log_to_flash(exception_log_buf, len + 1);
+#endif
+
     printf("system_reset...\r\n\r\n\r\n");
     log_flush();    //只能在异常中断里调用
     wdt_clear();

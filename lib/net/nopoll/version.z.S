@@ -4,5 +4,5 @@
 .global lib_nopoll_version
 
 lib_nopoll_version:
-.long 205249793 
-.asciz "libnopoll-@20220703-$a6c087f"
+.long 213594657 
+.asciz "libnopoll-@20221008-$a6c087f"

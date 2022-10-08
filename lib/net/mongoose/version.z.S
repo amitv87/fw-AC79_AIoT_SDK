@@ -3,5 +3,5 @@
 .global lib_mongoose_version
 
 lib_mongoose_version:
-.long 205249816 
-.asciz "MONGOOSE-@20220703-$a6c087f"
+.long 213594680 
+.asciz "MONGOOSE-@20221008-$a6c087f"

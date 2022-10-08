@@ -87,6 +87,7 @@ struct logbuf {
 #define y_f_printf(x, ...)  log_i("\e[33m\e[5m\e[1m" x "\e[0m", ## __VA_ARGS__)
 
 #ifndef __LOG_ENABLE
+
 #define log_dump(a, b)              do {} while(0)
 #define log_putchar()               do {} while(0)
 #define log_early_init(a)           do {} while(0)
@@ -97,6 +98,8 @@ struct logbuf {
 #define log_output_end(...)         do {} while(0)
 
 #else
+
+extern int config_debug_enable;
 
 int log_output_lock();
 

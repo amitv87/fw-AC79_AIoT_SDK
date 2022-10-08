@@ -3,5 +3,5 @@
 .global lib_iperf_version
 
 lib_iperf_version:
-.long 205249840 
-.asciz "IPERF-@20220703-$a6c087f"
+.long 213594706 
+.asciz "IPERF-@20221008-$a6c087f"

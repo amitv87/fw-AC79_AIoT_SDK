@@ -128,10 +128,10 @@ void socket_send_but_netif_busy_hook(int s, char type_udp)
 {
     if (type_udp) {
         putbyte('$');
-        os_time_dly(30); //根据实际应用发送情况调节, 针对UDP多释放一下CPU, 一方面有利于系统其他线程顺畅运行, 另一方面防止猛发送导致网络拥塞加剧
+        /* os_time_dly(30); //根据实际应用发送情况调节, 针对UDP多释放一下CPU, 一方面有利于系统其他线程顺畅运行, 另一方面防止猛发送导致网络拥塞加剧 */
     } else {
         putbyte('|');
-        os_time_dly(2);
+        /* os_time_dly(2); */
     }
 }
 
