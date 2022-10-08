@@ -142,7 +142,7 @@ static void yuv2rgb_task(void)
                 struct yuv_buffer *yuv = lbuf_pop(__this->lbuf, BIT(__this->index));
                 if (yuv) {
                     if (rgb24) {
-                        yuv420p_quto_rgb24(yuv->data, __this->rgb_buf, __this->width, __this->height);//YUV转RGB
+                        yuv420p_quto_rgb24(yuv->data, __this->rgb_buf, __this->width, __this->height, 1);//YUV转RGB
                     } else {
                         yuv420p_quto_rgb565(yuv->data, __this->rgb_buf, __this->width, __this->height, 1);//YUV转RGB
                     }

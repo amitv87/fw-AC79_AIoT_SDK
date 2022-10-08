@@ -59,6 +59,7 @@ static char pincode[5] = "0000";
 const u8 *bt_get_mac_addr(void)
 {
     static u8 mac_addr[6];
+    const u8 bc_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 #if defined CONFIG_WIFI_ENABLE && !defined CONFIG_RF_TEST_ENABLE
     wifi_get_mac(mac_addr);
@@ -67,7 +68,7 @@ const u8 *bt_get_mac_addr(void)
     } else
 #endif
     {
-        if (syscfg_read(CFG_BT_MAC_ADDR, mac_addr, 6) == 6) {
+        if (syscfg_read(CFG_BT_MAC_ADDR, mac_addr, 6) == 6 && memcmp(mac_addr, bc_mac, 6)) {
             return mac_addr;
         }
 
@@ -253,7 +254,9 @@ int init_net_device_mac_addr(char *macaddr, char ap_mode)
 
     return 0;
 }
+#endif
 
+#if defined CONFIG_RF_TEST_ENABLE || defined CONFIG_READ_RF_PARAM_FROM_CFGTOOL_ENABLE
 u8 get_rf_analog_gain(void)
 {
     return rf_param_config.analog_gain;
@@ -368,6 +371,20 @@ void cfg_file_parse(void)
         ble_power = 6;
     }
 
+    //-------------若存在BT/BLE功率校准值(RF_FCC校准所得)，则使用校准值-----------//
+#ifdef RF_FCC_TEST_ENABLE
+    if (rf_fcc_adj_res_read("edr", &bt_power)) {
+        log_info("\n ---  [RF_FCC_ADJ]bt_power %d ---- \n", bt_power);
+    } else {
+        log_info("\n ---  [RF_FCC_ADJ]bt_power NULL ---- \n");
+    }
+
+    if (rf_fcc_adj_res_read("ble", &ble_power)) {
+        log_info("\n ---  [RF_FCC_ADJ]ble_power %d ---- \n", ble_power);
+    } else {
+        log_info("\n ---  [RF_FCC_ADJ]ble_power NULL ---- \n");
+    }
+#endif
     extern void bt_max_pwr_set(u8 pwr, u8 pg_pwr, u8 iq_pwr, u8 ble_pwr);
     bt_max_pwr_set(bt_power, 6, 6, ble_power);	//0-11 设置蓝牙发射功率
     log_info("rf bt_power:%d, ble_power:%d\n", bt_power, ble_power);
@@ -462,7 +479,7 @@ void cfg_file_parse(void)
 #if defined CONFIG_BT_ENABLE || defined CONFIG_WIFI_ENABLE
 __attribute__((weak)) void wifi_get_xosc(u8 *xosc)
 {
-#ifdef CONFIG_RF_TEST_ENABLE
+#if defined CONFIG_RF_TEST_ENABLE || defined CONFIG_READ_RF_PARAM_FROM_CFGTOOL_ENABLE
     xosc[0] = rf_param_config.xosc_l;
     xosc[1] = rf_param_config.xosc_r;
 #else
@@ -476,7 +493,7 @@ __attribute__((weak)) void wifi_get_xosc(u8 *xosc)
 
 __attribute__((weak)) void wifi_get_mcs_dgain(u8 *mcs_dgain)
 {
-#ifdef CONFIG_RF_TEST_ENABLE
+#if defined CONFIG_RF_TEST_ENABLE || defined CONFIG_READ_RF_PARAM_FROM_CFGTOOL_ENABLE
     memcpy(mcs_dgain, rf_param_config.mcs_dgain, sizeof(rf_param_config.mcs_dgain));
 #else
     memcpy(mcs_dgain, wifi_calibration_param.mcs_dgain, sizeof(wifi_calibration_param.mcs_dgain));
@@ -488,7 +505,7 @@ __attribute__((weak)) void wifi_get_mcs_dgain(u8 *mcs_dgain)
 
 __attribute__((weak)) int wifi_get_pa_trim_data(u8 *pa_data)
 {
-#ifdef CONFIG_RF_TEST_ENABLE
+#if defined CONFIG_RF_TEST_ENABLE || defined CONFIG_READ_RF_PARAM_FROM_CFGTOOL_ENABLE
     memcpy(pa_data, rf_param_config.pa_trim_data, sizeof(rf_param_config.pa_trim_data));
 #else
     memcpy(pa_data, wifi_calibration_param.pa_trim_data, sizeof(wifi_calibration_param.pa_trim_data));

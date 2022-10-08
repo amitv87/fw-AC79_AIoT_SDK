@@ -179,7 +179,7 @@ extern u8 wifi_airkiss_calcrc_bytes(u8 *p, unsigned int num_of_bytes);
  *
  * @param cb 指向WIFI底层接收到802.11数据帧回调函数，一般为：wifi_rx_cb
  */
-extern void wifi_set_frame_cb(void (*cb)(void *rxwi, struct ieee80211_frame *header, void *data, void *reserve));
+extern void wifi_set_frame_cb(void (*cb)(void *rxwi, struct ieee80211_frame *wh, void *data, u32 len, void *priv), void *priv);
 
 /**
  * @brief wifi_set_pwr，用于设置WIFI 模拟功率等级

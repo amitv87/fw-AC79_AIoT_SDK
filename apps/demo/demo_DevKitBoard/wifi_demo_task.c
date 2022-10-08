@@ -579,21 +579,43 @@ static void wifi_status(void *p)
 static void wifi_scan_test(void)
 {
     struct wifi_scan_ssid_info *sta_ssid_info;
-    u32 sta_ssid_num = 0;
+    u32 sta_ssid_num;
+
+    wifi_clear_scan_result();// 测试之前清掉之前连接路由器的扫描缓存,也可以放在STA连上后调用
 
     wifi_scan_req();
 
-    os_time_dly(4 * 100); //简单等待一些时间, 或者通过信号量/标志位 等待事件 WIFI_STA_SCAN_COMPLETED 扫描完成之后才去获取结果
+#if 0//若用户为了实时显示，每扫描到1个通道及时获取扫描到的结果, 甚至可以每扫描到一个SSID就马上获取结果
 
+    for (char ch = 1; ch < 14; ch++) { //扫描13个信道
+        os_time_dly(22); //根据MAX_CHANNEL_TIME_BSS_INFRA简单等待一些时间, 或者通过信号量/标志位 等待事件 WIFI_EVENT_STA_SCANNED_SSID 扫描到SSID之后才去获取结果
+        sta_ssid_num = 0;
+        sta_ssid_info = wifi_get_scan_result(&sta_ssid_num);
+        printf("wifi_sta_scan_channel_test channel %d, ssid_num =%d \r\n", ch, sta_ssid_num);
+        for (int i = 0; i < sta_ssid_num; i++) {
+            printf("wifi_sta_scan_channel_test ssid = [%s],rssi = %d,snr = %d\r\n", sta_ssid_info[i].ssid, sta_ssid_info[i].rssi, sta_ssid_info[i].snr);
+        }
+        free(sta_ssid_info);
+    }
+
+#else//等待所有信道扫描完成再获取结果, 对CPU性能更友好
+
+    os_time_dly(4 * 100); //根据MAX_CHANNEL_TIME_BSS_INFRA简单等待一些时间, 或者通过信号量/标志位 等待事件 WIFI_EVENT_STA_SCAN_COMPLETED 扫描完成之后才去获取结果
+    sta_ssid_num = 0;
     sta_ssid_info = wifi_get_scan_result(&sta_ssid_num);
-    wifi_clear_scan_result();//若使用连接最优WIFI(connect_best_network)的情况下,如果不使用等待WIFI_STA_SCAN_COMPLETED事件的方式, 在WIFI还未连接成功的情况下,有概率会造成wifi内部获取的结果被这里清空导致当次获取不到空中准备WIFI列表,需要等到下次扫描结果,因此如果使用connect_best_network的情况下,推荐使用等待事件 WIFI_STA_SCAN_COMPLETED 扫描完成之后才去获取结果
-
     printf("wifi_sta_scan_test ssid_num =%d \r\n", sta_ssid_num);
     for (int i = 0; i < sta_ssid_num; i++) {
         printf("wifi_sta_scan_test ssid = [%s],rssi = %d,snr = %d\r\n", sta_ssid_info[i].ssid, sta_ssid_info[i].rssi, sta_ssid_info[i].snr);
     }
 
     free(sta_ssid_info);
+#endif
+
+    static u8 scan_cnt;
+    if (++scan_cnt > 4) { //累积多几次扫描结果再去清空列表, 有利于显示出更多ssid,长期不清空有可能会导致ssid已下线都不知道
+        scan_cnt = 0;
+        wifi_clear_scan_result();//若使用连接最优WIFI(connect_best_network)的情况下,如果不使用等待WIFI_EVENT_STA_SCAN_COMPLETED事件的方式, 在WIFI还未连接成功的情况下,有概率会造成wifi内部获取的结果被这里清空导致当次获取不到空中准备WIFI列表,需要等到下次扫描结果,因此如果使用connect_best_network的情况下,推荐使用等待事件 WIFI_EVENT_STA_SCAN_COMPLETED 扫描完成之后才去获取结果
+    }
 }
 
 static void wifi_demo_task(void *priv)
@@ -607,7 +629,29 @@ static void wifi_demo_task(void *priv)
     iperf_test();
 #endif	// USE_WIFI_IPERF_TEST
 
-    sys_timer_add(NULL, wifi_status, 5 * 1000); //打印一下WIFI一些信息
+    sys_timer_add_to_task("app_core", NULL, wifi_status, 5 * 1000); //打印一下WIFI一些信息
+
+#if 0 //一个简单存储SSID测试
+    u8 ssid_stored_cnt;
+    struct wifi_stored_sta_info wifi_stored_sta_info[32];
+
+    os_time_dly(5 * 100); //假设等待已经连接上路由器
+    wifi_store_mode_info(STA_MODE, "GJ12", "123456789");
+    wifi_store_mode_info(STA_MODE, "WL83", "12345678");
+    wifi_store_mode_info(STA_MODE, "WIFI_PS_TEST", "12345678");
+
+    ssid_stored_cnt = wifi_get_stored_sta_info(wifi_stored_sta_info);
+    for (int i = 0; i < ssid_stored_cnt; i++) {
+        printf("1:wifi_get_stored_sta_info[%d]= %s \r\n", i, wifi_stored_sta_info[i].ssid);
+    }
+
+    wifi_del_stored_sta_info("WIFI_PS_TEST"); //中途删除掉其中一个存储过的SSID
+
+    ssid_stored_cnt = wifi_get_stored_sta_info(wifi_stored_sta_info);
+    for (int i = 0; i < ssid_stored_cnt; i++) {
+        printf("2:wifi_get_stored_sta_info[%d]= %s \r\n", i, wifi_stored_sta_info[i].ssid);
+    }
+#endif
 
     while (1) {
 
@@ -626,13 +670,13 @@ static void wifi_demo_task(void *priv)
         os_time_dly(60 * 100);
 
         wifi_enter_smp_cfg_mode();
-        wifi_set_frame_cb(wifi_rx_cb);  //注册接收802.11数据帧回调
+        wifi_set_frame_cb(wifi_rx_cb, NULL); //注册接收802.11数据帧回调
 
         os_time_dly(60 * 100);
-        wifi_set_frame_cb(NULL);
+        wifi_set_frame_cb(NULL, NULL);
 #elif (defined MONITOR_MODE_TEST)
         wifi_enter_smp_cfg_mode();
-        wifi_set_frame_cb(wifi_rx_cb);  //注册接收802.11数据帧回调
+        wifi_set_frame_cb(wifi_rx_cb, NULL); //注册接收802.11数据帧回调
         while (1) {
             os_time_dly(50 * 100);
         }

@@ -83,6 +83,7 @@
 <Add directory="../../../../apps/common/ui/include" />
 <Add directory="../../../../apps/common/config/include" />
 <Add directory="../../../../apps/common/system" />
+<Add directory="../../../../apps/common/rf_fcc_tool/include" />
 <Add directory="../../../../include_lib/utils/ui" />
 <Add directory="../../../../include_lib/driver/device/video" />
 <Add directory="../../../../apps/wifi_story_machine" />
@@ -374,6 +375,9 @@
 <Unit filename="../../../../apps/common/net/voiceprint_cfg.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/net/voiceprint_cfg.h" />
 <Unit filename="../../../../apps/common/net/wifi_conf.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/common/rf_fcc_tool/include/datatype.h" />
+<Unit filename="../../../../apps/common/rf_fcc_tool/include/rf_fcc_main.h" />
+<Unit filename="../../../../apps/common/rf_fcc_tool/rf_fcc_main.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/system/app_power_manage.h" />
 <Unit filename="../../../../apps/common/system/device_mount.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/system/flash_write_protect.c"><Option compilerVer="CC"/></Unit>
@@ -584,6 +588,7 @@
 <Unit filename="../../../../include_lib/driver/cpu/wl80/asm/wdt.h" />
 <Unit filename="../../../../include_lib/driver/device/device.h" />
 <Unit filename="../../../../include_lib/driver/device/device_drive.h" />
+<Unit filename="../../../../include_lib/driver/device/gpcnt.h" />
 <Unit filename="../../../../include_lib/driver/device/gpio.h" />
 <Unit filename="../../../../include_lib/driver/device/iic.h" />
 <Unit filename="../../../../include_lib/driver/device/includes.h" />

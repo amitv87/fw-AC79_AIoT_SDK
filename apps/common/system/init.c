@@ -184,6 +184,17 @@ static void app_task_handler(void *p)
     __do_initcall(early_initcall);
     __do_initcall(platform_initcall);
     board_init();
+
+#ifdef RF_FCC_TEST_ENABLE
+    u8 rf_fcc_test_init(void);
+    if (rf_fcc_test_init()) {
+#ifndef RF_FCC_IN_NORNAL_WORK
+        while (1) {
+            os_time_dly(10);
+        }
+#endif
+    }
+#endif
     __do_initcall(initcall);
     __do_initcall(module_initcall);
     app_core_init();

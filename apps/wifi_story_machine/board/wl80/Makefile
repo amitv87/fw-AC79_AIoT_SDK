@@ -157,6 +157,7 @@ INCLUDES := \
 	-I../../../../apps/common/ui/include \
 	-I../../../../apps/common/config/include \
 	-I../../../../apps/common/system \
+	-I../../../../apps/common/rf_fcc_tool/include \
 	-I../../../../include_lib/utils/ui \
 	-I../../../../include_lib/driver/device/video \
 	-I../../../../apps/wifi_story_machine \
@@ -280,6 +281,7 @@ c_SRC_FILES := \
 	../../../../apps/common/net/testbox/wbcp.c \
 	../../../../apps/common/net/voiceprint_cfg.c \
 	../../../../apps/common/net/wifi_conf.c \
+	../../../../apps/common/rf_fcc_tool/rf_fcc_main.c \
 	../../../../apps/common/system/device_mount.c \
 	../../../../apps/common/system/flash_write_protect.c \
 	../../../../apps/common/system/init.c \

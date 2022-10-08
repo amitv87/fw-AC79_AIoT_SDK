@@ -320,7 +320,7 @@ int user_audio_digital_volume_reset_fade(void *_d_volume)
 			}  \
 			for (j = 0; j < ch_num; j++)  \
 			{          \
-				int tmp = (*in_ptr*volumeNOW) >> 14;  \
+				int tmp = (*in_ptr*volumeNOW + (1 << 13)) >> 14;  \
 				L_sat(tmp, tmp);  \
 				*in_ptr = tmp; \
 				in_ptr++; \
@@ -334,7 +334,7 @@ int user_audio_digital_volume_reset_fade(void *_d_volume)
 			short *in_ptr = &data[i]; \
 			for (j = 0; j < len; j++)\
 			{\
-				int tmp= (*in_ptr*volumeNOW) >> 14;  \
+				int tmp= (*in_ptr*volumeNOW + (1 << 13)) >> 14;  \
 				L_sat(tmp, tmp);  \
 				*in_ptr = tmp;\
 				in_ptr += ch_num;\
@@ -370,6 +370,9 @@ int user_audio_digital_volume_run(void *_d_volume, void *data, u32 len, u32 samp
         d_volume->ch_num = ch_num;
     }
 
+    audio_vol_mix(buf, len, ch_num, d_volume->vol_fade, d_volume->vol_target, d_volume->fade_step);
+
+    return 0;
     /* printf("d_volume->vol_target %d %d %d %d\n", d_volume->vol_target, ch_num, d_volume->vol_fade, d_volume->fade_step); */
 #if 1
 
@@ -395,6 +398,7 @@ int user_audio_digital_volume_run(void *_d_volume, void *data, u32 len, u32 samp
     }
 
 #else
+    s32 valuetemp;
 
     /* printf("d_volume->vol_target %d %d\n", d_volume->vol_target, ch_num); */
     for (u32 i = 0; i < len; i += d_volume->ch_num) {//ch_num 1/2/3/4
@@ -418,70 +422,84 @@ int user_audio_digital_volume_run(void *_d_volume, void *data, u32 len, u32 samp
         valuetemp = buf[i];
         if (valuetemp < 0) {
             valuetemp = -valuetemp;
-            valuetemp = (valuetemp * d_volume->vol_fade) >> 14 ;
+            valuetemp = (valuetemp * d_volume->vol_fade + (1 << 13)) >> 14 ;
             valuetemp = -valuetemp;
         } else {
-            valuetemp = (valuetemp * d_volume->vol_fade) >> 14 ;
+            valuetemp = (valuetemp * d_volume->vol_fade + (1 << 13)) >> 14 ;
         }
+#if 1
+       buf[i] = (s16)data_sat_s16(valuetemp);
+#else
         if (valuetemp < -32768) {
             valuetemp = -32768;
         } else if (valuetemp > 32767) {
             valuetemp = 32767;
         }
         buf[i] = (s16)valuetemp;
+#endif
 
         if (d_volume->ch_num > 1) { //双声道
             ///FR channel
             valuetemp = buf[i + 1];
             if (valuetemp < 0) {
                 valuetemp = -valuetemp;
-                valuetemp = (valuetemp * d_volume->vol_fade) >> 14 ;
+                valuetemp = (valuetemp * d_volume->vol_fade + (1 << 13)) >> 14 ;
                 valuetemp = -valuetemp;
             } else {
-                valuetemp = (valuetemp * d_volume->vol_fade) >> 14 ;
+                valuetemp = (valuetemp * d_volume->vol_fade + (1 << 13)) >> 14 ;
             }
-
+#if
+            buf[i + 1] = (s16)data_sat_s16(valuetemp);
+#else
             if (valuetemp < -32768) {
                 valuetemp = -32768;
             } else if (valuetemp > 32767) {
                 valuetemp = 32767;
             }
             buf[i + 1] = (s16)valuetemp;
+#endif
 
             if (d_volume->ch_num > 2) { //三声道
                 //RL channel
                 valuetemp = buf[i + 2];
                 if (valuetemp < 0) {
                     valuetemp = -valuetemp;
-                    valuetemp = (valuetemp * d_volume->vol_fade) >> 14 ;
+                    valuetemp = (valuetemp * d_volume->vol_fade + (1 << 13)) >> 14 ;
                     valuetemp = -valuetemp;
                 } else {
-                    valuetemp = (valuetemp * d_volume->vol_fade) >> 14 ;
+                    valuetemp = (valuetemp * d_volume->vol_fade + (1 << 13)) >> 14 ;
                 }
+#if 1
+                buf[i + 2] = (s16)data_sat_s16(valuetemp);
+#else
                 if (valuetemp < -32768) {
                     valuetemp = -32768;
                 } else if (valuetemp > 32767) {
                     valuetemp = 32767;
                 }
                 buf[i + 2] = (s16)valuetemp;
-
+#endif
 
                 if (d_volume->ch_num > 3) { //四声道
                     ///RR channel
                     valuetemp = buf[i + 3];
                     if (valuetemp < 0) {
                         valuetemp = -valuetemp;
-                        valuetemp = (valuetemp * d_volume->vol_fade) >> 14 ;
+                        valuetemp = (valuetemp * d_volume->vol_fade + (1 << 13)) >> 14 ;
                         valuetemp = -valuetemp;
                     } else {
-                        valuetemp = (valuetemp * d_volume->vol_fade) >> 14 ;
+                        valuetemp = (valuetemp * d_volume->vol_fade + (1 << 13)) >> 14 ;
                     }
+#if 1
+                    buf[i + 4] = (s16)data_sat_s16(valuetemp);
+#else
                     if (valuetemp < -32768) {
                         valuetemp = -32768;
                     } else if (valuetemp > 32767) {
                         valuetemp = 32767;
                     }
                     buf[i + 3] = (s16)valuetemp;
+#endif
                 }
             }
         }

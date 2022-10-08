@@ -432,17 +432,34 @@ static int __set_dec_volume(int step)
     }
     __this->volume = volume;
 
+#ifdef CONFIG_UI_ENABLE
+    os_taskq_post(POST_TASK_NAME, 2, UI_MSG_SET_VOLUME, volume);
+#endif
+
+    log_d("set_dec_volume: %d\n", volume);
+
+#ifdef CONFIG_DEC_DIGITAL_VOLUME_ENABLE
+#if TCFG_USER_EMITTER_ENABLE
+    if (get_bt_emitter_audio_server() && __this->digital_vol_hdl && __this->dec_server) {
+        return user_audio_digital_volume_set(__this->digital_vol_hdl, volume * 31 / 100);
+    }
+#endif
+#if TCFG_USER_VIRTUAL_PLAY_ENABLE
+    if (get_user_virtual_audio_server() && __this->digital_vol_hdl && __this->dec_server) {
+        return user_audio_digital_volume_set(__this->digital_vol_hdl, volume * 31 / 100);
+    }
+#endif
+#endif
+
     if (volume == MAX_VOLUME_VALUE) {
         app_music_play_mix_file(CONFIG_VOICE_PROMPT_FILE_PATH"VolumeFull.mp3");
     } else {
         app_music_play_mix_file(CONFIG_VOICE_PROMPT_FILE_PATH"Volume.mp3");
     }
 
-#ifdef CONFIG_UI_ENABLE
-    os_taskq_post(POST_TASK_NAME, 2, UI_MSG_SET_VOLUME, volume);
-#endif
-
-    log_d("set_dec_volume: %d\n", volume);
+    if (!__this->dec_server) {
+        return -EFAULT;
+    }
 
     req.dec.cmd     = AUDIO_DEC_SET_VOLUME;
     req.dec.volume  = volume;
@@ -554,6 +571,13 @@ static int local_music_dec_stop(int save_breakpoint)
     }
     __this->file = NULL;
 
+#ifdef CONFIG_DEC_DIGITAL_VOLUME_ENABLE
+    if (__this->digital_vol_hdl) {
+        user_audio_digital_volume_close(__this->digital_vol_hdl);
+        __this->digital_vol_hdl = NULL;
+    }
+#endif
+
     return 0;
 }
 
@@ -649,11 +673,11 @@ static int local_music_dec_file(void *file, int breakpoint, void *handler, int a
 
 #ifdef CONFIG_DEC_DIGITAL_VOLUME_ENABLE
     if (!__this->digital_vol_hdl) {
-        __this->digital_vol_hdl = user_audio_digital_volume_open(0, 31, 1);
+        __this->digital_vol_hdl = user_audio_digital_volume_open(__this->volume * 31 / 100, 31, 1);
     }
-    if (__this->digital_vol_hdl && !__this->play_voice_prompt) {
+    if (__this->digital_vol_hdl) {
         user_audio_digital_volume_reset_fade(__this->digital_vol_hdl);
-        user_audio_digital_volume_set(__this->digital_vol_hdl, 31);
+        /* user_audio_digital_volume_set(__this->digital_vol_hdl, 31); */
         req.dec.dec_callback = audio_dec_data_callback;
     }
 #endif
@@ -761,7 +785,7 @@ __retry:
             memset(name, 0, sizeof(name));
             len = fget_name(file, (u8 *)name, sizeof(name));
 #ifdef CONFIG_RESUME_LOCAL_PLAY_FILE
-            if (resume_file && syscfg_read(VM_FLASH_BREAKPOINT_INDEX + (__this->mode - LOCAL_MUSIC_MODE), vm_name, sizeof(vm_name)) > 0) {
+            if (resume_file && syscfg_read(VM_FLASH_BREAKPOINT_INDEX + (__this->mode - LOCAL_MUSIC_MODE), vm_name, sizeof(vm_name)) == sizeof(vm_name)) {
                 if (memcmp(name, vm_name, sizeof(vm_name))) {
                     if (i == __this->fscan->file_number) {
                         i = 0;
@@ -1358,6 +1382,13 @@ static int net_music_dec_stop(int save_breakpoint)
     __this->net_file = NULL;
     __this->seek_step = 0;
 
+#ifdef CONFIG_DEC_DIGITAL_VOLUME_ENABLE
+    if (__this->digital_vol_hdl) {
+        user_audio_digital_volume_close(__this->digital_vol_hdl);
+        __this->digital_vol_hdl = NULL;
+    }
+#endif
+
     return 0;
 }
 
@@ -1476,11 +1507,11 @@ static int __net_music_dec_file(int breakpoint)
 
 #ifdef CONFIG_DEC_DIGITAL_VOLUME_ENABLE
     if (!__this->digital_vol_hdl) {
-        __this->digital_vol_hdl = user_audio_digital_volume_open(0, 31, 1);
+        __this->digital_vol_hdl = user_audio_digital_volume_open(31, 31, 1);
     }
     if (__this->digital_vol_hdl && !__this->play_tts) {
         user_audio_digital_volume_reset_fade(__this->digital_vol_hdl);
-        user_audio_digital_volume_set(__this->digital_vol_hdl, 31);
+        /* user_audio_digital_volume_set(__this->digital_vol_hdl, 31); */
         req.dec.dec_callback = audio_dec_data_callback;
     }
 #endif

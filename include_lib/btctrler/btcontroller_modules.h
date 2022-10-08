@@ -64,12 +64,12 @@ extern int config_btctler_hci_standard;
  *-------------------Mode SELECT
  *  brief : 运行时优化（LTO）下，代码空间优化；
  */
-extern const int config_btctler_mode;
+extern int config_btctler_mode;
 #define BT_MODE_IS(x)            (config_btctler_mode & (x))
 
 /*-----------------------------------------------------------*/
 
-extern const int config_btctler_hci_standard;
+extern int config_btctler_hci_standard;
 #define BT_HCI_STANDARD_IS_SUPPORT(x)        (config_btctler_hci_standard)
 
 #endif

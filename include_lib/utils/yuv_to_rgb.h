@@ -6,7 +6,7 @@
 u16 rgb_24_to_565(u8 R, u8 G, u8 B);
 
 //yuvBuffer_in:YUV输入源数据缓存区, rgbBuffer_out:rgb输出缓存区，width/height:分辨率宽高, be:大小端存储:1大端,0小端
-void yuv420p_quto_rgb24(unsigned char *yuvBuffer_in, unsigned char *rgbBuffer_out, int width, int height);
+void yuv420p_quto_rgb24(unsigned char *yuvBuffer_in, unsigned char *rgbBuffer_out, int width, int height, char be);
 void yuv420p_quto_rgb565(unsigned char *yuvBuffer_in, unsigned char *rgbBuffer_out, int width, int height, char be);
 void yuv422p_quto_rgb565(unsigned char *yuvBuffer_in, unsigned char *rgbBuffer_out, int width, int height, char be);
 void yuv444p_quto_rgb565(unsigned char *yuvBuffer_in, unsigned char *rgbBuffer_out, int width, int height, char be);

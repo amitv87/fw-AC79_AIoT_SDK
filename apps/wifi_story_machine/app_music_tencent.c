@@ -724,7 +724,7 @@ __retry:
             memset(name, 0, sizeof(name));
             len = fget_name(file, (u8 *)name, sizeof(name));
 #ifdef CONFIG_RESUME_LOCAL_PLAY_FILE
-            if (resume_file && syscfg_read(VM_FLASH_BREAKPOINT_INDEX + (__this->mode - LOCAL_MUSIC_MODE), vm_name, sizeof(vm_name)) > 0) {
+            if (resume_file && syscfg_read(VM_FLASH_BREAKPOINT_INDEX + (__this->mode - LOCAL_MUSIC_MODE), vm_name, sizeof(vm_name)) == sizeof(vm_name)) {
                 if (memcmp(name, vm_name, sizeof(vm_name))) {
                     memset(vm_name, 0, sizeof(vm_name));
                     fclose(file);

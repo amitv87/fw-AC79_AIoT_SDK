@@ -727,7 +727,7 @@ static void wifi_app_task(void *priv)  //主要是create wifi 线程的
 
 #ifdef CONFIG_WIFIBOX_ENABLE
     set_wbcp_mode(WB_CLIENT_MODE);
-    wifi_set_frame_cb(wbcp_rx_frame_cb);
+    wifi_set_frame_cb(wbcp_rx_frame_cb, NULL);
 #endif
 
     wifi_set_sta_connect_timeout(CONNECT_TIMEOUT_SEC);
@@ -744,6 +744,12 @@ static void wifi_app_task(void *priv)  //主要是create wifi 线程的
 #ifdef CONFIG_WIFI_ENABLE
 static int wireless_net_init(void)   //主要是create wifi 线程的
 {
+#ifdef RF_FCC_TEST_ENABLE
+    //进入RF_FCC测试模式后，此处直接退出
+    if (get_rf_fcc_mode()) {
+        return 0;
+    }
+#endif
     puts("wireless_net_init \n\n");
     return thread_fork("wifi_app_task", 10, 1792, 0, 0, wifi_app_task, NULL);
 }

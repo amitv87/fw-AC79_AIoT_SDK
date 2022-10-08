@@ -241,9 +241,11 @@ typedef enum JL_CONFIG_ERR_TABLE {
 #define    VM_STA_IPADDR_INDEX          193
 #define    VM_USER_ID_INDEX             194
 #define    WIFI_INFO_IDX                195
-#define    VM_FLASH_BREAKPOINT_INDEX    196
-#define    VM_SD0_BREAKPOINT_INDEX      197
-#define    VM_USB0_BREAKPOINT_INDEX     198
+
+#define    WIFI_BT_FCC_CHANGE           196 //用于保存FCC测试模式
+#define    WIFI_BT_FCC_ADJ_IDX          197 //用于保存FCC校准结果
+#define    WIFI_BT_FCC_RES_FLAG         198 //用于保存FCC校准标志
+
 #define    VM_FM_INFO_INDEX             199
 #define    VM_SD_LOG_INDEX              200
 #define    VM_AG_KEY_INFO_IDX_START     201
@@ -261,6 +263,11 @@ typedef enum JL_CONFIG_ERR_TABLE {
 
 //238-255可使用
 #define    CFG_UPDATE_VERSION_INFO      238
+#define    VM_FLASH_BREAKPOINT_INDEX    239
+#define    VM_SD0_BREAKPOINT_INDEX      240
+#define    VM_SD1_BREAKPOINT_INDEX      241
+#define    VM_USB0_BREAKPOINT_INDEX     242
+#define    VM_USB1_BREAKPOINT_INDEX     243
 #define    VM_RTC_LRC_TRIM_INDEX        244
 
 //=================================================================================//

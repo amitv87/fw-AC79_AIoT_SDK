@@ -277,7 +277,7 @@ static void wifi_enter_smp_mode(void)
     wifi_set_smp_cfg_scan_all_channel(1);
     wifi_set_smp_cfg_just_monitor_mode(0);
     wifi_set_smp_cfg_timeout(100);
-    wifi_set_frame_cb(wbcp_rx_frame_cb);
+    wifi_set_frame_cb(wbcp_rx_frame_cb, NULL);
     wifi_enter_smp_cfg_mode();
 }
 
@@ -301,7 +301,7 @@ static s8 wifi_init(void)
     }
 
     if (wbcp.mode == WB_SERVER_MODE) {
-        wifi_set_frame_cb(wbcp_rx_frame_cb);
+        wifi_set_frame_cb(wbcp_rx_frame_cb, NULL);
     }
     wifi_set_smp_cfg_scan_all_channel(0);
     wifi_set_smp_cfg_just_monitor_mode(1);

@@ -485,6 +485,19 @@ const struct wifi_calibration_param wifi_calibration_param = {
 };
 #endif
 
+#ifdef TCFG_GPCNT_ENABLE
+#include "gpcnt.h"
+const struct gpcnt_platform_data gpcnt_data = {
+#if (defined RF_FCC_TEST_ENABLE && CONFIG_RF_FCC_TRIGGER_MODE == GPCNT_TRIGGER_MODE)
+    .gpcnt_gpio = CONFIG_RF_FCC_TRIGGER_GPCNT_PORT,
+#else
+    .gpcnt_gpio = IO_PORTC_01,
+#endif
+    .gss_clk_source = GPCNT_PLL_CLK,//480M
+    .ch_source  = GPCNT_INPUT_CHANNEL1,
+    .cycle      = CYCLE_15,
+};
+#endif
 REGISTER_DEVICES(device_table) = {
     { "pwm0",   &pwm_dev_ops,  (void *)&pwm_data0},
     { "pwm1",   &pwm_dev_ops,  (void *)&pwm_data1},
@@ -527,6 +540,9 @@ REGISTER_DEVICES(device_table) = {
 #endif
 #if TCFG_VIR_UDISK_ENABLE
     {"vir_udisk",  &ram_disk_dev_ops, NULL},
+#endif
+#ifdef TCFG_GPCNT_ENABLE
+	{"gpcnt", &gpcnt_dev_ops, (void *) &gpcnt_data },
 #endif
 };
 

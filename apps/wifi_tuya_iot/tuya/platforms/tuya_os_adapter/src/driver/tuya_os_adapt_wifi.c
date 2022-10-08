@@ -555,7 +555,7 @@ int tuya_os_adapt_wifi_sniffer_set(const bool en, const SNIFFER_CALLBACK cb)
         //sniffer_cb = cb;
         //wifi_set_frame_cb(wifi_rx_cb);  //注册接收802.11数据帧回调
     } else {
-        wifi_set_frame_cb(NULL);
+        wifi_set_frame_cb(NULL, NULL);
         sniffer_cb = NULL;
 
         //fix me
@@ -815,7 +815,7 @@ int tuya_os_adapt_wifi_register_recv_mgnt_callback(const bool enable, const WIFI
     } else {
         mgnt_recv_cb = NULL;
         if (sniffer_cb == NULL) {
-            wifi_set_frame_cb(NULL);
+            wifi_set_frame_cb(NULL, NULL);
         }
     }
 

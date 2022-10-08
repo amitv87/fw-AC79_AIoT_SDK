@@ -116,6 +116,7 @@ struct low_power_param {
 #define POWER_KEEP_RTC		BIT(1)
 #define POWER_KEEP_RESET	BIT(2)
 #define POWER_KEEP_PWM_LED	BIT(3)
+#define POWER_KEEP_SYSPLL 	BIT(4)
 
 struct port_wakeup {
     u8 edge;        //[0]: Rising / [1]: Falling
@@ -206,6 +207,8 @@ void power_set_mode(u8 mode);
 void power_keep_state(u8 data);
 
 u8 get_power_keep_state(void);
+
+u8 hw_low_power_idle_check(void);
 
 void power_set_callback(u8 mode, void (*powerdown_enter)(u8 step), void (*powerdown_exit)(u32), void (*soft_poweroff_enter)(void));
 

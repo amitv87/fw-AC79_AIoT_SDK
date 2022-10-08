@@ -32,11 +32,11 @@ const int config_btctler_modules        = 0;
 int config_btctler_mode                 = BT_FCC;
 int config_btctler_hci_standard         = 1;
 #else
-const int config_btctler_mode           = CONFIG_BT_MODE;
+int config_btctler_mode           = CONFIG_BT_MODE;
 #if (CONFIG_BT_MODE != BT_NORMAL)
 const int config_btctler_hci_standard   = 1;
 #else
-const int config_btctler_hci_standard   = 0;
+int config_btctler_hci_standard   = 0;
 #endif
 #endif
 #if TCFG_USER_EMITTER_ENABLE && defined CONFIG_NET_ENABLE

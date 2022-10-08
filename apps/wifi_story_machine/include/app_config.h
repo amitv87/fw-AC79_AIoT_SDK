@@ -55,6 +55,39 @@
 // #define CONFIG_DEC_DIGITAL_VOLUME_ENABLE     //数字音量淡入淡出功能
 // #define CONFIG_DEC_ANALOG_VOLUME_ENABLE      //模拟音量淡入淡出功能
 
+//*********************************************************************************//
+//                                  FCC测试相关配置                                //
+//*********************************************************************************//
+// #define RF_FCC_TEST_ENABLE       //使能RF_FCC测试
+
+#ifdef RF_FCC_TEST_ENABLE
+// #define RF_FCC_IN_NORNAL_WORK    //使能在正常工作模式下进行RF_FCC测试
+
+#define IO_TRIGGER_MODE      (0) //"IO检测"方式触发进入RF_FCC测试模式
+#define GPCNT_TRIGGER_MODE   (1) //"脉冲检测"方式触发进入RF_FCC测试模式
+#define UART_CMD_MODE        (2) //"串口指令"方式触发进入RF_FCC测试模式
+#define USER_DEF_MODE        (3) //"用户定义"方式触发进入RF_FCC测试模式
+
+#define CONFIG_RF_FCC_TRIGGER_MODE   GPCNT_TRIGGER_MODE//RF_FCC触发方式配置
+
+#define CONFIG_RF_FCC_TRIGGER_IO_PORT   IO_PORTC_01    //RF_FCC"IO检测"IO配置
+#define CONFIG_RF_FCC_TRIGGER_IO_STATE  (1)            //RF_FCC"IO检测"IO的状态配置，0:低电平触发，1:高电平触发
+#define CONFIG_RF_FCC_TRIGGER_IO_CNT    (10)           //RF_FCC"IO检测"IO的检测次数
+
+#define CONFIG_RF_FCC_GPCNT_TRIGGER_FREQ_H  (11000)    //RF_FCC"脉冲检测"频率上限，单位Hz
+#define CONFIG_RF_FCC_GPCNT_TRIGGER_FREQ_L  (9000)     //RF_FCC"脉冲检测"频率下限，单位Hz
+#define CONFIG_RF_FCC_GPCNT_TRIGGER_CNT     (10)       //RF_FCC"脉冲检测"次数
+#define CONFIG_RF_FCC_TRIGGER_GPCNT_PORT    IO_PORTC_01//RF_FCC"脉冲检测"IO
+
+#if (CONFIG_RF_FCC_TRIGGER_MODE == GPCNT_TRIGGER_MODE)
+#define TCFG_GPCNT_ENABLE
+#endif
+#endif //RF_FCC_TEST_ENABLE
+
+
+//*********************************************************************************//
+//                                  网络相关配置                                   //
+//*********************************************************************************//
 #ifdef CONFIG_NET_ENABLE
 #define CONFIG_WIFI_ENABLE  					/* 无线WIFI */
 #define WIFI_COLD_START_FAST_CONNECTION //启用WIFI冷启动快连
