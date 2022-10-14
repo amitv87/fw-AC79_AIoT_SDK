@@ -164,12 +164,6 @@ void ili9481_SleepOutMode(void)
     lcd_delay(120);  //Delay 120ms
 }
 
-void st7789_shown_image(u8 *buff, u16 x_addr, u16 y_addr, u16 width, u16 height)
-{
-    ili9481_SetRange(x_addr, y_addr, width, height);
-    WriteDAT_DMA(buff, width * height * 2);
-}
-
 static void ili9481_set_direction(u8 dir)
 {
     WriteCOM(0x36);    //扫描方向控制
@@ -188,7 +182,6 @@ static void ili9481_set_direction(u8 dir)
 #endif
     }
 
-    ili9481_SetRange(0, LCD_W - 1, 0, LCD_H - 1);
 }
 
 static void ili9481_draw(u8 *map, u32 size)//获取Ui发送出来的数据

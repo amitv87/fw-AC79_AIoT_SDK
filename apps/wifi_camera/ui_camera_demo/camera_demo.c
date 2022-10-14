@@ -118,17 +118,25 @@ static void get_JPG_save_to_SD(char *yuv_img_buf)
 }
 
 /*********摄像头应用部分***********/
-static void test_main(u8 *buf, u32 len, yuv_in_w, yuv_in_h)
+static void test_main(u8 *buf, u32 len, width, height)
 {
     int msg[32];
     static u8 time = 0;
 
     if (get_lcd_show_deta_mode() == ui_camera) { //其余模式不需要推摄像头数据
-        YUV420p_Soft_Scaling(buf, NULL, in_w, in_h, LCD_W, LCD_H);
+#if (HORIZONTAL_SCREEN == 1)
+        YUV420p_Soft_Scaling(buf, NULL, width, height, LCD_W, LCD_H);
+#else
+        YUV420p_Soft_Scaling(buf, NULL, width, height, LCD_H, LCD_W);
+#endif
         lcd_show_frame(buf, LCD_YUV420_DATA_SIZE); //240*320*2=153600
     }
     if (get_lcd_show_deta_mode() == camera) { //其余模式不需要推摄像头数据
-        YUV420p_Soft_Scaling(buf, NULL, in_w, in_h, LCD_W, LCD_H);
+#if (HORIZONTAL_SCREEN == 1)
+        YUV420p_Soft_Scaling(buf, NULL, width, height, LCD_W, LCD_H);
+#else
+        YUV420p_Soft_Scaling(buf, NULL, width, height, LCD_H, LCD_W);
+#endif
         lcd_show_frame(buf, LCD_YUV420_DATA_SIZE); //240*320*2=153600
     }
 }
@@ -184,7 +192,13 @@ static void camera_show_lcd(u8 *buf, u32 size, int width, int height)
     qr_get_ssid_pwd(&ssid, &pwd);
     printf(">>>>>>>>>>>>>>>sssid = %s, pwd = %s", ssid, pwd);
 #endif
+
+#if (HORIZONTAL_SCREEN == 1)
     YUV420p_Soft_Scaling(buf, NULL, width, height, LCD_W, LCD_H);
+#else
+    YUV420p_Soft_Scaling(buf, NULL, width, height, LCD_H, LCD_W);
+#endif
+
     lcd_show_frame(buf, LCD_YUV420_DATA_SIZE);
     Calculation_frame();
 }

@@ -68,7 +68,7 @@ void rtc_pin_reset_ctrl(u8 enable);
 
 void rtc_wkup_ctrl(struct rtc_wkup_cfg *wkup_cfg);
 
-void alarm_wkup_ctrl(int enable, u32 sec, u8 sys_off);
+void alarm_wkup_ctrl(int enable, u32 sec);
 
 void rtc_set_power_inside(void);
 

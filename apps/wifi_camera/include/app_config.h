@@ -315,7 +315,7 @@
 #if TCFG_LCD_480x272_8BITS || TCFG_LCD_ST7789V_ENABLE || TCFG_LCD_HX8357_ENABLE
 #define HORIZONTAL_SCREEN                   0//0为使用竖屏
 #else
-#define HORIZONTAL_SCREEN                   1//1为使能横屏配置
+#define HORIZONTAL_SCREEN                   0//1为使能横屏配置
 #endif
 
 

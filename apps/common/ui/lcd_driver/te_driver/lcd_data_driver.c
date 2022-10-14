@@ -18,7 +18,7 @@
 
 #define FILTER_COLOR 0x000000  //图像合成过滤纯黑色
 
-#if 1
+#if 0
 #define log_info(x, ...)    printf("\n[lcd_deta_driver]>>>>>>>>>>>>>>>>>>>###" x " \n", ## __VA_ARGS__)
 #else
 #define log_info(...)
@@ -320,21 +320,35 @@ static void picture_compose_task(void *priv)
             if (rbuf == NULL) {
                 goto updata;//如果读取失败也进行刷新数据
             } else {
+#if (HORIZONTAL_SCREEN == 1)
                 yuv420p_quto_rgb565(rbuf->data, camera_save_buf, LCD_W, LCD_H, 1);
+#else
+                yuv420p_quto_rgb565(rbuf->data, camera_save_buf, LCD_H, LCD_W, 1);
+#endif
                 lbuf_free(rbuf);
             }
 
 updata:
+#if (HORIZONTAL_SCREEN == 1)
+            printf("\n [ERROR] %s - %d\n", __FUNCTION__, __LINE__);
             picture_compose(ui_save_buf, camera_save_buf, LCD_W, LCD_H);
-#if HORIZONTAL_SCREEN
 #ifdef turn_180
             RGB_Soft_90(0, show_buf, camera_save_buf, LCD_W,  LCD_H);
 #else
             RGB_Soft_90(1, show_buf, camera_save_buf, LCD_W,  LCD_H);
 #endif
+
+#else  //HORIZONTAL_SCREEN
+
+#ifdef turn_180
+            RGB_Soft_90(0, show_buf, camera_save_buf, LCD_H, LCD_W);
 #else
-            memcpy(show_buf, camera_save_buf, LCD_RGB565_DATA_SIZE);
+            RGB_Soft_90(1, show_buf, camera_save_buf, LCD_H,  LCD_W);
 #endif
+            picture_compose(ui_save_buf, show_buf, LCD_W, LCD_H);
+
+#endif //HORIZONTAL_SCREEN
+
             send_data_to_lcd(show_buf, LCD_RGB565_DATA_SIZE);
             break;
 

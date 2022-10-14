@@ -9,6 +9,8 @@
 #include "asm/debug.h"
 #include "app_config.h"
 
+#define EXPCPTION_IN_SRAM 	0	//打开异常函数才sram，防止flash异常进入异常函数失败
+#define DEBUG_UART	JL_UART2  //debug串口
 
 extern const char *os_current_task_rom();
 extern void log_output_release_deadlock(void);
@@ -107,8 +109,211 @@ static void trace_call_stack()
                q32DSP(c)->ETM_PC1, q32DSP(c)->ETM_PC0);
     }
 }
+#if EXPCPTION_IN_SRAM
 
-
+AT(.volatile_ram_code)
+static char excep_str[] = "\n\n---------------------exception error ------------------------\n";
+AT(.volatile_ram_code)
+static char debug_msg_str[32][32] = {
+    /*0---7*/
+    "wdt_timout_err",
+    "prp_rd_mmu_err",
+    "prp_wr_limit_err",
+    "prp_wr_mmu_err",
+    "axi_rd_inv",
+    "axi_wr_inv",
+    "c1_rd_mmu_expt",
+    "c0_rd_mmu_expt",
+    /*8---15*/
+    "c1_wr_mmu_expt",
+    "c0_wr_mmu_expt",
+    "c1_pc_limit_err_r",
+    "c1_wr_limit_err_r",
+    "c0_pc_limit_err_r",
+    "c0_wr_limit_err_r",
+    "dmc_pnd",
+    "dbg_pnd",
+    /*16---23*/
+    "c1_if_bus_inv",
+    "c1_rd_bus_inv",
+    "c1_wr_bus_inv",
+    "c0_if_bus_inv",
+    "c0_rd_bus_inv",
+    "c0_wr_bus_inv",
+    "reserved",
+    "reserved",
+    /*24---31*/
+    "reserved",
+    "reserved",
+    "reserved",
+    "reserved",
+    "reserved",
+    "reserved",
+    "reserved",
+    "reserved",
+};
+extern void putbyte(char a);
+AT(.volatile_ram_code)
+static void uart_putchar(char a)
+{
+    if (DEBUG_UART->CON0 & BIT(0)) {
+        if (a == '\n') {
+            DEBUG_UART->CON0 |= BIT(13);
+            DEBUG_UART->BUF = '\r';
+            __asm_csync();
+            while ((DEBUG_UART->CON0 & BIT(15)) == 0);
+        }
+        DEBUG_UART->CON0 |= BIT(13);
+        DEBUG_UART->BUF = a;
+        __asm_csync();
+        while ((DEBUG_UART->CON0 & BIT(15)) == 0);
+    }
+}
+AT(.volatile_ram_code)
+static void putbuffer(char *buf)
+{
+    while (*buf != 0) {
+        uart_putchar(*buf++);
+    }
+}
+AT(.volatile_ram_code)
+static void puthex(int hex)
+{
+    uart_putchar(' ');
+    uart_putchar('0');
+    uart_putchar('x');
+    for (char i = 28, p = 0, f = 0; i >= 0; i -= 4) {
+        p = (char)(hex >> i) & 0xF;
+        if (p || f || i == 0) {
+            f = 1;
+            uart_putchar(p > 9 ? ('A' + (p - 10)) : ('0' + p));
+        }
+    }
+}
+AT(.volatile_ram_code)
+static void putretis(unsigned int reti, unsigned int rets)
+{
+    uart_putchar('r');
+    uart_putchar('e');
+    uart_putchar('t');
+    uart_putchar('i');
+    uart_putchar(':');
+    puthex(reti);
+    uart_putchar('\n');
+    uart_putchar('r');
+    uart_putchar('e');
+    uart_putchar('t');
+    uart_putchar('s');
+    uart_putchar(':');
+    puthex(rets);
+    uart_putchar('\n');
+}
+AT(.volatile_ram_code)
+static void putstrandhex(char c0, char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, char c9, int hex, int hex1)
+{
+    char bf[10];
+    bf[0] = c0, bf[1] = c1, bf[2] = c2, bf[3] = c3, bf[4] = c4, bf[5] = c5, bf[6] = c6, bf[7] = c7, bf[8] = c8, bf[9] = c9;
+    for (int i = 0; i < sizeof(bf); i++) {
+        if (bf[i]) {
+            uart_putchar(bf[i]);
+        }
+    }
+    puthex(hex);
+    if (hex1) {
+        puthex(hex1);
+    }
+    uart_putchar('\n');
+}
+AT(.volatile_ram_code)
+static void putpchex(int cpu_id)
+{
+    q32DSP(!cpu_id)->CMD_PAUSE = -1;
+    if (cpu_id) {
+        corex2(0)->C0_CON &= ~BIT(3);
+        corex2(0)->C0_CON |= BIT(1);
+    } else {
+        corex2(0)->C1_CON &= ~BIT(3);
+        corex2(0)->C1_CON |= BIT(1);
+    }
+    putstrandhex('e', 'r', 'r', ' ', 'C', 'P', 'U', '0' + cpu_id, 0, 0, cpu_id, 0);
+    for (int c = 0; c < CPU_CORE_NUM; c++) {
+        uart_putchar('C');
+        uart_putchar('P');
+        uart_putchar('U');
+        uart_putchar('0' + c);
+        uart_putchar(':');
+        puthex(q32DSP(c)->ETM_PC3);
+        uart_putchar(' ');
+        uart_putchar('-');
+        uart_putchar('-');
+        uart_putchar('>');
+        puthex(q32DSP(c)->ETM_PC2);
+        uart_putchar(' ');
+        uart_putchar('-');
+        uart_putchar('-');
+        uart_putchar('>');
+        puthex(q32DSP(c)->ETM_PC1);
+        uart_putchar(' ');
+        uart_putchar('-');
+        uart_putchar('-');
+        uart_putchar('>');
+        puthex(q32DSP(c)->ETM_PC0);
+        uart_putchar('\n');
+    }
+}
+AT(.volatile_ram_code)
+static void putdebugreg(void)
+{
+    putstrandhex('D', 'B', 'G', '_', 'M', 'S', 'G', ':', 0, 0, corex2(0)->DBG_MSG, 0);
+    for (int i = 0, j = 0, num = 0; i < 32; i++) {
+        if (BIT(i) & corex2(0)->DBG_MSG) {
+            j = 0;
+            if (i == 2 || i == 11 || i == 13) {
+                num = j == 2 ? corex2(0)->PRP_WR_LIMIT_ERR_NUM : (j == 11 ? corex2(0)->C1_WR_LIMIT_ERR_NUM : corex2(0)->C0_WR_LIMIT_ERR_NUM);
+                while (!(num & BIT(j)) && ++j < 8);
+                putstrandhex('W', 'R', '_', 'L', 'I', 'M', 'I', 'T', 'L', ':', ((volatile u32 *)(&corex2(0)->WR_LIMIT0_H))[j], ((volatile u32 *)(&corex2(0)->WR_LIMIT0_L))[j]);
+            } else if (i == 10 || i == 12) {
+                putstrandhex('P', 'C', '_', 'L', 'M', 'T', '0', 'L', '-', 'H', corex2(0)->PC_LIMIT0_L, corex2(0)->PC_LIMIT0_H);
+                putstrandhex('P', 'C', '_', 'L', 'M', 'T', '1', 'L', '-', 'H', corex2(0)->PC_LIMIT1_L, corex2(0)->PC_LIMIT1_H);
+            } else if (i == 14) {
+                putstrandhex('S', 'D', 'R', ' ', 'D', 'B', 'G', 'I', 'N', 'F', JL_SDR->DBG_INFO, 0);
+                putstrandhex('S', 'D', 'R', ' ', 'D', 'B', 'G', 'A', 'D', 'R', JL_SDR->DBG_ADR, 0);
+                putstrandhex('S', 'D', 'R', ' ', 'D', 'B', 'G', 'S', 'T', 'A', JL_SDR->DBG_START, 0);
+                putstrandhex('S', 'D', 'R', ' ', 'D', 'B', 'G', 'E', 'N', 'D', JL_SDR->DBG_END, 0);
+            } else if (i == 15) {
+                putstrandhex('A', 'X', 'I', '_', 'L', 'M', 'T', 'L', '_', 'H', JL_DBG->LIMIT_L, JL_DBG->LIMIT_H);
+                putstrandhex('W', 'R', '_', 'A', 'L', 'W', ' ', 'I', 'D', '0', JL_DBG->WR_ALLOW_ID0, 0);
+                putstrandhex('W', 'R', '_', 'A', 'L', 'W', ' ', 'I', 'D', '1', JL_DBG->WR_ALLOW_ID1, 0);
+                putstrandhex('W', 'R', '_', 'L', 'M', 'T', ' ', 'I', 'D', ':',  JL_DBG->WR_ALLOW_ID0, 0);
+            }
+            uart_putchar('R');
+            uart_putchar('e');
+            uart_putchar('a');
+            uart_putchar('s');
+            uart_putchar('o');
+            uart_putchar('n');
+            uart_putchar(':');
+            putbuffer((char *)&debug_msg_str[i]);
+        }
+    }
+    uart_putchar('\n');
+    uart_putchar('\n');
+}
+AT(.volatile_ram_code)
+static void exception_analyze_sram(void)
+{
+    u32 rets, reti, cpu_id;
+    __asm__ volatile("%0 = rets ;" : "=r"(rets));
+    __asm__ volatile("%0 = reti ;" : "=r"(reti));
+    __asm__ volatile("%0 = cnum" : "=r"(cpu_id) ::);
+    putbuffer(excep_str);
+    putretis(reti, rets);
+    putpchex(cpu_id);
+    putdebugreg();
+    __wdt_clear();
+    __cpu_reset();
+}
+#endif
 void exception_analyze(int *sp)
 {
 
@@ -592,7 +797,11 @@ void debug_init(void)
 {
     u32 cpu_id = current_cpu_id();
 
+#if EXPCPTION_IN_SRAM
+    request_irq(IRQ_EXCEPTION_IDX, 7, exception_analyze_sram, 0xff);
+#else
     request_irq(IRQ_EXCEPTION_IDX, 7, exception_irq_handler, 0xff);
+#endif
 
     JL_OSA->CON = 0x6D;	//监控lsb_clk
     request_irq(IRQ_OSA_IDX, 7, osa_irq_handler, 0);

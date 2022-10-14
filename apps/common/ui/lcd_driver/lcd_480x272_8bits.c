@@ -106,7 +106,6 @@ IMD_RGB_PLATFORM_DATA_BEGIN(lcd_rgb_data)
 	.test_mode		= TRUE,					//初始化颜色显示
 	.double_buffer  = TRUE,					//底层使用一张显存应用层一张显存 每次都是拷贝数据到显存更新数据
 	.req_buf_waite  = FALSE,				//底层buff更新是否需要等待在中断更新：小分辨率等待，大分辨率不等带
-	.data_format	= IMD_RGB_888,			//RGB输出格式:IMD_RGB_888/IMD_RGB_666kk
 	.new_double_buffer = FALSE,             //应用层双BUF
 	.test_color		= 0xFFFF00,				//初始化颜色(r<<16|g<<8|b)
 	.group_port 	= IMD_IO_GROUPC,		//IO口选择:IMD_IO_GROUPA/IMD_IO_GROUPC
@@ -117,8 +116,8 @@ IMD_RGB_PLATFORM_DATA_BEGIN(lcd_rgb_data)
 	.sync2			= IMD_DE_EN | IMD_SYN_EDGE_H,		//行帧步信号选择:
 	//.sync2			= IMD_SYNC_DIS,		//行帧同步信号选择:
 	/*.data_out_mode 	= IMD_DATA_LSB,		//输出输出大小端:IMD_DATA_MSB/IMD_DATA_LSB*/
-	.data_in_format	= IMD_RGB_888,			//RGB输入格式:IMD_RGB_888
-	.data_format	= IMD_RGB_888,			//RGB输出格式:IMD_RGB_888/IMD_RGB_666
+	.data_in_format	= IMD_RGB_888,			//disable rgb565 RGB in格式:IMD_RGB_888
+	.data_out_format= IMD_RGB_888,			//RGB out格式:IMD_RGB_888
 	.data_out_mode 	= IMD_DATA_MSB,			//输出输出大小端:IMD_DATA_MSB/IMD_DATA_LSB
 	.data_shift_en	= FALSE,				//RGB666数据右移位2位(先右移在按照MSB/LSB输出)
 	.pll_clk_div	= IMD_PLL_DIV24,//WL82_imd.h

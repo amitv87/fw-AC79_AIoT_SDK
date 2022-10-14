@@ -117,6 +117,7 @@ struct low_power_param {
 #define POWER_KEEP_RESET	BIT(2)
 #define POWER_KEEP_PWM_LED 	BIT(3)
 #define POWER_KEEP_SYSPLL 	BIT(4)
+#define POWER_KEEP_FLASH 	BIT(5)
 
 struct port_wakeup {
     u8 edge;        //[0]: Rising / [1]: Falling
