@@ -198,7 +198,7 @@
 #endif
 
 #define ACCESS_NUM 				1
-//#define CONFIG_ENABLE_VLIST
+/*#define CONFIG_ENABLE_VLIST*/
 
 //AP模式的热点名称和密码
 #define AP_WIFI_CAM_PREFIX    "wifi_camera_wl8x_"
@@ -241,6 +241,7 @@
 #define _FORWARD_PORT    	2224
 #define _BEHIND_PORT     	2225
 
+#define CONFIG_NET_PKG_JPEG
 
 //*********************************************************************************//
 //                         录像和实时流帧率配置                                    //
@@ -331,7 +332,7 @@
 #define CONFIG_PLAY_JPG_ENABLE              0
 #if TCFG_DEMO_UI_RUN
 #define NO_UI_LCD_TEST                      0  //开机运行camera_lcd_only_show_demo.c 不带UI 直推到屏
-#define APP_VIDEO_REC_RUN					1  //SD卡录制(video_rec.c)和屏显(ui_demo.c)同时运行，需将此宏置1
+#define APP_VIDEO_REC_RUN					0  //SD卡录制(video_rec.c)和屏显(ui_demo.c)同时运行，需将此宏置1
 #endif
 
 #define TCFG_USE_SD_ADD_UI_FILE             0  //使用SD卡加载资源文件

@@ -686,6 +686,8 @@ int video_rec_sd_event_ctp_notify(char state)
 #if defined CONFIG_ENABLE_VLIST
     if (!state) {
         FILE_REMOVE_ALL();
+    } else {
+        FILE_LIST_IN_MEM(1);
     }
 #endif
     sprintf(buf, "online:%d", state);
@@ -756,6 +758,9 @@ static int net_video_rec_take_photo(void (*callback)(char *buffer, int len))
     char buf[48];
     char name_buf[20];
     int err;
+#if defined CONFIG_ENABLE_VLIST
+    os_mutex_pend(&net_vdrec_mutex, 0);
+#endif
 
     if (!(__this_net->net_state == VIDREC_STA_START || __this_net->net_state_ch2 == VIDREC_STA_START)) {
         printf("waring :net video not open or video record running \n");
@@ -788,11 +793,20 @@ static int net_video_rec_take_photo(void (*callback)(char *buffer, int len))
         goto error;
     }
     sprintf(buf, "%s%s", path, req.icap.file_name);
+
+#if defined CONFIG_ENABLE_VLIST
+    FILE_LIST_ADD(0, (const char *)buf, __this_net->is_open);
+#endif
+
     printf("%s\n\n", buf);
     CTP_CMD_COMBINED(NULL, CTP_REQUEST, "PHOTO_CTRL", "NOTIFY", CTP_REQUEST_MSG);
     if (req.icap.buf) {
         free(req.icap.buf);
     }
+#if defined CONFIG_ENABLE_VLIST
+    os_time_dly(1);//防止连拍异常掉线
+    os_mutex_post(&net_vdrec_mutex);
+#endif
     return 0;
 
 error:

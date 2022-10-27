@@ -108,6 +108,8 @@ struct low_power_param {
 #define POWER_KEEP_RESET	BIT(2) //休眠:VCM复位保持工作
 #define POWER_KEEP_PWM_LED 	BIT(3) //休眠:PWM_LED复位保持工作
 #define POWER_KEEP_SYSPLL	BIT(4) //休眠前系统使用SYS_PLL，不切BTOSC_24M时钟
+#define POWER_KEEP_FLASH 	BIT(5) //休眠不关闭flash电源
+#define POWER_KEEP_WDT 		BIT(6) //休眠不关闭看门狗
 
 struct port_wakeup {
     u8 edge;        //[0]: Rising / [1]: Falling

@@ -603,6 +603,10 @@ void net_app_init(void)
         http_virfile_reg(DEV_DESC_PATH, DEV_DESC_CONTENT, strlen(DEV_DESC_CONTENT)); //注册虚拟文件描述文档,可在dev_desc.h修改
         http_get_server_init(HTTP_PORT); //8080
         video_rt_tcp_server_init(2229);
+#ifdef CONFIG_ENABLE_VLIST
+        preview_init(VIDEO_PREVIEW_PORT, NULL); //2226
+        playback_init(VIDEO_PLAYBACK_PORT, NULL);
+#endif
 
 
         printf("ftpd server init \n");
@@ -628,6 +632,8 @@ void net_app_uninit(void)
     http_get_server_uninit(); //8080
     stupid_ftpd_uninit();
     video_rt_tcp_server_uninit();
+    preview_uninit(); //2226
+    playback_uninit();
 #ifdef CONFIG_MASS_PRODUCTION_ENABLE
     extern void stream_media_server_uninit(void);
     stream_media_server_uninit();
@@ -671,4 +677,60 @@ const char *get_root_path(void)
 {
     return CONFIG_ROOT_PATH;
 }
+#if defined CONFIG_ENABLE_VLIST
+unsigned short DUMP_PORT()
+{
+    return _DUMP_PORT;
+}
 
+unsigned short FORWARD_PORT()
+{
+    return _FORWARD_PORT;
+}
+
+unsigned short BEHIND_PORT()
+{
+    return _BEHIND_PORT;
+}
+
+const char *get_rec_path_0()
+{
+    return NULL;
+}
+const char *get_rec_path_1()
+{
+    return CONFIG_REC_PATH_0;
+}
+const char *get_rec_path_2()
+{
+    return CONFIG_REC_PATH_1;
+}
+const char *get_rec_path_3()
+{
+    return CONFIG_REC_PATH_2;
+}
+const char *get_rec_emr_path_1()
+{
+#ifdef CONFIG_EMR_REC_PATH_0
+    return CONFIG_EMR_REC_PATH_0;
+#else
+    return NULL;
+#endif
+}
+const char *get_rec_emr_path_2()
+{
+#ifdef CONFIG_EMR_REC_PATH_1
+    return CONFIG_EMR_REC_PATH_1;
+#else
+    return NULL;
+#endif
+}
+const char *get_rec_emr_path_3()
+{
+#ifdef CONFIG_EMR_REC_PATH_2
+    return CONFIG_EMR_REC_PATH_2;
+#else
+    return NULL;
+#endif
+}
+#endif

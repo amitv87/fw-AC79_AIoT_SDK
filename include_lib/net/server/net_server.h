@@ -84,7 +84,7 @@ void FILE_REMOVE_ALL();
 void FILE_DELETE(char *__fname, u8 create_file);
 int FILE_GEN_SYNC(const char *filename, const char *dir);
 
-void FILE_GEN(void);
+void FILE_GEN(void *arg);
 
 int virfile_reg(void);
 int vf_list(u8 type, u8 isforward, char *dir);

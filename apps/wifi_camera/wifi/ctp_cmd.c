@@ -28,6 +28,7 @@
 #define CTP_ERR_MESSAGE "{\"errno\":%d}"
 #define WIFI_RT_STREAM 1
 
+#define VFLIST_FILE_NAME "vf_list.txt"
 
 static char file_name[64];
 static int app_online_timer;
@@ -2348,6 +2349,7 @@ int cmd_get_close_pull_rt_stream(void *priv, char *content)
 #endif
 
 #if 1
+extern void FILE_GEN_ASYNC(u8 flag);
 static int cmd_put_make_forward_files_list(void *priv, char *content)
 {
 
@@ -2376,47 +2378,31 @@ static int cmd_put_make_forward_files_list(void *priv, char *content)
     } else {
         type = atoi(tmp_value);
     }
-    /*printf("11-----ctp type  %s  , file_num = %d \n\n", tmp_value, file_num);*/
     switch (type) {
     case -1 :
         CTP_CMD_COMBINED(priv, CTP_SD_OFFLINE, "FORWARD_MEDIA_FILES_LIST", "NOTIFY", CTP_SD_OFFLINE_MSG);
         break;
     case NONE:
-        /*snprintf(buf, sizeof(buf), "type:0,path:%s", CONFIG_REC_PATH_1"vf_list.txt");*/
-        snprintf(buf, sizeof(buf), "type:0,path:%s", CONFIG_REC_PATH_0"vf_list.txt");
+        snprintf(buf, sizeof(buf), "type:0,path:%s"VFLIST_FILE_NAME, get_rec_path_1());
         CTP_CMD_COMBINED(priv, CTP_NO_ERR, "FORWARD_MEDIA_FILES_LIST", "NOTIFY", buf);
         break;
     case VID_JPG:
-
-        if (!file_num) {
-
 #if defined CONFIG_ENABLE_VLIST
+        if (!file_num) {
             if (!FILE_INITIND_CHECK()) {
-                FILE_GEN();
-                /*snprintf(buf, sizeof(buf), "type:1,path:%s", CONFIG_REC_PATH_1"vf_list.txt");*/
-                snprintf(buf, sizeof(buf), "type:1,path:%s", CONFIG_REC_PATH_0"vf_list.txt");
-                CTP_CMD_COMBINED(priv, CTP_NO_ERR, "FORWARD_MEDIA_FILES_LIST", "NOTIFY", buf);
+                FILE_GEN_ASYNC(1);
 
             } else {
                 CTP_CMD_COMBINED(priv, CTP_REQUEST, "FORWARD_MEDIA_FILES_LIST", "NOTIFY", CTP_REQUEST_MSG);
             }
-        } else {
-            FILE_LIST_INIT_SMALL(file_num);
-            /*snprintf(buf, sizeof(buf), "type:1,path:%s", CONFIG_REC_PATH_1"vf_list_small.txt");*/
-            snprintf(buf, sizeof(buf), "type:1,path:%s", CONFIG_REC_PATH_0"vf_list_small.txt");
-            CTP_CMD_COMBINED(priv, CTP_NO_ERR, "FORWARD_MEDIA_FILES_LIST", "NOTIFY", buf);
-#endif
         }
+#endif
         break;
     case VIDEO:
-        vf_list(type, 1, path);
-        snprintf(buf, sizeof(buf), "type:2,path:%s", path);
-        CTP_CMD_COMBINED(priv, CTP_NO_ERR, "FORWARD_MEDIA_FILES_LIST", "NOTIFY", buf);
-        break;
     case JPG:
         vf_list(type, 1, path);
-        snprintf(buf, sizeof(buf), "type:3,path:%s", path);
-        CTP_CMD_COMBINED(priv, CTP_NO_ERR, "FORWARD_MEDIA_FILES_LIST", "NOTIFY", buf);
+        snprintf(buf, sizeof(buf), "type:%d,path:%s", type, path);
+        CTP_CMD_COMBINED(priv, CTP_SD_OFFLINE, "FORWARD_MEDIA_FILES_LIST", "NOTIFY", buf);
         break;
     default:
         break;
@@ -2461,40 +2447,27 @@ static int cmd_put_make_behind_files_list(void *priv, char *content)
         CTP_CMD_COMBINED(priv, CTP_SD_OFFLINE, "BEHIND_MEDIA_FILES_LIST", "NOTIFY", CTP_SD_OFFLINE_MSG);
         break;
     case NONE:
-        snprintf(buf, sizeof(buf), "type:0,path:%s", CONFIG_REC_PATH_2"vf_list.txt");
+        snprintf(buf, sizeof(buf), "type:0,path:%s"VFLIST_FILE_NAME, get_rec_path_2());
         CTP_CMD_COMBINED(priv, CTP_NO_ERR, "BEHIND_MEDIA_FILES_LIST", "NOTIFY", buf);
         break;
     case VID_JPG:
-        if (!file_num) {
-
 #if defined CONFIG_ENABLE_VLIST
+        if (!file_num) {
             if (!FILE_INITIND_CHECK()) {
-                FILE_GEN();
-                snprintf(buf, sizeof(buf), "type:1,path:%s", CONFIG_REC_PATH_2"vf_list.txt");
-                CTP_CMD_COMBINED(priv, CTP_NO_ERR, "BEHIND_MEDIA_FILES_LIST", "NOTIFY", buf);
-
-
+                FILE_GEN_ASYNC(2);
+                /*       sprintf(buf, "type:1,path:%s"VFLIST_FILE_NAME, get_rec_path_2()); */
+                /* CTP_CMD_COMBINED(priv, CTP_NO_ERR, "BEHIND_MEDIA_FILES_LIST", "NOTIFY", buf); */
             } else {
-
                 CTP_CMD_COMBINED(priv, CTP_REQUEST, "BEHIND_MEDIA_FILES_LIST", "NOTIFY", CTP_REQUEST_MSG);
             }
-
-        } else {
-            FILE_LIST_INIT_SMALL(file_num);
-            snprintf(buf, sizeof(buf), "type:1,path:%s", CONFIG_REC_PATH_2"vf_list_small.txt");
-            CTP_CMD_COMBINED(priv, CTP_NO_ERR, "BEHIND_MEDIA_FILES_LIST", "NOTIFY", buf);
-#endif
         }
+#endif
         break;
     case VIDEO:
-        vf_list(type, 0, path);
-        snprintf(buf, sizeof(buf), "type:2,path:%s", path);
-        CTP_CMD_COMBINED(priv, CTP_NO_ERR, "BEHIND_MEDIA_FILES_LIST", "NOTIFY", buf);
-        break;
     case JPG:
         vf_list(type, 0, path);
-        snprintf(buf, sizeof(buf), "type:3,path:%s", path);
-        CTP_CMD_COMBINED(priv, CTP_NO_ERR, "BEHIND_MEDIA_FILES_LIST", "NOTIFY", buf);
+        snprintf(buf, sizeof(buf), "type:%d,path:%s", type, path);
+        CTP_CMD_COMBINED(priv, CTP_SD_OFFLINE, "FORWARD_MEDIA_FILES_LIST", "NOTIFY", buf);
         break;
     default:
         break;
@@ -2527,13 +2500,13 @@ static int cmd_put_firmware_file_send_end(void *priv, char *content)
 static int cmd_get_rt_talk_ctl(void *priv, char *content)
 {
     char buf[128];
+#if 0
+    extern u8 get_rt_talk_status(void);
 
-    /*extern u8 get_rt_talk_status(void);*/
+    sprintf(buf, "status:%d", get_rt_talk_status());
 
-    /*snprintf(buf, sizeof(buf), "status:%d", get_rt_talk_status());*/
-
-    /*CTP_CMD_COMBINED(NULL, CTP_NO_ERR, "RT_TALK_CTL", "NOTIFY", buf);*/
-
+    CTP_CMD_COMBINED(NULL, CTP_NO_ERR, "RT_TALK_CTL", "NOTIFY", buf);
+#endif
     return 0;
 }
 
@@ -2555,13 +2528,15 @@ static int cmd_put_rt_talk_ctl(void *priv, char *content)
     status = atoi(s_str);
     printf("\n-----status is %d-------\n", status);
     snprintf(buf, sizeof(buf), "status:%d", status);
-    /*if (status == 1) {*/
-    /*extern int rt_talk_net_init(void);*/
-    /*rt_talk_net_init();*/
-    /*} else if (status == 0) {*/
-    /*extern int rt_talk_net_uninit(void);*/
-    /*rt_talk_net_uninit();*/
-    /*}*/
+#if 0
+    if (status == 1) {
+        extern int rt_talk_net_init(void);
+        rt_talk_net_init();
+    } else if (status == 0) {
+        extern int rt_talk_net_uninit(void);
+        rt_talk_net_uninit();
+    }
+#endif
     snprintf(buf, sizeof(buf), "status:%d", status);
 
     CTP_CMD_COMBINED(NULL, CTP_NO_ERR, "RT_TALK_CTL", "NOTIFY", buf);
@@ -2599,9 +2574,10 @@ static int cmd_put_voice_talk_ctl(void *priv, char *content)
         tmp  = json_object_object_get(parm, "PATH");
         s_str = json_object_get_string(tmp);
         printf("\n %s \n", s_str);
-        /*extern void play_voice_file(const char *file_name);*/
-        /*play_voice_file(s_str);*/
-
+#if 0
+        extern void play_voice_file(const char *file_name);
+        play_voice_file(s_str);
+#endif
     } else {
 
     }
@@ -2704,13 +2680,15 @@ static int cmd_put_multi_cover_figure(void *priv, char *content)
     memset(&req, 0, sizeof(struct net_req));
     req.pre.type = PREVIEW;
     req.pre.filename = file_name_array;
-
-    /*if (video_preview_post_msg(&req)) {*/
-    /*CTP_CMD_COMBINED(priv, CTP_REQUEST, "MULTI_COVER_FIGURE", "NOTIFY", CTP_REQUEST_MSG);*/
-    /*json_object_put(new_obj);*/
-    /*return 0;*/
-    /*}*/
-
+#ifdef CONFIG_ENABLE_VLIST
+    if (video_preview_post_msg(&req)) {
+        CTP_CMD_COMBINED(priv, CTP_REQUEST, "MULTI_COVER_FIGURE", "NOTIFY", CTP_REQUEST_MSG);
+        json_object_put(new_obj);
+        free(file_name_array);
+        file_name_array = NULL;
+        return 0;
+    }
+#endif
     json_object_put(new_obj);
 
     return 0;
@@ -2758,12 +2736,14 @@ static int cmd_put_thunbails(void *priv, char *content)
 
     req.pre.offset  = atoi(offset);
     req.pre.timeinv = atoi(timeinv);
-    /*if (video_preview_post_msg(&req)) {*/
-    /*CTP_CMD_COMBINED(priv, CTP_REQUEST, "THUMBNAILS", "NOTIFY", CTP_REQUEST_MSG);*/
-    /*json_object_put(new_obj);*/
-    /*return 0;*/
-    /*}*/
 
+#ifdef CONFIG_ENABLE_VLIST
+    if (video_preview_post_msg(&req)) {
+        CTP_CMD_COMBINED(priv, CTP_REQUEST, "THUMBNAILS", "NOTIFY", CTP_REQUEST_MSG);
+        json_object_put(new_obj);
+        return 0;
+    }
+#endif // CONFIG_ENABLE_VLIST
     json_object_put(new_obj);
     return 0;
 
@@ -2785,9 +2765,13 @@ static int cmd_put_thunbails_ctrl(void *priv, char *content)
     printf("status -> %s\n", status);
 
     if (ctp_srv_get_cli_addr(priv)) {
-        /*video_cli_slide(ctp_srv_get_cli_addr(priv), atoi(status));*/
+#ifdef CONFIG_ENABLE_VLIST
+        video_cli_slide(ctp_srv_get_cli_addr(priv), atoi(status));
+#endif
     } else {
-        /*video_cli_slide(cdp_srv_get_cli_addr(priv), atoi(status));*/
+#ifdef CONFIG_ENABLE_VLIST
+        video_cli_slide(cdp_srv_get_cli_addr(priv), atoi(status));
+#endif
     }
     snprintf(buf, sizeof(buf), "status:%s", status);
     CTP_CMD_COMBINED(priv, CTP_NO_ERR, "THUMBNAILS_CTRL", "NOTIFY", buf);
@@ -2818,11 +2802,14 @@ static int cmd_put_time_axis_play(void *priv, char *content)
     memset(&req, 0, sizeof(struct net_req));
     strcpy(req.playback.file_name, file_name);
     req.playback.msec = atoi(msec);
-    /*if (video_playback_post_msg(&req)) {*/
-    /*CTP_CMD_COMBINED(priv, CTP_REQUEST, "TIME_AXIS_PLAY", "NOTIFY", CTP_REQUEST_MSG);*/
-    /*json_object_put(new_obj);*/
-    /*return 0;*/
-    /*}*/
+
+#ifdef CONFIG_ENABLE_VLIST
+    if (video_playback_post_msg(&req)) {
+        CTP_CMD_COMBINED(priv, CTP_REQUEST, "TIME_AXIS_PLAY", "NOTIFY", CTP_REQUEST_MSG);
+        json_object_put(new_obj);
+        return 0;
+    }
+#endif
     json_object_put(new_obj);
 
     return 0;
@@ -2855,15 +2842,21 @@ static int cmd_put_time_axis_play_ctrl(void *priv, char *content)
 
     switch (atoi(status)) {
     case PLAY_VIDEO_CONTINUE:
-        /*ret = playback_cli_continue(dst_addr);*/
+#ifdef CONFIG_ENABLE_VLIST
+        ret = playback_cli_continue(dst_addr);
+#endif
         break;
 
     case PLAY_VIDEO_PAUSE:
-        /*ret = playback_cli_pause(dst_addr);*/
+#ifdef CONFIG_ENABLE_VLIST
+        ret = playback_cli_pause(dst_addr);
+#endif
         break;
 
     case PLAY_VIDEO_STOP:
-        /*ret = playback_disconnect_cli(dst_addr);*/
+#ifdef CONFIG_ENABLE_VLIST
+        ret = playback_disconnect_cli(dst_addr);
+#endif
         break;
 
     default:
@@ -2911,7 +2904,9 @@ static int cmd_put_time_axis_fast_play(void *priv, char *content)
     } else {
         speed = 0;
     }
-    /*playback_cli_fast_play(dst_addr, speed);*/
+#ifdef CONFIG_ENABLE_VLIST
+    playback_cli_fast_play(dst_addr, speed);
+#endif
 
     if (!ret) {
         snprintf(buf, sizeof(buf), "level:%s", level);
@@ -3306,9 +3301,6 @@ static int cmd_put_ctp_cli_disconnect(void *priv, char *content)
 
     /*extern void stream_media_server_ip_close(struct sockaddr_in * dest_addr);*/
     /*extern void stupid_ftpd_disconnect_cli(struct sockaddr_in * dest_addr);*/
-    /*extern int video_rec_all_stop_notify(void);*/
-    /*extern int rt_talk_net_uninit(void);*/
-
     ctp_cmd_socket_unregister(priv);
 
     if (app_online_timer) {
@@ -3316,13 +3308,17 @@ static int cmd_put_ctp_cli_disconnect(void *priv, char *content)
         app_online_timer = 0;
     }
     close_rt_stream(dest_addr);
+    printf("|CLI_DISCONNECT 0x%x, 0x%x\n", (u32)priv, (u32)dest_addr->sin_addr.s_addr);
     /*stream_media_server_ip_close(dest_addr);*/
     /*stupid_ftpd_disconnect_cli(dest_addr);*/
-    /*video_rec_all_stop_notify();*/
-    printf("|CLI_DISCONNECT 0x%x, 0x%x\n", (u32)priv, (u32)dest_addr->sin_addr.s_addr);
-    /*video_preview_and_thus_disconnect(dest_addr);*/
-    /*playback_disconnect_cli(dest_addr);*/
+#ifdef CONFIG_ENABLE_VLIST
+    extern int video_rec_all_stop_notify(void);
+    video_rec_all_stop_notify();
+    video_preview_and_thus_disconnect(dest_addr);
+    playback_disconnect_cli(dest_addr);
+#endif
     http_get_server_discpnnect_cli(dest_addr);
+    /*extern int rt_talk_net_uninit(void);*/
     /*rt_talk_net_uninit();*/
     strcpy(buf, "status:1");
     CTP_CMD_COMBINED(priv, CTP_NO_ERR, "CTP_CLI_DISCONNECT", "NOTIFY", buf);

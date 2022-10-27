@@ -16,6 +16,8 @@
 
 const int config_spi_code_user_cache = 0;
 
+const int sdx_idle_query_check_keep_poweron = 0;	//如果硬件设计上进入低功耗时sd卡电源会掉时需要使能此变量
+
 #if TCFG_SD0_SD1_USE_THE_SAME_HW
 const int sd0_sd1_use_the_same_hw = 1;
 #else
@@ -39,6 +41,9 @@ const int clock_sys_src_use_lrc_hw = 1; //当使用lrc时timer.c需要特殊设�
 #else
 const int clock_sys_src_use_lrc_hw = 0;
 #endif
+
+//config_otg_slave_detect_method_2为1时，从机检测的方式使用方法2
+const int config_otg_slave_detect_method_2 = 0;
 
 /**
  * @brief Log (Verbose/Info/Debug/Warn/Error)

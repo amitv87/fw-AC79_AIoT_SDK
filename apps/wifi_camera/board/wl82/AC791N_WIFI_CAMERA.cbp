@@ -39,7 +39,6 @@
 <Add option="-DCONFIG_VIDEO_OSD_EN" />
 <Add option="-DCONFIG_SFC_ENABLE" />
 <Add option="-DCONFIG_AUDIO_ENABLE" />
-<Add option="-DCONFIG_UI_ENABLE" />
 <Add option="-DCONFIG_VIDEO_ENABLE=1" />
 <Add option="-DCONFIG_VIDEO0_ENABLE=1" />
 <Add option="-DCONFIG_NET_ENABLE=1" />
@@ -172,13 +171,7 @@
 <Add option="../../../../cpu/wl82/liba/ftpserver_new.a" />
 <Add option="../../../../cpu/wl82/liba/net_server.a" />
 <Add option="../../../../cpu/wl82/liba/libqrcode.a" />
-<Add option="../../../../cpu/wl82/liba/lib_mp3_dec.a " />
 <Add option="--end-group" />
-<Add option="../../../../cpu/wl82/liba/video_dec_server.a" />
-<Add option="../../../../cpu/wl82/liba/ui.a" />
-<Add option="../../../../cpu/wl82/liba/res.a" />
-<Add option="../../../../cpu/wl82/liba/font.a" />
-<Add option="../../../../cpu/wl82/liba/ui_draw.a" />
 <Add option="-T../../../../cpu/wl82/sdk.ld" />
 <Add option="-M=../../../../cpu/wl82/tools/sdk.map" />
 <Add library="C:\JL\pi32\pi32v2-lib\r3\libm.a" />
@@ -279,7 +272,6 @@
 <Unit filename="../../../../apps/common/ui/GUI_GIF.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/ui/font/fontinit.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/ui/gif_api.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="../../../../apps/common/ui/include/GUI_GIF_Private.h" />
 <Unit filename="../../../../apps/common/ui/include/lcd_config.h" />
 <Unit filename="../../../../apps/common/ui/include/lcd_drive.h" />
 <Unit filename="../../../../apps/common/ui/include/lcd_te_driver.h" />
@@ -364,6 +356,8 @@
 <Unit filename="../../../../apps/wifi_camera/include/ename.h" />
 <Unit filename="../../../../apps/wifi_camera/include/get_yuv_data.h" />
 <Unit filename="../../../../apps/wifi_camera/include/net_video_rec.h" />
+<Unit filename="../../../../apps/wifi_camera/include/packet.h" />
+<Unit filename="../../../../apps/wifi_camera/include/simple_avi_unpkg.h" />
 <Unit filename="../../../../apps/wifi_camera/include/storage_device.h" />
 <Unit filename="../../../../apps/wifi_camera/include/stream_protocol.h" />
 <Unit filename="../../../../apps/wifi_camera/include/strm_video_rec.h" />
@@ -372,6 +366,7 @@
 <Unit filename="../../../../apps/wifi_camera/include/video_system.h" />
 <Unit filename="../../../../apps/wifi_camera/jpeg2yuv.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/wifi_camera/production_test.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/wifi_camera/simple_avi_unpkg.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/wifi_camera/spi_video.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/wifi_camera/ui_camera_demo/camera_demo.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/wifi_camera/ui_camera_demo/camera_lcd_only_show_demo.c"><Option compilerVer="CC"/></Unit>
@@ -382,8 +377,10 @@
 <Unit filename="../../../../apps/wifi_camera/video_rec.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/wifi_camera/wifi/ctp_cmd.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/wifi_camera/wifi/ftpd_vfs_reg.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/wifi_camera/wifi/media_file_list.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/wifi_camera/wifi/net_video_rec.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/wifi_camera/wifi/network_mssdp.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/wifi_camera/wifi/packet.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/wifi_camera/wifi/stream/video_rt_tcp.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/wifi_camera/wifi/stream/video_rt_udp.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/wifi_camera/wifi/stream/video_rt_usr.c"><Option compilerVer="CC"/></Unit>
@@ -391,6 +388,8 @@
 <Unit filename="../../../../apps/wifi_camera/wifi/strm_video_rec.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/wifi_camera/wifi/tx_camera_cWF/tx_camera_cWF.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/wifi_camera/wifi/user_video_rec.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/wifi_camera/wifi/video_playback.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/wifi_camera/wifi/video_preview.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/wifi_camera/wifi/wifi_app_task.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/wifi_camera/yuv2jpeg_thumbnail.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../cpu/wl82/debug.c"><Option compilerVer="CC"/></Unit>
@@ -563,6 +562,7 @@
 <Unit filename="../../../../include_lib/net/server/ctp_server.h" />
 <Unit filename="../../../../include_lib/net/server/net_server.h" />
 <Unit filename="../../../../include_lib/net/server/rt_stream_pkg.h" />
+<Unit filename="../../../../include_lib/net/server/simple_mov_unpkg.h" />
 <Unit filename="../../../../include_lib/net/server/stream_core.h" />
 <Unit filename="../../../../include_lib/net/server/video_rt_tcp.h" />
 <Unit filename="../../../../include_lib/net/streaming_media_server/fenice_config.h" />
@@ -659,7 +659,6 @@
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_browser.h" />
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_button.h" />
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_camera.h" />
-<Unit filename="../../../../include_lib/utils/ui/ui/ui_circle.h" />
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_core.h" />
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_grid.h" />
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_number.h" />

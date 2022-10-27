@@ -107,7 +107,6 @@ DEFINES := \
 	-DCONFIG_VIDEO_OSD_EN \
 	-DCONFIG_SFC_ENABLE \
 	-DCONFIG_AUDIO_ENABLE \
-	-DCONFIG_UI_ENABLE \
 	-DCONFIG_VIDEO_ENABLE=1 \
 	-DCONFIG_VIDEO0_ENABLE=1 \
 	-DCONFIG_NET_ENABLE=1 \
@@ -302,6 +301,7 @@ c_SRC_FILES := \
 	../../../../apps/wifi_camera/get_yuv_data.c \
 	../../../../apps/wifi_camera/jpeg2yuv.c \
 	../../../../apps/wifi_camera/production_test.c \
+	../../../../apps/wifi_camera/simple_avi_unpkg.c \
 	../../../../apps/wifi_camera/spi_video.c \
 	../../../../apps/wifi_camera/ui_camera_demo/camera_demo.c \
 	../../../../apps/wifi_camera/ui_camera_demo/camera_lcd_only_show_demo.c \
@@ -312,8 +312,10 @@ c_SRC_FILES := \
 	../../../../apps/wifi_camera/video_rec.c \
 	../../../../apps/wifi_camera/wifi/ctp_cmd.c \
 	../../../../apps/wifi_camera/wifi/ftpd_vfs_reg.c \
+	../../../../apps/wifi_camera/wifi/media_file_list.c \
 	../../../../apps/wifi_camera/wifi/net_video_rec.c \
 	../../../../apps/wifi_camera/wifi/network_mssdp.c \
+	../../../../apps/wifi_camera/wifi/packet.c \
 	../../../../apps/wifi_camera/wifi/stream/video_rt_tcp.c \
 	../../../../apps/wifi_camera/wifi/stream/video_rt_udp.c \
 	../../../../apps/wifi_camera/wifi/stream/video_rt_usr.c \
@@ -321,6 +323,8 @@ c_SRC_FILES := \
 	../../../../apps/wifi_camera/wifi/strm_video_rec.c \
 	../../../../apps/wifi_camera/wifi/tx_camera_cWF/tx_camera_cWF.c \
 	../../../../apps/wifi_camera/wifi/user_video_rec.c \
+	../../../../apps/wifi_camera/wifi/video_playback.c \
+	../../../../apps/wifi_camera/wifi/video_preview.c \
 	../../../../apps/wifi_camera/wifi/wifi_app_task.c \
 	../../../../apps/wifi_camera/yuv2jpeg_thumbnail.c \
 	../../../../cpu/wl80/debug.c \
@@ -408,13 +412,7 @@ LFLAGS := \
 	../../../../cpu/wl80/liba/ftpserver_new.a \
 	../../../../cpu/wl80/liba/net_server.a \
 	../../../../cpu/wl80/liba/libqrcode.a \
-	../../../../cpu/wl80/liba/lib_mp3_dec.a  \
 	--end-group \
-	../../../../cpu/wl80/liba/video_dec_server.a \
-	../../../../cpu/wl80/liba/ui.a \
-	../../../../cpu/wl80/liba/res.a \
-	../../../../cpu/wl80/liba/font.a \
-	../../../../cpu/wl80/liba/ui_draw.a \
 	-T../../../../cpu/wl80/sdk.ld \
 	-M=../../../../cpu/wl80/tools/sdk.map \
 	--plugin-opt=mcpu=r3 \
