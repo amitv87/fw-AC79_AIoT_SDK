@@ -22,7 +22,18 @@
 #define UVC_REC_JPG_HEAD_SIZE	8
 #define UVC_REC_JPG_ALIGN     	512
 #define UVC_JPEG_HEAD 			0xE0FFD8FF
+#define UVC_JPEG_HEAD1 			0xC0FFD8FF
 #define USB_DMA_CP_ENABLE       (0)//注意：使用硬件dma copy需要异步接收推送数据，否则出现速度快数据错乱的问题
+
+static int uvc_jpeg_head_check(u32 head)
+{
+    if (head == UVC_JPEG_HEAD) {
+        return true;
+    } else if (head == UVC_JPEG_HEAD1) {
+        return true;
+    }
+    return 0;
+}
 
 struct uvc_dev_control {
     OS_SEM sem;
@@ -94,7 +105,7 @@ static int uvc_img_cap(void *_fh, u32 arg)
         }
         fh->image_req = false;
         head = (u32 *)(fh->img.buf + 8);
-        if (*head == UVC_JPEG_HEAD) {
+        if (uvc_jpeg_head_check(*head)) {
             fh->img.size -= 8;
             memcpy(icap->baddr, icap->baddr + 8, fh->img.size);
         }
@@ -301,7 +312,7 @@ int uvc_mjpg_stream_out(void *fd, int cnt, void *stream_list, int state)
         if (fh->buf) {
             /*memset(fh->buf + fh->b_offset + UVC_REC_JPG_HEAD_SIZE, 0, req_size - fh->b_offset - UVC_REC_JPG_HEAD_SIZE);*/
             u32 *head = (u32 *)(fh->buf + UVC_REC_JPG_HEAD_SIZE);
-            if (*head == UVC_JPEG_HEAD) {
+            if (uvc_jpeg_head_check(*head)) {
                 uvc_buf_stream_finish(fh, fh->buf);//注意：使用硬件dma copy需要异步接收推送数据，否则出现速度快数据错乱的问题
             } else {
                 uvc_buf_free(fh, fh->buf);

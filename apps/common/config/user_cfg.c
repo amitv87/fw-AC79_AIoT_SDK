@@ -39,6 +39,25 @@ const struct btif_item btif_table[] = {
     {0,                         0 },   //reserved cfg
 };
 
+
+#if 0 //BTIF多次擦写使能
+int btif_item_rewrite_en(u16 id, u16 len)
+{
+    int ret;
+    switch (id) {
+    case CFG_BT_MAC_ADDR:
+        //需要重复写入的id，在此处添加相应case即可
+        ret = 1;
+        break;
+
+    default:
+        ret = 0;
+        break;
+    }
+    return ret;
+}
+#endif
+
 //============================= VM 区域空间最大值 ======================================//
 //以下宏在app_cfg中配置:
 const int vm_max_page_align_size_config   = VM_MAX_PAGE_ALIGN_SIZE_CONFIG; 		//page对齐vm管理空间最大值配置
