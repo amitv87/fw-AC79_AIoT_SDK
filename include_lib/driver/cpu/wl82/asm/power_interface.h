@@ -200,18 +200,18 @@ u8 hw_low_power_idle_check(void);
 
 void power_set_callback(u8 mode, void (*powerdown_enter)(u8 step), void (*powerdown_exit)(u32), void (*soft_poweroff_enter)(void));
 
-void power_set_rf_sleep_max_internal_us(u32 rf_sleep_max_internal_us);
+void power_set_sys_sleep_max_duration_us(u32 sys_sleep_max_duration_us);
 
-void power_set_sys_sleep_internal_us(u32 sys_sleep_internal_us);
+void power_set_sys_sleep_duration_us(u32 sys_sleep_duration_us);
+
+void power_set_rf_sleep_compensate_us(int rf_sleep_compensate_us);
+
+void power_set_sys_sleep_compensate_us(int sys_sleep_compensate_us);
 /*-----------------------------------------------------------*/
 
 void low_power_request(char *name);
 
 void low_power_exit_request(void);
-
-void low_power_lock(void);
-
-void low_power_unlock(void);
 
 void *low_power_get(void *priv, const struct low_power_operation *ops);
 
@@ -236,6 +236,10 @@ u8 low_power_get_osc_type(void);
 void low_power_hw_unsleep_lock(void);
 
 void low_power_hw_unsleep_unlock(void);
+
+void low_power_sys_unsleep_lock(void);
+
+void low_power_sys_unsleep_unlock(void);
 
 u8 low_power_get_config(void);
 
