@@ -1,9 +1,8 @@
 #ifndef POWER_INTERFACE_H
 #define POWER_INTERFACE_H
 
-// #include "asm/hwi.h"
-//
 #include "generic/typedef.h"
+
 #define NEW_BASEBAND_COMPENSATION       0
 
 #define AT_VOLATILE_RAM             //AT(.volatile_ram)
@@ -25,6 +24,7 @@ enum {
     MAGIC_ADDR = 2,
     ENTRY_ADDR = 3,
 };
+
 #define RAM1_MAGIC_ADDR (NV_RAM_END - MAGIC_ADDR*4)
 #define RAM1_ENTRY_ADDR (NV_RAM_END - ENTRY_ADDR*4)
 
@@ -33,14 +33,6 @@ enum {
 #define RF_SLEEP_EN                         BIT(3)
 #define RF_FORCE_SYS_SLEEP_EN               BIT(4)
 #define SLEEP_SAVE_TIME_US                  1L
-
-#define DSLEEP_SAVE_BEFORE_ENTER_MS         1
-#define DSLEEP_RECOVER_AFTER_EXIT_MS        10
-#define DEEP_SLEEP_TIMEOUT_MIN_US           (60*625L)  //间隔至少要60slot以上才进入power off
-
-#define SLEEP_TICKS_UNIT                    (10*1000L) //
-#define DEEP_SLEEP_TICKS_UNIT               (20*1000L) //
-
 
 enum {
     BT_OSC = 0,
@@ -78,6 +70,7 @@ enum {
     VDDIOM_VOL_34V,
     VDDIOM_VOL_36V,
 };
+
 //Macro for VDDIOW_VOL_SEL
 enum {
     VDDIOW_VOL_21V = 0,
@@ -101,24 +94,22 @@ struct low_power_param {
     u8 pd_wdvdd_lev;
     u8 vlvd_value;
     u8 vlvd_enable;
-
-    u32 sys_sleep_internal_us;
 };
 
-#define BLUETOOTH_RESUME    BIT(1)
+#define BLUETOOTH_RESUME		BIT(1)
 #define POWER_SLEEP_WAKEUP 		BIT(2)
 #define POWER_OFF_WAKEUP 		BIT(3)
 
 #define RISING_EDGE         0
 #define FALLING_EDGE        1
 
-#define POWER_KEEP_DACVDD	BIT(0)
-#define POWER_KEEP_RTC		BIT(1)
-#define POWER_KEEP_RESET	BIT(2)
-#define POWER_KEEP_PWM_LED 	BIT(3)
-#define POWER_KEEP_SYSPLL 	BIT(4)
-#define POWER_KEEP_FLASH 	BIT(5)
-#define POWER_KEEP_WDT 		BIT(6)
+#define POWER_KEEP_DACVDD	BIT(0) //休眠:DACVDD保持工作
+#define POWER_KEEP_RTC		BIT(1) //休眠:RTC保持工作
+#define POWER_KEEP_RESET	BIT(2) //休眠:VCM复位保持工作
+#define POWER_KEEP_PWM_LED 	BIT(3) //休眠:PWM_LED复位保持工作
+#define POWER_KEEP_SYSPLL	BIT(4) //休眠前系统使用SYS_PLL，不切BTOSC_24M时钟
+#define POWER_KEEP_FLASH 	BIT(5) //休眠不关闭flash电源
+#define POWER_KEEP_WDT 		BIT(6) //休眠不关闭看门狗
 
 struct port_wakeup {
     u8 edge;        //[0]: Rising / [1]: Falling
@@ -126,12 +117,14 @@ struct port_wakeup {
     u8 iomap;       //Port Group-Port Index
     u8 low_power;
 };
+
 struct long_press {
     u8 enable;
     u8 use_sec4;    //1:sec 4 , 0:sec8
     u8 edge;		//rising --> hight reset , falling --> low reset
     u8 iomap;       //Port Group-Port Index
 };
+
 struct charge_wakeup {
     u8 attribute;   //Relate operation bitmap OS_RESUME | BLUETOOTH_RESUME
 };
@@ -168,7 +161,6 @@ struct reset_param {
 };
 
 struct low_power_operation {
-
     const char *name;
 
     u32(*get_timeout)(void *priv);
@@ -190,19 +182,13 @@ struct low_power_operation {
     void (*on)(void *priv);
 };
 
-u32 __tus_carry(u32 x);
-
-u8 __power_is_poweroff(void);
-
-void poweroff_recover(void);
-
 void power_init(const struct low_power_param *param);
 
-u8 power_is_low_power_probe(void);
+void power_set_soft_poweroff(u32 ms); //if 0 power off  dis 0 xms will power on
 
-u8 power_is_low_power_post(void);
+void set_softoff_wakeup_time_ms(u32 us);
 
-void power_set_soft_poweroff(u32 ms);// 0 power off  x ms  will power on
+void power_set_proweroff(void);
 
 void power_set_mode(u8 mode);
 
@@ -214,23 +200,18 @@ u8 hw_low_power_idle_check(void);
 
 void power_set_callback(u8 mode, void (*powerdown_enter)(u8 step), void (*powerdown_exit)(u32), void (*soft_poweroff_enter)(void));
 
-u8 power_is_poweroff_post(void);
-// #define  power_is_poweroff_post()   0
+void power_set_sys_sleep_max_duration_us(u32 sys_sleep_max_duration_us);
 
-void power_set_proweroff(void);
+void power_set_sys_sleep_duration_us(u32 sys_sleep_duration_us);
 
-void power_reset_source_dump(void);
+void power_set_rf_sleep_compensate_us(int rf_sleep_compensate_us);
+
+void power_set_sys_sleep_compensate_us(int sys_sleep_compensate_us);
 /*-----------------------------------------------------------*/
-
-void low_power_on(void);
 
 void low_power_request(char *name);
 
 void low_power_exit_request(void);
-
-void low_power_lock(void);
-
-void low_power_unlock(void);
 
 void *low_power_get(void *priv, const struct low_power_operation *ops);
 
@@ -244,8 +225,6 @@ void low_power_sys_put(void *priv);
 
 u8 low_power_sys_is_idle(void);
 
-void low_power_set_audio_run(u8 is_run);//音频播放、唤醒API，参数为真，则禁止系统休眠
-
 s32 low_power_trace_drift(u32 usec);
 
 void low_power_reset_osc_type(u8 type);
@@ -253,8 +232,22 @@ void low_power_reset_osc_type(u8 type);
 u8 low_power_get_default_osc_type(void);
 
 u8 low_power_get_osc_type(void);
+
 void low_power_hw_unsleep_lock(void);
+
 void low_power_hw_unsleep_unlock(void);
+
+void low_power_sys_unsleep_lock(void);
+
+void low_power_sys_unsleep_unlock(void);
+
+u8 low_power_get_config(void);
+
+void low_power_check_bt_exist(u8 *edr_exist, u8 *ble_exist);
+
+u8 low_power_all_group_force_sleep(u32 us);
+
+void low_power_hardware_group_force_sleep(u32 us, char *name);
 /*-----------------------------------------------------------*/
 
 void power_wakeup_init(const struct wakeup_param *param);
@@ -263,22 +256,18 @@ void power_wakeup_index_enable(u8 index);
 
 void power_wakeup_index_disable(u8 index);
 
-void power_wakeup_init_test();
-
 u8 get_wakeup_source(void);
 
 u8 is_ldo5v_wakeup(void);
-// void power_wakeup_callback(JL_SignalEvent_t cb_event);
 
 void p33_soft_reset(void);
-/*-----------------------------------------------------------*/
 
+void power_reset_init(const struct reset_param *rs_param);
+/*-----------------------------------------------------------*/
 
 void lrc_debug(u8 a, u8 b);
 
 void sdpg_config(int enable);
-
-
 /*-----------------------------------------------------------*/
 
 typedef u8(*idle_handler_t)(void);
@@ -290,7 +279,6 @@ struct lp_target {
 
 #define REGISTER_LP_TARGET(target) \
         const struct lp_target target SEC_USED(.lp_target)
-
 
 extern const struct lp_target lp_target_begin[];
 extern const struct lp_target lp_target_end[];
@@ -307,7 +295,6 @@ struct deepsleep_target {
 
 #define DEEPSLEEP_TARGET_REGISTER(target) \
         const struct deepsleep_target target SEC_USED(.deepsleep_target)
-
 
 extern const struct deepsleep_target deepsleep_target_begin[];
 extern const struct deepsleep_target deepsleep_target_end[];
