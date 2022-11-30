@@ -255,9 +255,6 @@
 		<Unit filename="../port/sys_arch.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="../port/wifi_raw_ethernetif.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="../port/wireless_ethernetif.c">
 			<Option compilerVar="CC" />
 		</Unit>

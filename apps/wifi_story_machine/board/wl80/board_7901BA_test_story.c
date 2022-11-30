@@ -329,12 +329,6 @@ SPI2_PLATFORM_DATA_BEGIN(spi2_data)
     .attr	= SPI_SCLK_L_UPH_SMPH | SPI_BIDIR_MODE,
 SPI2_PLATFORM_DATA_END()
 
-static const struct spiflash_platform_data spiflash_data = {
-    .name           = "spi0",
-    .mode           = FAST_READ_OUTPUT_MODE,//FAST_READ_IO_MODE,
-    .sfc_run_mode   = SFC_FAST_READ_DUAL_OUTPUT_MODE,
-};
-
 static const struct emi_platform_data emi_data = {
 	.bits_mode	= EMI_8BITS_MODE,
 	.baudrate	= EMI_BAUD_DIV2,	//clock = LSB_CLK / (EMI_BAUD_DIV2 + 1) , LSB分频
@@ -677,10 +671,6 @@ REGISTER_DEVICES(device_table) = {
     { "video_dec",  &video_dev_ops, NULL },
 #endif
 
-#ifndef CONFIG_SFC_ENABLE
-    { "spi0", &spi_dev_ops, (void *)&spi0_data },
-    { "spiflash", &spiflash_dev_ops, (void *)&spiflash_data },
-#endif
 #if TCFG_LCD_ST7735S_ENABLE
     { "spi1", &spi_dev_ops, (void *)&spi1_data },
 #endif

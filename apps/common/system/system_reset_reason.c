@@ -86,7 +86,11 @@ int system_wakeup_port_get(void)
         sys_rst_rs = system_reset_reason_check();
     }
     if (sys_rst_rs & SYS_RST_PORT_WKUP) {
-        return (sys_rst_rs >> 16) & 0xFF;
+        if (p33_rx_1byte(P3_PINR_CON) & BIT(0)) { //有开长按唤醒则IO唤醒从1-7
+            return (sys_rst_rs >> 17) & 0xFF;
+        } else {
+            return (sys_rst_rs >> 16) & 0xFF;
+        }
     }
     return -EINVAL;
 }

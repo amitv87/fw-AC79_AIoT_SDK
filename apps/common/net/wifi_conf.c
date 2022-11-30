@@ -110,7 +110,7 @@ int lwip_low_level_inputput_filter(u8 *pkg, u32 len)
 #define ICMP_ER   0    /* echo reply */
 #define ICMP_ECHO 8    /* echo */
     if (iph->iphd.protocol == 1 && *((u8 *)iph + sizeof(struct iphdr_e)) != ICMP_ER && *((u8 *)iph + sizeof(struct iphdr_e)) != ICMP_ECHO) { //如果是ICMP并且不是echo和echo reply就丢弃, 因为是一些Time_Ex等无用包
-        putbyte('I');
+        putchar('C');
         return -1;
     }
     /*------------------------------------------------------------------------------------------------------------------------------------------------------------*/
@@ -119,13 +119,13 @@ int lwip_low_level_inputput_filter(u8 *pkg, u32 len)
     u32 remain_pbuf_pool = memp_get_pbuf_pool_free_cnt();
     if (remain_pbuf_pool <= PBUF_RESERVED_FOR_TCP) {
         if (remain_pbuf_pool == 0) { //PBUF_POOL 一个也没了,直接丢弃
-            putbyte('X');
+            putchar('X');
             return -1;
         } else if (remain_pbuf_pool <= PBUF_RESERVED_FOR_ARP && protoType != 0x0806) {//PBUF_POOL 在剩余小于 PBUF_RESERVED_FOR_ARP 的情况下, 丢弃非ARP包
-            putbyte('Y');
+            putchar('Y');
             return -1;
         } else if (!(protoType == 0x0800 && iph->iphd.protocol == 6)) { //PBUF_POOL 在剩余小于 PBUF_RESERVED_FOR_TCP 的情况下, 丢弃非TCP包
-            putbyte('D');
+            putchar('D');
             return -1;
         }
     }
@@ -149,13 +149,13 @@ int lwip_low_level_output_filter(u8 *pkg, u32 len)
 
     if (remain_wifi_txq <= WIFI_TXQ_RESERVED_FOR_TCP) {
         if (remain_wifi_txq == 0) { //WIFI_TXQ 一个也没了,直接丢弃
-            putbyte('H');
+            putchar('G');
             return -1;
         } else if (remain_wifi_txq <= WIFI_TXQ_RESERVED_FOR_ARP && protoType != 0x0806) {//WIFI_TXQ 在剩余小于 WIFI_TXQ_RESERVED_FOR_ARP 的情况下, 丢弃非ARP包
-            putbyte('J');
+            putchar('O');
             return -1;
         } else if (!(protoType == 0x0800 && iph->iphd.protocol == 6)) { //WIFI_TXQ 在剩余小于 WIFI_TXQ_RESERVED_FOR_TCP 的情况下, 丢弃非TCP包
-            putbyte('K');
+            putchar('H');
             return -1;
         }
     }
@@ -166,10 +166,10 @@ int lwip_low_level_output_filter(u8 *pkg, u32 len)
 int socket_send_but_netif_busy_hook(int s, char type_udp)
 {
     if (type_udp) {
-        putbyte('$');
+        putchar('@');
         /* os_time_dly(30); //根据实际应用发送情况调节, 针对UDP多释放一下CPU, 一方面有利于系统其他线程顺畅运行, 另一方面防止猛发送导致网络拥塞加剧 */
     } else {
-        putbyte('|');
+        putchar('|');
         /* os_time_dly(2); */
     }
 
@@ -210,19 +210,19 @@ int wifi_recv_pkg_and_soft_filter(u8 *pkg, u32 len)  //通过软件过滤无用�
                 if (protoType == 0x0800) { //ipv4
                     if (iph->iphd.protocol == 17) { //udp
                         if (ipv4addr_ismulticast(iph->iphd.daddr)) { //组播
-                            /*putbyte('M');*/
+                            /*putchar('M');*/
                         } else {
-                            /*putbyte('U');*/
+                            /*putchar('U');*/
                         }
 
                         /* print_debug_ipv4(iph->iphd.daddr, iph->iphd.saddr); */
 
                     } else if (iph->iphd.protocol == 6) { //tcp
-                        /*putbyte('T');*/
+                        /*putchar('T');*/
                         /* print_debug_ipv4(iph->iphd.daddr, iph->iphd.saddr); */
                     }
                 } else if (protoType == 0x0806) { //arp
-                    /*putbyte('R');*/
+                    /*putchar('R');*/
                 }
             }
     }

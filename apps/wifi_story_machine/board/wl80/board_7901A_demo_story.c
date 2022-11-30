@@ -240,12 +240,6 @@ SPI2_PLATFORM_DATA_BEGIN(spi2_data)
     .attr	= SPI_SCLK_L_UPH_SMPH | SPI_BIDIR_MODE,
 SPI2_PLATFORM_DATA_END()
 
-static const struct spiflash_platform_data spiflash_data = {
-    .name           = "spi0",
-    .mode           = FAST_READ_OUTPUT_MODE,//FAST_READ_IO_MODE,
-    .sfc_run_mode   = SFC_FAST_READ_DUAL_OUTPUT_MODE,
-};
-
 static const struct dac_platform_data dac_data = {
     .pa_mute_port = IO_PORTA_07,
     .pa_mute_value = 1,
@@ -414,10 +408,6 @@ REGISTER_DEVICES(device_table) = {
     { "sd1",  &sd_dev_ops, (void *)&sd1_data },
 #endif
 
-#ifndef CONFIG_SFC_ENABLE
-    { "spi0", &spi_dev_ops, (void *)&spi0_data },
-    { "spiflash", &spiflash_dev_ops, (void *)&spiflash_data },
-#endif
     { "spi1", &spi_dev_ops, (void *)&spi1_data },
     { "spi2", &spi_dev_ops, (void *)&spi2_data },
 
