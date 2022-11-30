@@ -182,16 +182,18 @@ static void ili9488_set_direction(u8 dir)
 
     if (dir == ROTATE_DEGREE_0) { //正向
 #if HORIZONTAL_SCREEN
-        WriteDAT_8(0x40);
+        /*WriteDAT_8(0x48);*/
+        WriteDAT_8(0x4c);
 #else
-        WriteDAT_8(0x00);
+        WriteDAT_8(0x0c);
+        /*WriteDAT_8(0x08);*/
 #endif
         ili9488_SetRange(0, LCD_W - 1, 0, LCD_H - 1);
     } else if (dir == ROTATE_DEGREE_180) { //翻转180
 #if HORIZONTAL_SCREEN
-        WriteDAT_8(0xc0);
+        WriteDAT_8(0xcc);
 #else
-        WriteDAT_8(0x80);
+        WriteDAT_8(0x8c);
 #endif
     }
 }
@@ -228,12 +230,6 @@ typedef struct {
 } InitCode;
 
 static const InitCode code1[] = {
-    //  {0x01, 0},//soft reset
-//    {0x28, 0},//关显示
-    // {REGFLAG_DELAY, 10},
-    // {0x10, 0},//Internal oscillator will be stopped
-//   {REGFLAG_DELAY, 120},
-//   {0x21, 0},
 
     {0xe0, 15, {0x00, 0x06, 0x0C, 0x07, 0x15, 0x0a, 0x3c, 0x89, 0x47, 0x08, 0x10, 0x0E, 0x1e, 0x22, 0x0f}},
     {0xe1, 15, {0x00, 0x1f, 0x23, 0x07, 0x12, 0x07, 0x32, 0x34, 0x47, 0x04, 0x0d, 0x0b, 0x34, 0x39, 0x0f}},
@@ -242,15 +238,12 @@ static const InitCode code1[] = {
     {0xc1, 1, {0x41}},
     {0xc5, 3, {0x00, 0x2e, 0x80}},
 
-//FIXME: TE Mode
     {0x35, 1, {0x00}},
-    {0x44, 2, {0x01, 0xe0}},
-    {0xb1, 2, {0x70, 0x11}},    //fps 45
+    {0x44, 2, {0x00, 0xf0}},
+    /*{0xb1, 2, {0x70, 0x11}},    //fps 45*/
 
-    // {0xb1, 2, {0xb0, 0x11}}, //fps 70
-//end
+    {0xb1, 2, {0xb0, 0x11}}, //fps
 
-    {0x36, 1, {0x08}},   //可以控制旋转/flip/rota
     {0x3a, 1, {0x55}},
 
     {0xb0, 1, {0x00}},
@@ -312,13 +305,48 @@ static int ili9488_init(void)
     printf("LCD_ili9488 init_start\n");
     ili9488_reset();
     ili9488_init_code(code1, sizeof(code1) / sizeof(code1[0]));
-    /*ili9488_set_direction(ROTATE_DEGREE_0);*/
+    ili9488_set_direction(ROTATE_DEGREE_0);
     init_TE(ili9488_Fill);
     /*ili9488_test();*/
     printf("LCD_ili9488 config succes\n");
     return 0;
 }
 
+
+#if 0
+static u8 show_buf[LCD_RGB565_DATA_SIZE];
+static u16 show_color[4] = {BLUE, GRED, BRRED, YELLOW};
+static void te_test(void *priv)
+{
+    u8 i = 0;
+    u16 color = 0;
+    user_ui_lcd_init();//初始化ui服务和lcd
+    set_lcd_show_data_mode(ui);
+    while (1) {
+        color = show_color[i];
+        printf(">>>color = %d", color);
+        for (u32 j = 0; j < LCD_W * LCD_H; j++) {
+            show_buf[2 * j] = (color >> 8) & 0xff;
+            show_buf[2 * j + 1] = color & 0xff;
+        }
+        i++;
+        if (i > 4) {
+            i = 0;
+        }
+        os_time_dly(100);
+        ili9488_draw(show_buf, LCD_RGB565_DATA_SIZE);
+    }
+
+}
+
+
+static int te_test_tesk(void)
+{
+    puts("te_test_tesk \n\n");
+    return thread_fork("te_test", 11, 1024, 32, 0, te_test, NULL);
+}
+late_initcall(te_test_tesk);
+#endif
 
 REGISTER_LCD_DEV(LCD_ili9488) = {
     .name              = "ili9488",

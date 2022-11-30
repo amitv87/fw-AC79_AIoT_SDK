@@ -100,7 +100,7 @@ static void get_JPG_save_to_SD(char *yuv_img_buf)
     //q >=2 , size  = w*h*q*0.32
     req.q = 13;	//jepg编码质量(范围0-13),0最小 质量越好,下面的编码buf需要适当增大
     req.format = JPG_SAMP_FMT_YUV420;
-    req.data.buf = yuv_out_buf;
+    req.data.buf = (yuv_out_buf + 1024);// 防止做转换的时候第一行数据追尾
     req.data.len = buf_len;
     req.width = yuv_out_w ;
     req.height =  yuv_out_h ;

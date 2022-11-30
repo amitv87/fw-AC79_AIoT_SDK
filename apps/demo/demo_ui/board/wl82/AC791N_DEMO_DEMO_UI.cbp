@@ -208,6 +208,7 @@
 <Unit filename="../../../../../apps/common/ui/lcd/lcd_ui_api.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/ui/lcd_driver/lcd_480x272_8bits.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/ui/lcd_driver/lcd_drive.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../apps/common/ui/lcd_driver/lcd_gc9307.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/ui/lcd_driver/lcd_hx8357.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/ui/lcd_driver/lcd_ili9341.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/ui/lcd_driver/lcd_ili9481.c"><Option compilerVer="CC"/></Unit>

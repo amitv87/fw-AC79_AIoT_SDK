@@ -285,18 +285,30 @@ static void picture_compose_task(void *priv)
                 log_info("%s >>>note lbuf rbuf == NULL\r\n", __func__);
                 break;
             } else {
+#if (HORIZONTAL_SCREEN == 1)
                 yuv420p_quto_rgb565(rbuf->data, camera_save_buf, LCD_W, LCD_H, 1);
+#else
+                yuv420p_quto_rgb565(rbuf->data, camera_save_buf, LCD_H, LCD_W, 1);
+#endif
                 lbuf_free(rbuf);
             }
 
 #if HORIZONTAL_SCREEN
+
 #ifdef turn_180
             RGB_Soft_90(0, show_buf, camera_save_buf, LCD_W,  LCD_H);
 #else
             RGB_Soft_90(1, show_buf, camera_save_buf, LCD_W,  LCD_H);
 #endif
+
 #else
-            memcpy(show_buf, camera_save_buf, LCD_RGB565_DATA_SIZE);
+
+#ifdef turn_180
+            RGB_Soft_90(0, show_buf, camera_save_buf, LCD_H,  LCD_W);
+#else
+            RGB_Soft_90(1, show_buf, camera_save_buf, LCD_H,  LCD_W);
+#endif
+            /*memcpy(show_buf, camera_save_buf, LCD_RGB565_DATA_SIZE);横屏驱动使用这个*/
 #endif
             send_data_to_lcd(show_buf, LCD_RGB565_DATA_SIZE);
             break;
@@ -353,7 +365,11 @@ updata:
             break;
 
         case ui_user: //屏数据为使用者进行查看照片更新UI时需要切换的模式
-            yuv420p_quto_rgb565(show_buf, camera_save_buf, LCD_W, LCD_H, 1);
+#if (HORIZONTAL_SCREEN == 1)
+            yuv420p_quto_rgb565(rbuf->data, camera_save_buf, LCD_W, LCD_H, 1);
+#else
+            yuv420p_quto_rgb565(rbuf->data, camera_save_buf, LCD_H, LCD_W, 1);
+#endif
 
             picture_compose(ui_save_buf, camera_save_buf, LCD_W, LCD_H);
 #if HORIZONTAL_SCREEN
@@ -368,7 +384,11 @@ updata:
             break;
 
         case ui_qr://屏数据有实时更新的摄像头数据已经ui数据 二者做图像合成
-            yuv420p_quto_rgb565(show_buf, camera_save_buf, aim_compose_w, aim_compose_h, 1);
+#if (HORIZONTAL_SCREEN == 1)
+            yuv420p_quto_rgb565(rbuf->data, camera_save_buf, LCD_W, LCD_H, 1);
+#else
+            yuv420p_quto_rgb565(rbuf->data, camera_save_buf, LCD_H, LCD_W, 1);
+#endif
 
             picture_compose(ui_save_buf, camera_save_buf, LCD_W, LCD_H);
 #if HORIZONTAL_SCREEN

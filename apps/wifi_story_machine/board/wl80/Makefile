@@ -294,6 +294,7 @@ c_SRC_FILES := \
 	../../../../apps/common/ui/lcd/lcd_ui_api.c \
 	../../../../apps/common/ui/lcd_driver/lcd_480x272_8bits.c \
 	../../../../apps/common/ui/lcd_driver/lcd_drive.c \
+	../../../../apps/common/ui/lcd_driver/lcd_gc9307.c \
 	../../../../apps/common/ui/lcd_driver/lcd_hx8357.c \
 	../../../../apps/common/ui/lcd_driver/lcd_ili9341.c \
 	../../../../apps/common/ui/lcd_driver/lcd_ili9481.c \

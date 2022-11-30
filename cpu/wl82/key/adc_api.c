@@ -10,6 +10,7 @@ static u32 adc_sample(u32 ch);
 static volatile u16 _adc_res;
 static volatile u16 cur_ch_value;
 static u8 cur_ch = 0;
+static u8 adc_scan_busy;
 
 struct adc_info_t {
     u32 ch;
@@ -203,9 +204,21 @@ u8 __attribute__((weak)) adc_io_reuse_exit(u32 ch)
 }
 
 ___interrupt
-static void adc_isr()
+static void adc_isr(void)
 {
+    adc_scan_busy = 1;
+
+    __asm_csync();
+
+    if (!(JL_ADC->CON & BIT(7))) {
+        return;    //防止刚进中断时pnd被另外一个核清掉
+    }
+
     _adc_res = JL_ADC->RES;
+
+    if (_adc_res == 0xffff) {
+        printf("adc res == 0xffff impossible!!!");
+    }
 
     u32 ch;
     ch = (JL_ADC->CON & 0xf00) >> 8;
@@ -214,6 +227,10 @@ static void adc_isr()
     /* adc_pmu_detect_en(AD_CH_WVDD >> 16); */
     JL_ADC->CON = BIT(6);
     JL_ADC->CON = 0;
+
+    adc_scan_busy = 0;
+
+    __asm_csync();
 }
 
 static u32 adc_sample(u32 ch)
@@ -457,3 +474,14 @@ void adc_vbg_init()
 {
 
 }
+
+static u8 adc_scan_idle_query(void)
+{
+    return !adc_scan_busy;
+}
+
+REGISTER_LP_TARGET(adc_scan_lp_target) = {
+    .name       = "adc_scan",
+    .is_idle    = adc_scan_idle_query,
+};
+
