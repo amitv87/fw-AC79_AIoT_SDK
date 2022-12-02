@@ -47,3 +47,4 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+doc/datasheet/AC790N规格书
