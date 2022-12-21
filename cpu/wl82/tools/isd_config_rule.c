@@ -183,7 +183,7 @@ BTIF_LEN=0x1000;
 BTIF_OPT=1;
 
 //#第三方云平台profile
-#ifdef CONFIG_SERVER_ASSIGN_PROFILE
+#if defined CONFIG_SERVER_ASSIGN_PROFILE
 PROFILE_ADR=AUTO; [第三方云平台profile]
 PROFILE_LEN=0x1000;
 PROFILE_OPT=1;
@@ -201,12 +201,47 @@ EXIF_ADR=AUTO;//[保留客户使用 也可自定义名字 参考example文档使
 EXIF_LEN=0x1000;
 EXIF_OPT=1;
 
+#if defined CONFIG_AUDIO_ENABLE && defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_ZONE
+AUPACKRES_FILE=packres/AUPACKRES;
+AUPACKRES_ADR=AUTO; [请根据编译后FLASH INFO打印的实际地址填写,比如0x59a000]
+AUPACKRES_LEN=0; [更新提示音资源打包后必须更新此实际长度,比如0x141000,建议根据后续资源升级的需求预留好空间]
+AUPACKRES_OPT=1;
+#endif
+
+#if defined CONFIG_UI_ENABLE && defined CONFIG_UI_FILE_SAVE_IN_RESERVED_ZONE
+UIPACKRES_FILE=packres/UIPACKRES;
+UIPACKRES_ADR=AUTO; [请根据编译后FLASH INFO打印的实际地址填写,比如0x6db000]
+UIPACKRES_LEN=0; [更新UI资源打包后必须更新此实际长度,比如0x123000, 建议根据后续资源升级的需求预留好空间]
+UIPACKRES_OPT=1;
+#endif
+
 PRCT_ADR=0;
 PRCT_LEN=CODE_LEN;
 PRCT_OPT=2;
 
 //#升级后不可更变的资源
 [RESERVED_EXPAND_CONFIG]
+/***************资源文件打包 请阅读以下信息******************************/
+//packers文件夹下会生成AUPACKRES,UIPACKRES这两个包是资源文件打包好的包需要
+//第一次下载会批处理会生成打包文件在packres文件夹下 根据文件大小填写打包文件大小再下载一次 下载工具会提示分配出来的地址
+//根据实际大小填写AUPACKRES_ADR,AUPACKRES_LEN,
+//AUPACKRES_ADR 配置 AUTO 第一次下载后会下载不进 需要根据FLASH INFO打印的实际地址填写
+//例如AUPACKRES 378KB = 0x5e800 实际填大小可以填大一些 AUPACKRES_LEN = 0x5f000
+//AUPACKRES_OPT为下载是否需要擦除
+#if defined CONFIG_AUDIO_ENABLE && defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_EXPAND_ZONE
+AUPACKRES_FILE=packres/AUPACKRES; [烧录后不可升级的资源]
+AUPACKRES_ADR=AUTO; [请根据编译后FLASH INFO打印的实际地址填写,比如0x59b000]
+AUPACKRES_LEN=0; [更新提示音资源打包后必须更新此实际长度,比如0x141000]
+AUPACKRES_OPT=1;
+#endif
+
+#if defined CONFIG_UI_ENABLE && defined CONFIG_UI_FILE_SAVE_IN_RESERVED_EXPAND_ZONE
+UIPACKRES_FILE=packres/UIPACKRES; [烧录后不可升级的资源]
+UIPACKRES_ADR=AUTO; [请根据编译后FLASH INFO打印的实际地址填写,比如0x6dc000]
+UIPACKRES_LEN=0; [更新UI资源打包后必须更新此实际长度,比如0x123000]
+UIPACKRES_OPT=1;
+#endif
+
 /* fixed.mp3_FILE=fixed_res/fixed.mp3; [升级后不可更变的资源] */
 /* fixed.mp3_ADR=AUTO; */
 /* fixed.mp3_LEN=0x4000; */

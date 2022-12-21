@@ -134,7 +134,6 @@
 <Add option="--plugin-opt=-pi32v2-enable-rep-memop" />
 <Add option="--plugin-opt=-warn-stack-size=2560" />
 <Add option="--sort-common" />
-<Add option="--dont-complain-call-overflow" />
 <Add option="--plugin-opt=-used-symbol-file=../../../../cpu/wl82/sdk_used_list.used" />
 <Add option="--plugin-opt=-pi32v2-large-program=true" />
 <Add option="--start-group" />

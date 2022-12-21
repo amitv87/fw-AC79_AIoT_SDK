@@ -7,6 +7,6 @@ lib_mqtt_version:
 #ifdef CONFIG_RELEASE_ENABLE
 
 #else
-.asciz __FILE__
-.asciz "MQTT-*modified*-@{DATE}-${COMMID}"
+
+.asciz "MQTT-*modified*-{env:USER}-@{DATE}-${COMMID}"
 #endif

@@ -162,6 +162,7 @@ stats_display(void)
         MEMP_STATS_DISPLAY(i);
     }
     SYS_STATS_DISPLAY();
+    tcp_debug_print_pcbs(); //用于观察FIN_WAIT情况,有多少TCP还未释放的
 }
 #endif /* LWIP_STATS_DISPLAY */
 

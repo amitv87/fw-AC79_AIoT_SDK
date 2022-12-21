@@ -486,16 +486,26 @@ void NetWorkSetTLS_key(Network *n, const char *cas_pem, int cas_pem_len, const c
 
 static int linux_read(Network *n, unsigned char *buffer, int len, unsigned long timeout_ms)
 {
-    int bytes;
+    int bytes = 0;
 
-    bytes = sock_recv(n->my_socket, buffer, len, 0);
+    sock_set_recv_timeout(n->my_socket, timeout_ms);
 
-    if (bytes <= 0) {
-        if (bytes == 0 || !sock_would_block(n->my_socket)) {
+    while (bytes < len) {
+        int rc = sock_recv(n->my_socket, &buffer[bytes], (size_t)(len - bytes), 0);
+        if (rc == -1) {
+            if (!sock_would_block(n->my_socket)) {
+                n->state = -1;
+                printf("Socket %d recv ret %d, error %d \n", *(int *)n->my_socket, bytes, sock_get_error(n->my_socket));
+            }
+            bytes = -1;
+            break;
+        } else if (rc == 0) {
             n->state = -1;
-            printf("Socket %d recv ret %d, error %d \n", *(int *)n->my_socket, bytes, sock_get_error(n->my_socket));
+            bytes = 0;
+            break;
+        } else {
+            bytes += rc;
         }
-        bytes = -1;
     }
 
     return bytes;
@@ -505,6 +515,8 @@ static int linux_read(Network *n, unsigned char *buffer, int len, unsigned long 
 static int linux_write(Network *n, unsigned char *buffer, int len, unsigned long timeout_ms)
 {
     int bytes;
+
+    sock_set_send_timeout(n->my_socket, timeout_ms);
 
     bytes = sock_send(n->my_socket, buffer, len, 0);
 

@@ -27,6 +27,9 @@ const int config_asser         = 1;
 
 const int config_system_info   = 0;
 
+//为减少频繁写入VM导致的长时间关中断问题，提供VM写入缓存机制，调用vm_in_ram_update()才主动刷新到flash
+const int config_vm_save_in_ram_enable = 0;
+
 //================================================//
 //                  SDFILE 精简使能               //
 //================================================//

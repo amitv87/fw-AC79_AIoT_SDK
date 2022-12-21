@@ -10,14 +10,13 @@ call .\download.bat
 
 if exist upgrade\*.ufw del upgrade\*.ufw
 
-::再复制文件
-copy jl_isd.ufw upgrade\update.ufw
+if not exist upgrade md upgrade
 
-echo.
-echo.
-echo 升级文件名称：update.ufw，将update.ufw拷贝到SD卡/U盘的根目录，插卡上电即可升级（2秒钟后自动关闭窗口）
-echo.
+set mode=SD
+start .\upgrade.bat %mode%
+
 choice /t 2 /d y /n >nul 
+
 
 ::pause
 exit

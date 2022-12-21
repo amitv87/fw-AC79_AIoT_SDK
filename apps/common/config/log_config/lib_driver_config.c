@@ -40,6 +40,10 @@ const int clock_sys_src_use_lrc_hw = 1; //当使用lrc时timer.c需要特殊设�
 #else
 const int clock_sys_src_use_lrc_hw = 0;
 #endif
+
+//config_otg_slave_detect_method_2为1时，从机检测的方式使用方法2
+const int config_otg_slave_detect_method_2 = 0;
+
 /**
  * @brief Log (Verbose/Info/Debug/Warn/Error)
  */
