@@ -3,19 +3,24 @@
 
 #include "app_config.h"
 
-#define EXTERN_PATH "storage/virfat_flash/C/"
-#define INTERN_PATH "mnt/sdfile/res/ui_res/"
 
 #if TCFG_USE_SD_ADD_UI_FILE
-#define RES_PATH   CONFIG_ROOT_PATH"ui_res/"///EXTERN_PATH
+#define RES_PATH   CONFIG_ROOT_PATH"ui_res/"
 #else     //USE_FLASH_ADD_UI_FILE
-#define RES_PATH   INTERN_PATH//EXTERN_PATH
+
+#if defined CONFIG_UI_FILE_SAVE_IN_RESERVED_EXPAND_ZONE
+#define RES_PATH   "mnt/sdfile/EXT_RESERVED/uipackres/ui/"
+#elif defined CONFIG_UI_FILE_SAVE_IN_RESERVED_ZONE
+#define RES_PATH   "mnt/sdfile/app/uipackres/ui/"
+#else
+#define RES_PATH   "mnt/sdfile/res/ui_res/"
 #endif
 
-#define FONT_PATH   RES_PATH
+#endif//TCFG_USE_SD_ADD_UI_FILE
 
-#define UPGRADE_PATH   INTERN_PATH"ui_upgrade/"
+#define UPGRADE_PATH   RES_PATH"ui_upgrade/"
 
+#define FONT_PATH RES_PATH
 
 
 // #define UI_STY_CHECK_PATH     \

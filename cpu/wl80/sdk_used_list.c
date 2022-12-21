@@ -119,6 +119,7 @@ aac_package_ops
 #endif
 #ifdef CONFIG_AAC_DEC_ENABLE
 aac_decoder
+aas_decoder
 #endif
 
 #ifdef CONFIG_M4A_DEC_ENABLE

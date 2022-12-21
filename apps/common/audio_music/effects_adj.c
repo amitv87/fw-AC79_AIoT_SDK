@@ -1593,7 +1593,7 @@ REGISTER_DETECT_TARGET(eff_adj_target) = {
 //在线调试不进power down
 static u8 effect_tool_idle_query(void)
 {
-#if TCFG_EFFECT_TOOL_ENABLE
+#if TCFG_EQ_ONLINE_ENABLE
     return 0;
 #endif
     return 1;

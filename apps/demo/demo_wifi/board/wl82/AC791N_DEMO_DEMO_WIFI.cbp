@@ -100,7 +100,6 @@
 <Add option="--plugin-opt=-pi32v2-enable-rep-memop" />
 <Add option="--plugin-opt=-warn-stack-size=2560" />
 <Add option="--sort-common" />
-<Add option="--dont-complain-call-overflow" />
 <Add option="--plugin-opt=-used-symbol-file=../../../../../cpu/wl82/sdk_used_list.used" />
 <Add option="--plugin-opt=-enable-movable-region=true" />
 <Add option="--plugin-opt=-movable-region-section-prefix=.movable.slot." />

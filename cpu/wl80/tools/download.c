@@ -13,8 +13,25 @@ objsizedump -lite -skip-zero sdk.elf | sort -k 1 > ../../../map.lit
 
 export PROJ_BUILD=download.bat
 
-echo "@REM 加一下中文注释,防止服务器导出不了报错  ERROR: invalid file type to transfer   tools/download.bat 3 2 " >> ${PROJ_BUILD}
-echo "@REM 加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释" >> ${PROJ_BUILD}
+
+echo "echo 加一下中文注释,防止服务器导出不了报错" >> ${PROJ_BUILD}
+echo "echo 加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释" >> ${PROJ_BUILD}
+
+#if defined CONFIG_UI_ENABLE
+echo "@echo                                        "是否输出UI资源文件_按Y_不生成继续_按N生成并继续_倒计时3s自动选择Y"" >> ${PROJ_BUILD}
+echo "choice /t 3 /c ync /n /d y" >> ${PROJ_BUILD}
+echo "if %errorlevel%==1 goto end" >> ${PROJ_BUILD}
+echo "if %errorlevel%==2 goto continue" >> ${PROJ_BUILD}
+echo ":continue" >> ${PROJ_BUILD}
+#if defined UI_USE_WIFI_CAMERA_PROJECT
+echo "cd ..\..\..\ui_project\3.ui_demo_wifi_camera\ui_320x480_test\project" >> ${PROJ_BUILD}
+echo "start auto_ui_res.bat" >> ${PROJ_BUILD}
+echo "cd ..\..\..\..\cpu\wl82\tools" >> ${PROJ_BUILD}
+echo "TIMEOUT /T 8" >> ${PROJ_BUILD}
+#endif
+echo ":end" >> ${PROJ_BUILD}
+#endif
+
 
 echo "set OBJDUMP=C:\JL\pi32\bin\llvm-objdump.exe" >> ${PROJ_BUILD}
 echo "set OBJCOPY=C:\JL\pi32\bin\llvm-objcopy.exe" >> ${PROJ_BUILD}
@@ -27,10 +44,18 @@ echo "%OBJDUMP% -section-headers -address-mask=0x1ffffff %ELFFILE%" >> ${PROJ_BU
 echo "%OBJDUMP% -t %ELFFILE% > symbol_tbl.txt" >> ${PROJ_BUILD}
 echo "copy /b text.bin+data.bin+ram0_data.bin+cache_ram_data.bin app.bin" >> ${PROJ_BUILD}
 #if defined CONFIG_UI_ENABLE
+#if defined CONFIG_UI_FILE_SAVE_IN_RESERVED_EXPAND_ZONE || defined CONFIG_UI_FILE_SAVE_IN_RESERVED_ZONE
+echo "packres\packres.exe -n ui -o packres/UIPACKRES ui_res" >> ${PROJ_BUILD}
+#else
 echo "set UI_RES=ui_res" >> ${PROJ_BUILD}
 #endif
-#if defined CONFIG_VOICE_PROMPT_FILE_PATH
+#endif
+#if defined CONFIG_AUDIO_ENABLE && defined CONFIG_VOICE_PROMPT_FILE_PATH
+#if defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_EXPAND_ZONE || defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_ZONE
+echo "packres\packres.exe -n tone -o packres/AUPACKRES audlogo" >> ${PROJ_BUILD}
+#else
 echo "set AUDIO_RES=audlogo" >> ${PROJ_BUILD}
+#endif
 #endif
 #if defined CONFIG_SFC_ENABLE
 echo "isd_download.exe isd_config.ini -tonorflash -dev wl80 -boot 0x1c02000 -div1 -wait 300 -uboot uboot.boot -app app.bin cfg_tool.bin -res %AUDIO_RES% %UI_RES% cfg -reboot 500 -update_files normal" >> ${PROJ_BUILD}
@@ -63,6 +88,7 @@ echo "del cache_ram_data.bin" >> ${PROJ_BUILD}
 echo "del data.bin" >> ${PROJ_BUILD}
 echo "del ram0_data.bin" >> ${PROJ_BUILD}
 echo "del text.bin" >> ${PROJ_BUILD}
+echo "TIMEOUT /T 3" >> ${PROJ_BUILD}
 echo "exit /b 0" >> ${PROJ_BUILD}
 
 files="isd_config.ini download.bat"
@@ -75,6 +101,9 @@ rm isd_config.ini
 
 #else
 
+REM 该版本的uboot.boot与此前一些版本的uboot.boot存在二进制差异，会造成已经生产的产品无法升级到该版本; 因此需要用户自行将该版本的uboot.boot替换为已生产产品的uboot.boot；如果你明白到这一点,请删除 cpu/wl80/tools/download.c 的本行和下一行
+exit /b -1
+
 @echo off
 
 @echo *********************************************************************
@@ -85,6 +114,15 @@ rm isd_config.ini
 cd /d %~dp0
 
 echo %*
+
+#if defined CONFIG_UI_ENABLE
+#if defined UI_USE_WIFI_CAMERA_PROJECT
+cd ..\..\..\ui_project\3.ui_demo_wifi_camera\ui_320x480_test\project
+start auto_ui_res.bat
+cd ..\..\..\..\cpu\wl82\tools
+TIMEOUT /T 8
+#endif
+#endif
 
 set OBJDUMP=C:\JL\pi32\bin\llvm-objdump.exe
 set OBJCOPY=C:\JL\pi32\bin\llvm-objcopy.exe
@@ -101,16 +139,21 @@ REM %OBJDUMP% -D -address-mask=0x1ffffff -print-dbg %ELFFILE% > sdk.lst
 
 copy /b text.bin+data.bin+ram0_data.bin+cache_ram_data.bin app.bin
 
-REM set KEY_FILE=-key JL_791N-XXXX.key
-REM set KEY_FILE=-key1 JL_791N-XXXX.key1 -mkey JL_791N-XXXX.mkey
-
-#if defined CONFIG_UI_ENABLE
+#if defined CONFIG_UI_ENABLE && (defined CONFIG_UI_FILE_SAVE_IN_RESERVED_EXPAND_ZONE || defined CONFIG_UI_FILE_SAVE_IN_RESERVED_ZONE)
+packres\packres.exe -n ui -o packres/UIPACKRES ui_res
+#else
 set UI_RES=ui_res
 #endif
 
-#if defined CONFIG_VOICE_PROMPT_FILE_PATH
+#if defined CONFIG_AUDIO_ENABLE && defined CONFIG_VOICE_PROMPT_FILE_PATH && \
+(defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_EXPAND_ZONE || defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_ZONE)
+packres\packres.exe -n tone -o packres/AUPACKRES audlogo
+#else
 set AUDIO_RES=audlogo
 #endif
+
+REM set KEY_FILE=-key JL_791N-XXXX.key
+REM set KEY_FILE=-key1 JL_791N-XXXX.key1 -mkey JL_791N-XXXX.mkey
 
 set CFG_FILE=cfg
 

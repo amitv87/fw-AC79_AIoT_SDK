@@ -96,12 +96,12 @@ struct low_power_param {
     u8 vlvd_enable;
 };
 
-#define BLUETOOTH_RESUME		BIT(1)
-#define POWER_SLEEP_WAKEUP 		BIT(2)
-#define POWER_OFF_WAKEUP 		BIT(3)
+#define BLUETOOTH_RESUME		BIT(1)//保留参数
+#define POWER_SLEEP_WAKEUP 		BIT(2)//休眠唤醒支持
+#define POWER_OFF_WAKEUP 		BIT(3)//关机唤醒支持
 
-#define RISING_EDGE         0
-#define FALLING_EDGE        1
+#define RISING_EDGE         0		//上升沿
+#define FALLING_EDGE        BIT(0)	//下降沿
 
 #define POWER_KEEP_DACVDD	BIT(0) //休眠:DACVDD保持工作
 #define POWER_KEEP_RTC		BIT(1) //休眠:RTC保持工作

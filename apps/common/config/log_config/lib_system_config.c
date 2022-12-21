@@ -27,6 +27,9 @@ const int config_asser         = 1;
 
 const int config_system_info   = 0;
 
+//为减少频繁写入VM导致的长时间关中断问题，提供VM写入缓存机制，调用vm_in_ram_update()才主动刷新到flash
+const int config_vm_save_in_ram_enable = 0;
+
 //================================================//
 //                  SDFILE 精简使能               //
 //================================================//
@@ -42,6 +45,7 @@ const int VIRFAT_FLASH_ENABLE = 0;
 #endif
 const int FILT_0SIZE_ENABLE = 1; //是否过滤0大小文件
 const int FILE_TIME_HIDDEN_ENABLE = 0;  //是否隐藏文件时间
+const int FILE_AUTO_RENAME_NUM = 1;//自动重命名文件数量配置 配置数*8192
 
 //================================================//
 //                  dev使用异步读使能             //
