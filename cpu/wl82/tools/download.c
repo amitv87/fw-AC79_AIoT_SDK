@@ -129,17 +129,21 @@ REM %OBJDUMP% -D -address-mask=0x1ffffff -print-dbg %ELFFILE% > sdk.lst
 
 copy /b text.bin+data.bin+ram0_data.bin+cache_ram_data.bin app.bin
 
-#if defined CONFIG_UI_ENABLE && (defined CONFIG_UI_FILE_SAVE_IN_RESERVED_EXPAND_ZONE || defined CONFIG_UI_FILE_SAVE_IN_RESERVED_ZONE)
+#if defined CONFIG_UI_ENABLE 
+#if (defined CONFIG_UI_FILE_SAVE_IN_RESERVED_EXPAND_ZONE || defined CONFIG_UI_FILE_SAVE_IN_RESERVED_ZONE)
 packres\packres.exe -n ui -o packres/UIPACKRES ui_res
 #else
 set UI_RES=ui_res
 #endif
+#endif
 
-#if defined CONFIG_AUDIO_ENABLE && defined CONFIG_VOICE_PROMPT_FILE_PATH && \
+#if defined CONFIG_AUDIO_ENABLE 
+#if defined CONFIG_VOICE_PROMPT_FILE_PATH && \
 (defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_EXPAND_ZONE || defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_ZONE)
 packres\packres.exe -n tone -o packres/AUPACKRES audlogo
 #else
 set AUDIO_RES=audlogo
+#endif
 #endif
 
 REM set KEY_FILE=-key JL_791N-XXXX.key

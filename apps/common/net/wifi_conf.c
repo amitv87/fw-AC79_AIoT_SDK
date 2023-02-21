@@ -85,7 +85,7 @@ int lwip_low_level_inputput_filter(u8 *pkg, u32 len)
     /*------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 #define ICMP_ER   0    /* echo reply */
 #define ICMP_ECHO 8    /* echo */
-    if (iph->iphd.protocol == 1 && *((u8 *)iph + sizeof(struct iphdr_e)) != ICMP_ER && *((u8 *)iph + sizeof(struct iphdr_e)) != ICMP_ECHO) { //如果是ICMP并且不是echo和echo reply就丢弃, 因为是一些Time_Ex等无用包
+    if ((protoType != 0x0806) && iph->iphd.protocol == 1 && *((u8 *)iph + sizeof(struct iphdr_e)) != ICMP_ER && *((u8 *)iph + sizeof(struct iphdr_e)) != ICMP_ECHO) { //如果是ICMP并且不是echo和echo reply就丢弃, 因为是一些Time_Ex等无用包
         putchar('C');
         return -1;
     }
