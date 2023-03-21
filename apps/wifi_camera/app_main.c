@@ -166,6 +166,13 @@ void app_main()
     struct intent it;
 
     puts("------------- wifi_camera app main-------------\n");
+#ifdef PRODUCT_TEST_ENABLE
+    u8 product_main(void);
+    if (product_main()) {
+        //进入产测模式后，将不再运行APP状态机
+        return;
+    }
+#endif
 
     init_intent(&it);
 

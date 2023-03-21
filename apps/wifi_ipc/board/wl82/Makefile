@@ -381,7 +381,6 @@ LFLAGS := \
 	--plugin-opt=-dont-used-symbol-list=malloc,free,sprintf,printf,puts,putchar \
 	--plugin-opt=save-temps \
 	--plugin-opt=-pi32v2-enable-rep-memop \
-	--plugin-opt=-warn-stack-size=2560 \
 	--sort-common \
 	--plugin-opt=-used-symbol-file=../../../../cpu/wl82/sdk_used_list.used \
 	--plugin-opt=-enable-movable-region=true \

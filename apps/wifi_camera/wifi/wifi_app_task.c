@@ -645,6 +645,14 @@ static void wifi_app_task(void *priv)
     int msg[32];
     int res;
 
+#ifdef PRODUCT_TEST_ENABLE
+    u8 product_enter_check(void);
+    if (product_enter_check()) {
+        //进入产测模式后，将直接退出
+        return;
+    }
+#endif
+
     wifi_set_event_callback(wifi_event_callback);
     wifi_on();
 

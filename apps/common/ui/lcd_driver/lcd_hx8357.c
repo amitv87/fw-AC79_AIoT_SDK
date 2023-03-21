@@ -135,6 +135,7 @@ void HX8357_SetRange_1(u16 xs, u16 xe, u16 ys, u16 ye)
 
 void HX8357_clear_screen(u32 color)
 {
+    lcd_interface_non_block_wait();
     WriteCOM(0x2c);
 
     u8 *buf = malloc(LCD_W * LCD_H * 2);
@@ -152,6 +153,7 @@ void HX8357_clear_screen(u32 color)
 
 void HX8357_Fill(u8 *img, u16 len)
 {
+    lcd_interface_non_block_wait();
     WriteCOM(0x2c);
     WriteDAT_DMA(img, len);
 }
@@ -170,6 +172,7 @@ void HX8357_SleepOutMode(void)
 
 void st7789_shown_image(u8 *buff, u16 x_addr, u16 y_addr, u16 width, u16 height)
 {
+    lcd_interface_non_block_wait();
     HX8357_SetRange(x_addr, y_addr, width, height);
     WriteDAT_DMA(buff, width * height * 2);
 }

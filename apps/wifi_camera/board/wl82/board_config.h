@@ -56,6 +56,11 @@
 #define __SDRAM_SIZE__    (8 * 1024 * 1024)
 
 //#define CONFIG_VIDEO1_ENABLE                    //spi video
+/*video1的IO组和硬件IO */
+#ifdef CONFIG_VIDEO1_ENABLE
+#define CONFIG_SPI_VIDEO_ENABLE             //使用spi接收单线摄像头
+#define CONFIG_SPI_ONE_LINE_ENABLE      0   //单线spi镜头使能，0则使用双线
+#endif
 
 #define TCFG_SD0_ENABLE                     1
 #define TCFG_ADKEY_ENABLE                   1           //AD按键

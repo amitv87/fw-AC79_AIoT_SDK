@@ -13,6 +13,11 @@
 #include "device/uart.h"
 #endif
 
+#ifdef PRODUCT_TEST_ENABLE
+#include "product_main.h"
+#endif
+
+
 #define LOG_TAG_CONST       USER_CFG
 #define LOG_TAG             "[USER_CFG]"
 #define LOG_ERROR_ENABLE
@@ -43,27 +48,39 @@ const struct btif_item btif_table[] = {
     {CFG_BLE_MAC_ADDR,          6 },
     {CFG_BT_FRE_OFFSET,         6 },   //测试盒矫正频偏值
     {CFG_WIFI_FRE_OFFSET,       6 },   //测试盒矫正频偏值
+
+#ifdef PRODUCT_TEST_ENABLE
+    {CFG_PRODUCT_UUID_INDEX,    PRODUCT_UUID_SIZE}, 		//产品UUID代码
+    {CFG_PRODUCT_SN_INDEX,      PRODUCT_SN_SIZE},   		//产品SN代码
+    {CFG_PRODUCT_LICENSE_INDEX, PRODUCT_LICENSE_INFO_SIZE}, //产品LICENSE相关信息
+    {CFG_PRODUCT_RTC_INDEX,     PRODUCT_RTC_INFO_SIZE},     //产品RTC初始时间
+#endif
+
     {0,                         0 },   //reserved cfg
 };
 
 
-#if 0 //BTIF多次擦写使能
 int btif_item_rewrite_en(u16 id, u16 len)
 {
     int ret;
     switch (id) {
+#ifdef PRODUCT_TEST_ENABLE
     case CFG_BT_MAC_ADDR:
-        //需要重复写入的id，在此处添加相应case即可
+    case CFG_BLE_MAC_ADDR:
+    case CFG_PRODUCT_UUID_INDEX:
+    case CFG_PRODUCT_SN_INDEX:
+    case CFG_PRODUCT_LICENSE_INDEX:
+    case CFG_PRODUCT_RTC_INDEX:
         ret = 1;
         break;
-
+#endif
+    //需要重复写入的id，在此处添加相应case即可
     default:
         ret = 0;
         break;
     }
     return ret;
 }
-#endif
 
 //============================= VM 区域空间最大值 ======================================//
 //以下宏在app_cfg中配置:

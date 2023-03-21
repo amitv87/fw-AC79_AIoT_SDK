@@ -11,6 +11,7 @@
 #include "ui/ui.h"
 #include "lbuf.h"
 #include "lcd_config.h"
+#include "yuv_to_rgb.h"
 
 #ifdef CONFIG_UI_ENABLE
 
@@ -26,12 +27,15 @@
 
 OS_SEM compose_sem;
 extern OS_SEM send_ok_sem;
+static OS_MUTEX mutex_rgb;
 
 
 static u8 data_mode = ui;
+static u8 rgb_send_flog = 0;
 static u16 ui_xstart, ui_xend, ui_ystart, ui_yend;
 static u8 aim_filter_color_l;//rgb565
 static u8 aim_filter_color_h;
+static u8 turn_90_mode = HORIZONTAL_SCREEN;
 
 static u8 ui_save_buf[LCD_RGB565_DATA_SIZE]  ALIGNE(32);
 static u8 camera_save_buf[LCD_RGB565_DATA_SIZE] ALIGNE(32);
@@ -77,6 +81,24 @@ static int start_y = 0;
 static int aim_compose_w = 0;//合成长宽
 static int aim_compose_h = 0;
 
+void clear_te_lbuf(void)
+{
+    lbuf_clear(lbuf_handle_test);
+}
+
+/********保存RGB数据到SD卡中************/
+static void get_RGB_save_to_SD(char *RGB, u32 len)
+{
+    if (storage_device_ready()) {
+        char file_name[64];//定义路径存储
+        snprintf(file_name, 64, CONFIG_ROOT_PATH"rgb/RGB***.bin");
+        FILE *fd = fopen(file_name, "wb+");
+        fwrite(RGB, 1, len, fd);
+        fclose(fd);
+        log_info("RGB save ok name=RGB\r\n");
+    }
+}
+
 static void picture_compose(u8 *ui_in, u8 *camera_in, u16 in_LCD_W, u16 in_LCD_H)
 {
     unsigned int n = 0;
@@ -84,7 +106,7 @@ static void picture_compose(u8 *ui_in, u8 *camera_in, u16 in_LCD_W, u16 in_LCD_H
     case 0://两张整图合成
         for (int j = 0; j < in_LCD_H; j++) {
             for (int i = 0; i < in_LCD_W; i++) {
-                if (ui_in[n] != aim_filter_color_l && ui_in[n + 1] != aim_filter_color_h) {
+                if ((ui_in[n] != aim_filter_color_h) || (ui_in[n + 1] != aim_filter_color_l)) {
                     camera_in[n] = ui_in[n];
                     camera_in[n + 1] = ui_in[n + 1];
                 }
@@ -95,7 +117,7 @@ static void picture_compose(u8 *ui_in, u8 *camera_in, u16 in_LCD_W, u16 in_LCD_H
     case 1://UI顶部条状合成
         for (int j = 0; j < user1_y_len; j++) {//Y
             for (int i = 0; i < LCD_W; i++) {//X
-                if (ui_in[n] != aim_filter_color_l && ui_in[n + 1] != aim_filter_color_h) {
+                if (ui_in[n] != aim_filter_color_l || ui_in[n + 1] != aim_filter_color_h) {
                     camera_in[n] = ui_in[n];
                     camera_in[n + 1] = ui_in[n + 1];
                 }
@@ -106,7 +128,7 @@ static void picture_compose(u8 *ui_in, u8 *camera_in, u16 in_LCD_W, u16 in_LCD_H
     case 2://ui顶部和底部条状合成
         for (int j = 0; j < user1_y_len; j++) {//Y
             for (int i = 0; i < LCD_W; i++) {//X
-                if (ui_in[n] != aim_filter_color_l && ui_in[n + 1] != aim_filter_color_h) {
+                if (ui_in[n] != aim_filter_color_l || ui_in[n + 1] != aim_filter_color_h) {
                     camera_in[n] = ui_in[n];
                     camera_in[n + 1] = ui_in[n + 1];
                 }
@@ -117,7 +139,7 @@ static void picture_compose(u8 *ui_in, u8 *camera_in, u16 in_LCD_W, u16 in_LCD_H
         n = user2_y * LCD_W * 2;
         for (int j = 0; j < user2_y_len; j++) {//Y
             for (int i = 0; i < LCD_W; i++) {//X
-                if (ui_in[n] != aim_filter_color_l && ui_in[n + 1] != aim_filter_color_h) {
+                if (ui_in[n] != aim_filter_color_l || ui_in[n + 1] != aim_filter_color_h) {
                     camera_in[n] = ui_in[n];
                     camera_in[n + 1] = ui_in[n + 1];
                 }
@@ -134,9 +156,11 @@ static void picture_compose(u8 *ui_in, u8 *camera_in, u16 in_LCD_W, u16 in_LCD_H
                 ui_in[n + 1] = camera_in[i + j * aim_compose_w * 2 + 1];
             }
         }
+        os_mutex_post(&mutex_rgb);
         break;
     }
 }
+
 void set_compose_mode(u8 mode, int mode1_y_len, int mode2_y, int mode2_y_len)
 {
     compose_mode = mode;
@@ -147,6 +171,7 @@ void set_compose_mode(u8 mode, int mode1_y_len, int mode2_y, int mode2_y_len)
 
 void set_compose_mode3(int x, int y, int w, int h)
 {
+    os_mutex_pend(&mutex_rgb, 0);
     compose_mode = 3;
     start_x = x;
     start_y = y;
@@ -173,6 +198,8 @@ void set_lcd_show_data_mode(u8 choice_data_mode)
         break;
     case ui_qr:
         printf("[LCD_MODE == ui_qr]");
+    case ui_rgb:
+        printf("[LCD_MODE == ui_rgb]");
         break;
     }
 }
@@ -181,6 +208,7 @@ u8 get_lcd_show_deta_mode(void)
 {
     return data_mode;
 }
+
 void get_lcd_ui_x_y(u16 xstart, u16 xend, u16 ystart, u16 yend)
 {
     ui_xstart = xstart;
@@ -232,16 +260,68 @@ void camera_send_data_ready(u8 *data_buf, u32 data_size)
     }
 }
 
-void qr_data_updata(u8 *data_buf, u32 data_size)
+void set_turn_90_mode(u8 mode)
 {
-    memcpy(show_buf, data_buf, data_size);
-    os_sem_post(&compose_sem);
+    turn_90_mode = mode;
+}
+
+u8 get_lcd_turn_mode(void)
+{
+    return turn_90_mode;
 }
 
 void send_data_to_lcd(u8 *buf, u32 size)
 {
     te_send_data(buf, size);
 }
+
+void user_send_no_data_ready(int x, int y, int w, int h, char *img)
+{
+    if (data_mode == ui_rgb) {
+        set_compose_mode3(x, y, w, h);
+        picture_compose(ui_save_buf, img, LCD_W, LCD_H);
+    }
+}
+
+void user_send_no_data_ready1(int x, int y, int w, int h, char *img)
+{
+    if (data_mode == ui_rgb) {
+        set_compose_mode3(x, y, w, h);
+        picture_compose(ui_save_buf, img, LCD_W, LCD_H);
+#ifdef turn_180
+        RGB_Soft_90(0, show_buf, ui_save_buf, LCD_W,  LCD_H);
+#else
+        RGB_Soft_90(1, show_buf, ui_save_buf, LCD_W,  LCD_H);
+#endif
+        send_data_to_lcd(show_buf, LCD_RGB565_DATA_SIZE);
+    }
+}
+
+void user_send_data_ready(int x, int y, int w, int h, char *img)
+{
+    if (data_mode == ui_rgb) {
+        set_compose_mode3(x, y, w, h);
+        picture_compose(ui_save_buf, img, LCD_W, LCD_H);
+        if (rgb_send_flog) {
+            rgb_send_flog = 0;
+#ifdef turn_180
+            RGB_Soft_90(0, show_buf, ui_save_buf, LCD_W,  LCD_H);
+#else
+            RGB_Soft_90(1, show_buf, ui_save_buf, LCD_W,  LCD_H);
+#endif
+            send_data_to_lcd(show_buf, LCD_RGB565_DATA_SIZE);
+            os_sem_pend(&send_ok_sem, 0);
+        }
+    }
+}
+
+void qr_data_updata(u8 *data_buf, u32 data_size)
+{
+    memcpy(show_buf, data_buf, data_size);
+    os_sem_post(&compose_sem);
+    os_sem_pend(&send_ok_sem, 0);
+}
+
 
 static void get_filter_color(void)
 {
@@ -278,7 +358,11 @@ static void picture_compose_task(void *priv)
                 set_lcd_show_data_mode(ui);
             }
         } else {
-            os_sem_pend(&compose_sem, 0);
+            if (data_mode == camera) {
+                os_sem_pend(&compose_sem, 100);
+            } else {
+                os_sem_pend(&compose_sem, 0);
+            }
         }
 
         switch (data_mode) {
@@ -292,33 +376,38 @@ static void picture_compose_task(void *priv)
                 log_info("%s >>>note lbuf rbuf == NULL\r\n", __func__);
                 break;
             } else {
-                yuv420p_quto_rgb565(rbuf->data, camera_save_buf, LCD_W, LCD_H, 1);
+                if (turn_90_mode == 0) {
+                    yuv420p_quto_rgb565(rbuf->data, camera_save_buf, LCD_H, LCD_W, 1);
+                } else {
+                    yuv420p_quto_rgb565(rbuf->data, camera_save_buf, LCD_W, LCD_H, 1);
+                }
+
                 lbuf_free(rbuf);
             }
 
-#if HORIZONTAL_SCREEN
-#ifdef turn_180
-            RGB_Soft_90(0, show_buf, camera_save_buf, LCD_W,  LCD_H);
-#else
-            RGB_Soft_90(1, show_buf, camera_save_buf, LCD_W,  LCD_H);
-#endif
-#else
-            memcpy(show_buf, camera_save_buf, LCD_RGB565_DATA_SIZE);
-#endif
+            if (turn_90_mode == 0) {
+                memcpy(show_buf, camera_save_buf, LCD_RGB565_DATA_SIZE);
+            } else if (turn_90_mode == 1) {
+                RGB_Soft_90(0, show_buf, camera_save_buf, LCD_W,  LCD_H);
+            } else if (turn_90_mode == 2) {
+                RGB_Soft_90(1, show_buf, camera_save_buf, LCD_W,  LCD_H);
+            }
+
             send_data_to_lcd(show_buf, LCD_RGB565_DATA_SIZE);
             break;
+
         case ui: //屏数据只有UI数据
-#if HORIZONTAL_SCREEN
-#ifdef turn_180
-            RGB_Soft_90(0, show_buf, ui_save_buf, LCD_W,  LCD_H);
-#else
-            RGB_Soft_90(1, show_buf, ui_save_buf, LCD_W,  LCD_H);
-#endif
-            send_data_to_lcd(show_buf, LCD_RGB565_DATA_SIZE);
-#else
-            send_data_to_lcd(ui_save_buf, LCD_RGB565_DATA_SIZE);
-#endif
+            if (turn_90_mode == 0) {
+                send_data_to_lcd(ui_save_buf, LCD_RGB565_DATA_SIZE);
+            } else if (turn_90_mode == 1) {
+                RGB_Soft_90(0, show_buf, ui_save_buf, LCD_W,  LCD_H);
+                send_data_to_lcd(show_buf, LCD_RGB565_DATA_SIZE);
+            } else if (turn_90_mode == 2) {
+                RGB_Soft_90(1, show_buf, ui_save_buf, LCD_W,  LCD_H);
+                send_data_to_lcd(show_buf, LCD_RGB565_DATA_SIZE);
+            }
             break;
+
         case ui_camera://屏数据有实时更新的摄像头数据已经ui数据 二者做图像合成
             if (lbuf_empty(lbuf_handle_test)) { //查询LBUF内是否有数据帧
                 goto updata;//在没有帧数据也进行刷新防止没有camera数据时ui数据不更新
@@ -327,21 +416,32 @@ static void picture_compose_task(void *priv)
             if (rbuf == NULL) {
                 goto updata;//如果读取失败也进行刷新数据
             } else {
-                yuv420p_quto_rgb565(rbuf->data, camera_save_buf, LCD_W, LCD_H, 1);
+                if (turn_90_mode == 0) {
+                    yuv420p_quto_rgb565(rbuf->data, camera_save_buf, LCD_H, LCD_W, 1);
+                } else if (turn_90_mode == 1) {
+                    yuv420p_quto_rgb565(rbuf->data, camera_save_buf, LCD_W, LCD_H, 1);
+
+                }
                 lbuf_free(rbuf);
             }
 
 updata:
-            picture_compose(ui_save_buf, camera_save_buf, LCD_W, LCD_H);
-#if HORIZONTAL_SCREEN
+            if (turn_90_mode == 0) {
 #ifdef turn_180
-            RGB_Soft_90(0, show_buf, camera_save_buf, LCD_W,  LCD_H);
+                RGB_Soft_90(0, show_buf, camera_save_buf, LCD_H, LCD_W);
 #else
-            RGB_Soft_90(1, show_buf, camera_save_buf, LCD_W,  LCD_H);
+                RGB_Soft_90(1, show_buf, camera_save_buf, LCD_H,  LCD_W);
 #endif
+                picture_compose(ui_save_buf, show_buf, LCD_W, LCD_H);
+            } else if (turn_90_mode == 1) {
+
+                picture_compose(ui_save_buf, camera_save_buf, LCD_W, LCD_H);
+#ifdef turn_180
+                RGB_Soft_90(0, show_buf, camera_save_buf, LCD_W,  LCD_H);
 #else
-            memcpy(show_buf, camera_save_buf, LCD_RGB565_DATA_SIZE);
+                RGB_Soft_90(1, show_buf, camera_save_buf, LCD_W,  LCD_H);
 #endif
+            }
             send_data_to_lcd(show_buf, LCD_RGB565_DATA_SIZE);
             break;
 
@@ -349,14 +449,13 @@ updata:
             yuv420p_quto_rgb565(show_buf, camera_save_buf, LCD_W, LCD_H, 1);
 
             picture_compose(ui_save_buf, camera_save_buf, LCD_W, LCD_H);
-#if HORIZONTAL_SCREEN
-#ifdef turn_180
-            RGB_Soft_90(0, show_buf, camera_save_buf, LCD_W,  LCD_H);
-#else
-            RGB_Soft_90(1, show_buf, camera_save_buf, LCD_W,  LCD_H);
-#endif
-#else
-#endif
+            if (turn_90_mode == 0) {
+                memcpy(show_buf, camera_save_buf, LCD_RGB565_DATA_SIZE);
+            } else if (turn_90_mode == 1) {
+                RGB_Soft_90(0, (char *)show_buf, (char *)camera_save_buf, LCD_W,  LCD_H);
+            } else if (turn_90_mode == 2) {
+                RGB_Soft_90(1, (char *)show_buf, (char *)camera_save_buf, LCD_W,  LCD_H);
+            }
             send_data_to_lcd(show_buf, LCD_RGB565_DATA_SIZE);
             break;
 
@@ -364,19 +463,23 @@ updata:
             yuv420p_quto_rgb565(show_buf, camera_save_buf, aim_compose_w, aim_compose_h, 1);
 
             picture_compose(ui_save_buf, camera_save_buf, LCD_W, LCD_H);
-#if HORIZONTAL_SCREEN
-#ifdef turn_180
-            RGB_Soft_90(0, show_buf, ui_save_buf, LCD_W,  LCD_H);
-#else
-            RGB_Soft_90(1, show_buf, ui_save_buf, LCD_W,  LCD_H);
-#endif
-#else
-            memcpy(show_buf, ui_save_buf, LCD_RGB565_DATA_SIZE);
-#endif
+            if (turn_90_mode == 0) {
+                memcpy(show_buf, ui_save_buf, LCD_RGB565_DATA_SIZE);
+            } else if (turn_90_mode == 1) {
+                RGB_Soft_90(0, (char *)show_buf, (char *)camera_save_buf, LCD_W,  LCD_H);
+            } else if (turn_90_mode == 2) {
+                RGB_Soft_90(1, (char *)show_buf, (char *)camera_save_buf, LCD_W,  LCD_H);
+            }
             send_data_to_lcd(show_buf, LCD_RGB565_DATA_SIZE);
             break;
+
         }
     }
+}
+
+static void check_send_time(void)
+{
+    rgb_send_flog = 1;
 }
 
 static int picture_compose_task_init(void)
@@ -385,6 +488,8 @@ static int picture_compose_task_init(void)
     os_sem_create(&compose_sem, 0);
 
     lbuf_handle_test = lib_system_lbuf_test_init(LCD_YUV420_DATA_SIZE * 2 + 128);
+    sys_timer_add(NULL, check_send_time, 40);
+    os_mutex_create(&mutex_rgb);
 
     return thread_fork("picture_compose_task", 8, 1024, 32, NULL, picture_compose_task, NULL);
 }

@@ -37,6 +37,7 @@
 <Add option="-DCONFIG_VIDEO_OSD_EN" />
 <Add option="-DCONFIG_SFC_ENABLE" />
 <Add option="-DCONFIG_AUDIO_ENABLE" />
+<Add option="-DCONFIG_UI_ENABLE" />
 <Add option="-DCONFIG_VIDEO_ENABLE=1" />
 <Add option="-DCONFIG_VIDEO0_ENABLE=1" />
 <Add option="-DCONFIG_NET_ENABLE=1" />
@@ -111,6 +112,7 @@
 <Add directory="../../../../include_lib/driver/device/usb/device" />
 <Add directory="../../../../include_lib/driver/device/usb/host" />
 <Add directory="../../../../apps/common/rf_fcc_tool/include" />
+<Add directory="../../../../apps/common/product_test_tool/includes" />
 <Add directory="../../../../apps/common/net/testbox/include" />
 </Compiler>
 <Linker>
@@ -126,7 +128,6 @@
 <Add option="--plugin-opt=-dont-used-symbol-list=malloc,free,sprintf,printf,puts,putchar" />
 <Add option="--plugin-opt=save-temps" />
 <Add option="--plugin-opt=-pi32v2-enable-rep-memop" />
-<Add option="--plugin-opt=-warn-stack-size=2560" />
 <Add option="--sort-common" />
 <Add option="--plugin-opt=-used-symbol-file=../../../../cpu/wl80/sdk_used_list.used" />
 <Add option="--plugin-opt=-pi32v2-large-program=true" />
@@ -157,7 +158,13 @@
 <Add option="../../../../cpu/wl80/liba/ftpserver_new.a" />
 <Add option="../../../../cpu/wl80/liba/net_server.a" />
 <Add option="../../../../cpu/wl80/liba/libqrcode.a" />
+<Add option="../../../../cpu/wl80/liba/lib_mp3_dec.a " />
 <Add option="--end-group" />
+<Add option="../../../../cpu/wl80/liba/video_dec_server.a" />
+<Add option="../../../../cpu/wl80/liba/ui.a" />
+<Add option="../../../../cpu/wl80/liba/res.a" />
+<Add option="../../../../cpu/wl80/liba/font.a" />
+<Add option="../../../../cpu/wl80/liba/ui_draw.a" />
 <Add option="-T../../../../cpu/wl80/sdk.ld" />
 <Add option="-M=../../../../cpu/wl80/tools/sdk.map" />
 <Add library="C:\JL\pi32\pi32v2-lib\r3\libm.a" />
@@ -243,6 +250,15 @@
 <Unit filename="../../../../apps/common/net/voiceprint_cfg.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/net/voiceprint_cfg.h" />
 <Unit filename="../../../../apps/common/net/wifi_conf.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/common/product_test_tool/communication.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/common/product_test_tool/devices_control.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/common/product_test_tool/includes/communication.h" />
+<Unit filename="../../../../apps/common/product_test_tool/includes/datatype.h" />
+<Unit filename="../../../../apps/common/product_test_tool/includes/devices_control.h" />
+<Unit filename="../../../../apps/common/product_test_tool/includes/product_main.h" />
+<Unit filename="../../../../apps/common/product_test_tool/includes/product_port.h" />
+<Unit filename="../../../../apps/common/product_test_tool/product_main.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/common/product_test_tool/product_port.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/rf_fcc_tool/include/datatype.h" />
 <Unit filename="../../../../apps/common/rf_fcc_tool/include/rf_fcc_main.h" />
 <Unit filename="../../../../apps/common/rf_fcc_tool/rf_fcc_main.c"><Option compilerVer="CC"/></Unit>
@@ -257,6 +273,7 @@
 <Unit filename="../../../../apps/common/ui/GUI_GIF.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/ui/font/fontinit.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/ui/gif_api.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/common/ui/include/GUI_GIF_Private.h" />
 <Unit filename="../../../../apps/common/ui/include/lcd_config.h" />
 <Unit filename="../../../../apps/common/ui/include/lcd_drive.h" />
 <Unit filename="../../../../apps/common/ui/include/lcd_te_driver.h" />
@@ -640,6 +657,7 @@
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_browser.h" />
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_button.h" />
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_camera.h" />
+<Unit filename="../../../../include_lib/utils/ui/ui/ui_circle.h" />
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_core.h" />
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_grid.h" />
 <Unit filename="../../../../include_lib/utils/ui/ui/ui_number.h" />

@@ -6,6 +6,7 @@
 #include "lcd_drive.h"
 #include "lcd_te_driver.h"
 #include "lcd_config.h"
+#include "gpio.h"
 
 /*  ili9488驱动说明 该驱动测试时使用的 wl80 79系列
  *  由于该IC推屏能力不够强 推屏的帧数较低 大概在25帧左右
@@ -137,6 +138,7 @@ void ili9488_SetRange_1(u16 xs, u16 xe, u16 ys, u16 ye)
 
 void ili9488_clear_screen(u32 color)
 {
+    lcd_interface_non_block_wait();
     WriteCOM(0x2c);
 
     u8 *buf = malloc(LCD_W * LCD_H * 2);
@@ -154,6 +156,7 @@ void ili9488_clear_screen(u32 color)
 
 void ili9488_Fill(u8 *img, u16 len)
 {
+    lcd_interface_non_block_wait();
     WriteCOM(0x2c);
     WriteDAT_DMA(img, len);
 }
@@ -172,6 +175,7 @@ void ili9488_SleepOutMode(void)
 
 void st7789_shown_image(u8 *buff, u16 x_addr, u16 y_addr, u16 width, u16 height)
 {
+    lcd_interface_non_block_wait();
     ili9488_SetRange(x_addr, y_addr, width, height);
     WriteDAT_DMA(buff, width * height * 2);
 }
@@ -228,44 +232,23 @@ typedef struct {
 } InitCode;
 
 static const InitCode code1[] = {
-    //  {0x01, 0},//soft reset
-//    {0x28, 0},//关显示
-    // {REGFLAG_DELAY, 10},
-    // {0x10, 0},//Internal oscillator will be stopped
-//   {REGFLAG_DELAY, 120},
-//   {0x21, 0},
-
-    {0xe0, 15, {0x00, 0x06, 0x0C, 0x07, 0x15, 0x0a, 0x3c, 0x89, 0x47, 0x08, 0x10, 0x0E, 0x1e, 0x22, 0x0f}},
-    {0xe1, 15, {0x00, 0x1f, 0x23, 0x07, 0x12, 0x07, 0x32, 0x34, 0x47, 0x04, 0x0d, 0x0b, 0x34, 0x39, 0x0f}},
-
-    {0xc0, 2, {0x13, 0x13}},
-    {0xc1, 1, {0x41}},
-    {0xc5, 3, {0x00, 0x2e, 0x80}},
-
-//FIXME: TE Mode
-    {0x35, 1, {0x00}},
-    {0x44, 2, {0x01, 0xe0}},
-    {0xb1, 2, {0x70, 0x11}},    //fps 45
-
-    // {0xb1, 2, {0xb0, 0x11}}, //fps 70
-//end
-
-    {0x36, 1, {0x08}},   //可以控制旋转/flip/rota
+    {0XF7, 4, {0xA9, 0x51, 0x2C, 0x82}},
+    {0xC0, 2, {0x11, 0x09}},
+    {0xC1, 1, {0x41}},
+    {0XC5, 3, {0x00, 0x0A, 0x80}},
+    {0xB1, 2, {0xB0, 0x11}},
+    {0xB4, 1, {0x02}},
+    {0xB6, 2, {0x02, 0x42}},
+    {0xB7, 1, {0xc6}},
+    {0xBE, 2, {0x00, 0x04}},
+    {0xE9, 1, {0x00}},
+    {0x36, 1, {0x48}},   //可以控制旋转/flip/rota
     {0x3a, 1, {0x55}},
-
-    {0xb0, 1, {0x00}},
-    {0xb4, 1, {0x02}},
-    {0xb6, 2, {0x02, 0x22}},
-    {0xb7, 1, {0xC6}},
-    {0xbe, 2, {0x00, 0x04}},
-
-    {0xe9, 1, {0x00}},
-    {0xf7, 4, {0xa9, 0x51, 0x2c, 0x82}},
-
+    {0xE0, 15, {0x00, 0x07, 0x10, 0x09, 0x17, 0x0B, 0x41, 0x89, 0x4B, 0x0A, 0x0C, 0x0E, 0x18, 0x1B, 0x0F}},
+    {0XE1, 15, {0x00, 0x17, 0x1A, 0x04, 0x0E, 0x06, 0x2F, 0x45, 0x43, 0x02, 0x0A, 0x09, 0x32, 0x36, 0x0F}},
     {0x11, 0},//Sleep out
-    {REGFLAG_DELAY, 150},
+    {REGFLAG_DELAY, 200},
     {0x29, 0},//开显示
-    // {REGFLAG_DELAY, 100},
 };
 
 static void ili9488_init_code(const InitCode *code, u8 cnt)
@@ -293,14 +276,14 @@ void ili9488_test(void)
     lcd_bl_pinstate(BL_ON);
     while (1) {
         os_time_dly(100);
-        ili9488_clear_screen(BLUE);
-        printf("LCD_ili9488_TSET_BLUE\n");
+        ili9488_clear_screen(WHITE);
+        printf("LCD_ili9488_TSET_WHITE\n");
         os_time_dly(100);
-        ili9488_clear_screen(GRED);
-        printf("LCD_ili9488_TSET_GRED\n");
+        ili9488_clear_screen(BLACK);
+        printf("LCD_ili9488_TSET_BLACK\n");
         os_time_dly(100);
-        ili9488_clear_screen(BRRED);
-        printf("LCD_ili9488_TSET_BRRED\n");
+        ili9488_clear_screen(RED);
+        printf("LCD_ili9488_TSET_RED\n");
         os_time_dly(100);
         ili9488_clear_screen(YELLOW);
         printf("LCD_ili9488_TSET_YELLOW\n");

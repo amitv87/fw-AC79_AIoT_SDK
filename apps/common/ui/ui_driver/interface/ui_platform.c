@@ -3653,7 +3653,7 @@ static int br23_show_text(struct draw_context *dc, struct ui_text_attrs *text)
             info->text_width  = dc->rect.width;
             info->text_height = dc->rect.height;
             info->flags       = text->flags;
-            /* info->offset      = text->offset; */
+            info->offset      = text->offset;
             int roll = 0;//需要滚动
             int multi_line = 0;
             /* FONT_SHOW_MULTI_LINE */

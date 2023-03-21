@@ -17,6 +17,9 @@ export PROJ_BUILD=download.bat
 echo "echo 加一下中文注释,防止服务器导出不了报错" >> ${PROJ_BUILD}
 echo "echo 加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释" >> ${PROJ_BUILD}
 
+echo "echo 加一下中文注释,防止服务器导出不了报错" >> ${PROJ_BUILD}
+echo "echo 加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释" >> ${PROJ_BUILD}
+
 #if defined CONFIG_UI_ENABLE
 echo "@echo                                        "是否输出UI资源文件_按Y_不生成继续_按N生成并继续_倒计时3s自动选择Y"" >> ${PROJ_BUILD}
 echo "choice /t 3 /c ync /n /d y" >> ${PROJ_BUILD}
@@ -100,15 +103,8 @@ rm isd_config.ini
 
 #else
 
-@echo [警告]该版本的uboot.boot与此前一些版本的uboot.boot存在二进制差异，会造成已经生产的产品无法升级到该版本; 因此需要用户自行将该版本的uboot.boot替换为已生产产品的uboot.boot;
-@echo [警告]如果你了解到上述警告，请修改cpu/wl82/tools/download.c文件，在该段话下面将set var=n命令修改为set var=y。否则会导致编译不成功
-set var=n
-if /i %var% == y (
-@echo BUILD NOW
-)else (
-@echo [错误]BUILD FAILED：请仔细阅读上述警告！
+REM 该版本的uboot.boot与此前一些版本的uboot.boot存在二进制差异，会造成已经生产的产品无法升级到该版本; 因此需要用户自行将该版本的uboot.boot替换为已生产产品的uboot.boot ; 如果你明白到这一点,请删除 cpu/wl82/tools/download.c 的本行和下一行
 exit /b -1
-)
 
 @echo off
 
@@ -145,17 +141,21 @@ REM %OBJDUMP% -D -address-mask=0x1ffffff -print-dbg %ELFFILE% > sdk.lst
 
 copy /b text.bin+data.bin+ram0_data.bin+cache_ram_data.bin app.bin
 
-#if defined CONFIG_UI_ENABLE && (defined CONFIG_UI_FILE_SAVE_IN_RESERVED_EXPAND_ZONE || defined CONFIG_UI_FILE_SAVE_IN_RESERVED_ZONE)
+#if defined CONFIG_UI_ENABLE
+#if (defined CONFIG_UI_FILE_SAVE_IN_RESERVED_EXPAND_ZONE || defined CONFIG_UI_FILE_SAVE_IN_RESERVED_ZONE)
 packres\packres.exe -n ui -o packres/UIPACKRES ui_res
 #else
 set UI_RES=ui_res
 #endif
+#endif
 
-#if defined CONFIG_AUDIO_ENABLE && defined CONFIG_VOICE_PROMPT_FILE_PATH && \
+#if defined CONFIG_AUDIO_ENABLE
+#if defined CONFIG_VOICE_PROMPT_FILE_PATH && \
 (defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_EXPAND_ZONE || defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_ZONE)
 packres\packres.exe -n tone -o packres/AUPACKRES audlogo
 #else
 set AUDIO_RES=audlogo
+#endif
 #endif
 
 REM set KEY_FILE=-key JL_791N-XXXX.key

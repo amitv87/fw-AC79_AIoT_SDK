@@ -31,6 +31,7 @@
 #define F_ATTR_ARC      0x02   /*!< 文件 */
 #define F_ATTR_DIR      0x04   /*!< 目录 */
 #define F_ATTR_VOL      0x08   /*!< 卷标 */
+#define F_ATTR_HID      0x10   /*!< 隐藏 */
 /* \} name */
 
 #ifndef FSELECT_MODE
@@ -111,6 +112,8 @@ struct vfs_devinfo {
     void *fd;
     u32 sector_size;
     void *private_data;
+    u32 block_start;
+    u32 block_end;
 };
 /// \endcond
 
@@ -275,6 +278,22 @@ struct imount *mount(const char *dev_name, const char *path, const char *fs_type
                      int cache_num, void *dev_arg);
 
 /**
+ * @brief 支持自定义偏移量的挂载设备虚拟文件系统
+ *
+ * @param dev_name 设备名称
+ * @param path 挂载点路径
+ * @param fs_type 文件系统类型(支持"fat" "devfs" "ramfs" "sdfile")
+ * @param cache_num  文件系统缓存
+ * @param dev_arg 设备参数指针
+ * @param block_offset 自定义引导扇区的起始block块偏移量(低32位),结束block块偏移量(高32位,取0默认设置为介质的最后block)
+ *
+ * @return 指向挂载点结构体的指针
+ * @return NULL 挂载失败
+ */
+struct imount *mount_ext(const char *dev_name, const char *path, const char *fs_type,
+                         int cache_num, void *dev_arg, u64 block_offset);
+
+/**
  * @brief 卸载设备虚拟文件系统
  *
  * @param path 挂载点路径
@@ -285,7 +304,7 @@ struct imount *mount(const char *dev_name, const char *path, const char *fs_type
 int unmount(const char *path);
 
 /**
- * @brief 格式化驱动器
+ * @brief 支持自定义偏移量的格式化驱动器
  *
  * @param path 需要格式化的根目录
  * @param fs_type 文件系统类型
@@ -295,6 +314,19 @@ int unmount(const char *path);
  * @return other: 格式化失败
  */
 int f_format(const char *path, const char *fs_type, u32 clust_size);
+
+/**
+ * @brief 格式化驱动器
+ *
+ * @param path 需要格式化的根目录
+ * @param fs_type 文件系统类型
+ * @param clust_size 簇大小,簇为0时默认为卡本身簇大小
+ * @param block_offset 自定义引导扇区的起始block块偏移量(低32位),结束block块偏移量(高32位,取0默认设置为介质的最后block)
+ *
+ * @return 0: 格式化成功
+ * @return other: 格式化失败
+ */
+int f_format_ext(const char *path, const char *fs_type, u32 clust_size, u64 block_offset);
 
 /**
  * @brief 刷新文件缓存数据（一般使用在fclose后某些数据还没有及时写进SD卡，需要主动刷新一下缓存区）
@@ -397,7 +429,7 @@ int ftell(FILE *file);
  * @brief 获取文件名(不包含目录)
  *
  * @param file 指向文件流的文件指针
- * @param name 保存文件名的buffer
+ * @param name 保存文件名的buffer,获取长文件名时buffer大小要大于长文件名长度，否则会获取到文件的短文件名"LFN~xxx",打印长文件名用put_buf方式
  * @param len buffer的长度，大于15个字节获取的是长文件名，小于16个字节获取的是短文件名
  *
  * @return 文件名的长度(大于0)
@@ -412,6 +444,7 @@ int fget_name(FILE *file, u8 *name, int len);
  *
  * @return 0: 成功
  * @return other: 失败
+ * @note  操作完毕后需要调用fclose关闭文件句柄
  */
 int frename(FILE *file, const char *fname);
 
@@ -453,6 +486,16 @@ int fdelete_by_name(const char *fname);
  * @return other: 删除失败
  */
 int fdelete_dir(const char *path);
+
+/**
+ * @brief 获取目录下文件总大小
+ *
+ * @param path 文件夹路径，最后不需要加'/'
+ *
+ * @return 目录下文件总大小(用s64类型接收返回值，使用%lld打印数值)
+ * @return 负值获取失败
+ */
+long long flen_dir(const char *path);
 
 /**
  * @brief 获取剩余空间
@@ -832,7 +875,7 @@ int fget_disp_info(FILE *file, void *arg);
  * @brief  创建目录
  *
  * @param path 路径
- * @param folder 文件夹名称,不需要 /
+ * @param folder 文件夹名称,需要 /, 例如 /test
  * @param mode 目录属性（1 设置为隐藏属性， 0 不设置 ）
  *
  * @return   0成功，非0不成功
@@ -1016,6 +1059,7 @@ int f_flush_wbuf(const char *path);
  * @param fptr 源文件被插入的位置
  *
  * @return 0成功，非0不成功
+ * @note  操作完毕后需要调用fclose关闭文件句柄
  */
 /* ----------------------------------------------------------------------------*/
 int finsert_file(FILE *file, FILE *i_file, u32 fptr);
@@ -1029,6 +1073,7 @@ int finsert_file(FILE *file, FILE *i_file, u32 fptr);
  * @param fptr 源文件被分割位置
  *
  * @return 0成功，非0不成功
+ * @note  操作完毕后需要调用fclose关闭文件句柄
  */
 /* ----------------------------------------------------------------------------*/
 int fdicvision_file(FILE *file, char *file_name, u32 fptr);

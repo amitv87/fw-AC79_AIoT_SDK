@@ -90,6 +90,7 @@ struct lcd_device {
     void (*SetDrawArea)(u16, u16, u16, u16);
     void (*LCD_Draw)(u8 *map, u32 size);
     void (*LCD_Draw_1)(u8 *map, u32 size);
+    void (*LCD_Draw_2)(int x, int y, int w, int h, char *img);
     void (*LCD_DrawToDev)(u8 *map, u32 size);
     void (*LCD_Lvgl_Full)(u16 xs, u16 xe, u16 ys, u16 ye, char *img);
     void (*LCD_ClearScreen)(u32 color);
@@ -104,6 +105,7 @@ struct lcd_interface {
     void (*buffer_free)(u8 *buf);
     void (*draw)(u8 *buf, u32 len, u8 wait);
     void (*draw_1)(u8 *buf, u32 len, u8 wait);
+    void (*draw_2)(int x, int y, int w, int h, char *img);
     void (*draw_lvgl)(u16 xs, u16 xe, u16 ys, u16 ye, char *img);
     void (*set_draw_area)(u16 xs, u16 xe, u16 ys, u16 ye);
     void (*clear_screen)(u32 color);
@@ -146,6 +148,9 @@ void lcd_show_frame(u8 *buf, u32 len);//数据为YUV数据
 void play_gif_to_lcd(char *gif_path, char play_speed);//播放GIF动图 seepd = 1 = 10ms
 void get_te_fps(char *fps); //获取底层发送显示帧数
 void lcd_set_draw_area(u16 xs, u16 xe, u16 ys, u16 ye);//
+void lcd_interface_set_non_block(u8 block);
+void lcd_interface_non_block_wait(void);
+bool lcd_interface_get_non_block(void);
 
 
 

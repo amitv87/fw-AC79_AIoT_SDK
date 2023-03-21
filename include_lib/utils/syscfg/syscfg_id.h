@@ -268,8 +268,14 @@ typedef enum JL_CONFIG_ERR_TABLE {
 #define    VM_USB0_BREAKPOINT_INDEX     242
 #define    VM_USB1_BREAKPOINT_INDEX     243
 #define    VM_RTC_LRC_TRIM_INDEX        244
+#define    VM_HTTP_SINGLE_UPDATE_URL 	245 //单备份http网络升级的网址
 
-//244-255可使用
+#define    CFG_PRODUCT_UUID_INDEX       246
+#define    CFG_PRODUCT_SN_INDEX         247
+#define    CFG_PRODUCT_LICENSE_INDEX    248
+#define    CFG_PRODUCT_RTC_INDEX        249
+
+//60-61 249-255可使用
 
 //=================================================================================//
 //                   只存于sys_cfg.bin的配置项[512 ~ 700]                		   //

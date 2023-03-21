@@ -122,6 +122,7 @@ void ili9481_SetRange_1(u16 xs, u16 xe, u16 ys, u16 ye)
 
 void ili9481_clear_screen(u32 color)
 {
+    lcd_interface_non_block_wait();
     WriteCOM(0x2c);
 
     u8 *buf = malloc(LCD_W * LCD_H * 2);
@@ -142,6 +143,7 @@ void ili9481_clear_screen(u32 color)
 
 void ili9481_Fill(u8 *img, u32 len)
 {
+    lcd_interface_non_block_wait();
     WriteCOM(0x2c);
     WriteDAT_DMA(img, len);
 }
@@ -160,6 +162,7 @@ void ili9481_SleepOutMode(void)
 
 void st7789_shown_image(u8 *buff, u16 x_addr, u16 y_addr, u16 width, u16 height)
 {
+    lcd_interface_non_block_wait();
     ili9481_SetRange(x_addr, y_addr, width, height);
     WriteDAT_DMA(buff, width * height * 2);
 }
@@ -170,15 +173,20 @@ static void ili9481_set_direction(u8 dir)
 
     if (dir == ROTATE_DEGREE_0) { //正向
 #if HORIZONTAL_SCREEN
-        WriteDAT_8(0x48);
+        WriteDAT_8(0x4c);
 #else
-        WriteDAT_8(0x48);
+        WriteDAT_8(0x4c);
 #endif
     } else if (dir == ROTATE_DEGREE_180) { //翻转180
 #if HORIZONTAL_SCREEN
-        WriteDAT_8(0x48);
+#ifdef  USE_AWTK_UI_DEMO
+        WriteDAT_8(0x04 | BIT(3) | BIT(5));
 #else
-        WriteDAT_8(0x48);
+        WriteDAT_8(0x04);
+#endif
+
+#else
+        WriteDAT_8(0x04);
 #endif
     }
 
@@ -224,8 +232,8 @@ static const InitCode code1[] = {
 
     {0x35, 1, {0x00}},//开TE 关TE 0x34
     {0x44, 2, {0x01, 0X50}}, //有关TE时间控制
-#ifdef USE_DevKitBoard_TEST_DEMO
-    {0xc5, 1, {0x04}},
+#ifdef USE_LVGL_UI_DEMO
+    {0xc5, 1, {0x04}},//帧率控制寄存器
 #else
     {0xc5, 1, {0x07}},
 #endif
@@ -270,6 +278,25 @@ static void ili9481_led_ctrl(u8 status)
     lcd_bl_pinstate(status);
 }
 
+static void ILI9481_lvgl_Fill(u16 xs, u16 xe, u16 ys, u16 ye, u8 *img)
+{
+    u32 len = 0;
+    lcd_interface_non_block_wait();
+    len = (xe + 1 - xs) * (ye + 1 - ys) * 2;
+    WriteCOM(0x2A);
+    WriteDAT_8(xs >> 8);
+    WriteDAT_8(xs);
+    WriteDAT_8(xe >> 8);
+    WriteDAT_8(xe);
+    WriteCOM(0x2B);
+    WriteDAT_8(ys >> 8);
+    WriteDAT_8(ys);
+    WriteDAT_8(ye >> 8);
+    WriteDAT_8(ye);
+    WriteCOM(0x2c);
+    WriteDAT_DMA(img, len);
+}
+
 void ili9481_test(void)
 {
     lcd_bl_pinstate(BL_ON);
@@ -292,7 +319,11 @@ static int ili9481_init(void)
     printf("LCD_ili9481 init_start\n");
     lcd_bl_pinstate(BL_ON);
     ili9481_init_code(code1, sizeof(code1) / sizeof(code1[0]));
+#ifdef  USE_AWTK_UI_DEMO
+    ili9481_set_direction(ROTATE_DEGREE_180);
+#else
     ili9481_set_direction(ROTATE_DEGREE_0);
+#endif
     init_TE(ili9481_Fill);
     /*ili9481_test();*/
     printf("LCD_ili9481 config succes\n");
@@ -312,6 +343,7 @@ REGISTER_LCD_DEV(LCD_ili9481) = {
     .LCD_Draw          = ili9481_draw,
     .LCD_Draw_1        = ili9481_draw_1,
     .LCD_DrawToDev     = ili9481_Fill,//应用层直接到设备接口层，需要做好缓冲区共用互斥，慎用！
+    .LCD_Lvgl_Full     = ILI9481_lvgl_Fill,//LVGL发送数据接口
     .LCD_ClearScreen   = ili9481_clear_screen,
     .Reset             = ili9481_reset,
     .BackLightCtrl     = ili9481_led_ctrl,

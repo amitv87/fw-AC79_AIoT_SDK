@@ -11,9 +11,10 @@
 #include "gpio.h"
 #include "ui_api.h"
 #include "touch_event.h"
-#include <stdlib.h>
+#include "sys_common.h"
 
 #if TCFG_TOUCH_FT6236_ENABLE
+#define TEST 0
 
 #if 1
 #define log_info(x, ...)    printf("\n[touch]>" x " \n", ## __VA_ARGS__)
@@ -21,8 +22,34 @@
 #define log_info(...)
 #endif
 
+struct touch_hdl {
+    u16 x;
+    u16 y;
+    u8 status;
+};
+struct touch_hdl lvgl_touch_hdl;
+
 static OS_SEM touch_sem;
 
+void *get_touch_x_y(void)
+{
+    return &lvgl_touch_hdl;
+}
+
+void get_touch_x_y_status(u16 *x, u16 *y, u8 *status)
+{
+#if HORIZONTAL_SCREEN==1
+    *x = lvgl_touch_hdl.y;
+    *y = 320 - lvgl_touch_hdl.x;
+    if (*y > LCD_H) {
+        *y = LCD_H;
+    }
+#else
+    *x = lvgl_touch_hdl.x;
+    *y = lvgl_touch_hdl.y;
+#endif
+    *status = lvgl_touch_hdl.status;
+}
 extern int ui_touch_msg_post(struct touch_event *event);
 
 //I2C读写命令
@@ -83,6 +110,7 @@ static void *iic = NULL;
 #define VK_X_Y_DIFF     30
 
 
+static u8 touch_status = 0;
 static unsigned char wrFT6236Reg(u8 regID, unsigned char regDat)
 {
     u8 ret = 1;
@@ -199,9 +227,17 @@ static void tpd_down(int x, int y)
         tp_down_cnt = 0;
 
         t.action = tp_last_staus;
+#if HORIZONTAL_SCREEN
+        t.x = LCD_W - y;
+        t.y = x;
+#else
         t.x = x;
         t.y = y;
+#endif
         log_info("----tpd_hold----x=%d, y=%d", x, y);
+        lvgl_touch_hdl.x = x;
+        lvgl_touch_hdl.y = y;
+        lvgl_touch_hdl.status = 1;
         ui_touch_msg_post(&t);
         return;
     }
@@ -245,8 +281,16 @@ static void tpd_down(int x, int y)
     first_x = x;
     first_y = y;
     t.action = tp_last_staus;
+#if HORIZONTAL_SCREEN
+    t.x = LCD_W - y;
+    t.y = x;
+#else
     t.x = x;
     t.y = y;
+#endif
+    lvgl_touch_hdl.x = x;
+    lvgl_touch_hdl.y = y;
+    lvgl_touch_hdl.status = 1;
     ui_touch_msg_post(&t);
 }
 
@@ -279,9 +323,17 @@ static void tpd_up(int x, int y)
     tp_last_staus = ELM_EVENT_TOUCH_UP;
     tp_down_cnt = 0;
     t.action = tp_last_staus;
+#if HORIZONTAL_SCREEN
+    t.x = LCD_W - y;
+    t.y = x;
+#else
     t.x = x;
-    t.y =  y;
+    t.y = y;
+#endif
     log_info("----tpd_up----x=%d, y=%d", x, y);
+    lvgl_touch_hdl.x = x;
+    lvgl_touch_hdl.y = y;
+    lvgl_touch_hdl.status = 0;
     ui_touch_msg_post(&t);
 }
 
@@ -290,13 +342,13 @@ static void FT6236_interrupt(void)
     os_sem_post(&touch_sem);
 }
 
+
 void FT6236_init(void)
 {
     static u8 status = 0;
     static int x, y;
     static u16 touch_x = 0;
     static u16 touch_y = 0;
-    static u8 touch_status = 0;
 
     os_sem_create(&touch_sem, 0);
 
@@ -305,17 +357,17 @@ void FT6236_init(void)
     pdata = (struct ui_lcd_platform_data *)ui_cfg_data.private_data;
 
     gpio_direction_output(pdata->touch_reset_pin, 0);
-    os_time_dly(100);
+    os_time_dly(80);
     gpio_direction_output(pdata->touch_reset_pin, 1);
     os_time_dly(100);
     iic = dev_open("iic0", NULL);
-
+    os_time_dly(10);
     //注册中断注意触摸用的事件0 屏幕TE用的事件1
     port_wakeup_reg(EVENT_IO_0, pdata->touch_int_pin, EDGE_NEGATIVE, FT6236_interrupt);
 
-    /*wrFT6236Reg(FT_DEVIDE_MODE, 0);*/
-    /*wrFT6236Reg(FT_ID_G_THGROUP, 25);*/
-    /*wrFT6236Reg(FT_ID_G_PERIODACTIVE, 20);*/
+    wrFT6236Reg(FT_DEVIDE_MODE, 0);
+    wrFT6236Reg(FT_ID_G_THGROUP, 50);//降低触摸灵敏度
+    wrFT6236Reg(FT_ID_G_PERIODACTIVE, 12);
     if (get_FT6236_pid()) {
         log_info("[err]>>>>>FT6236 err!!!");
     }
@@ -343,9 +395,9 @@ static void my_touch_test_task(void *priv)
     FT6236_init();
 }
 
-static int FT6236_task_init(void)
+int FT6236_task_init(void)
 {
-    return thread_fork("my_touch_test_task", 10, 1024, 0, NULL, my_touch_test_task, NULL);
+    return thread_fork("my_touch_test_task", 29, 1024, 0, NULL, my_touch_test_task, NULL);
 }
 late_initcall(FT6236_task_init);
 

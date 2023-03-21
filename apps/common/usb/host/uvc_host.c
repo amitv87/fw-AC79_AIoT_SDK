@@ -19,11 +19,29 @@
 
 #if TCFG_HOST_UVC_ENABLE
 
+#ifdef CONFIG_UI_ENABLE
+#define UVC_RECV_BUFF_STATIC		1 //1:UVC接收数据不受应用层缓存影响，使用静态一帧单独给UVC一直接收数据，使用uvc_host_jpg_callback_register注册进行数据获取，应该在屏显等
+#else
+#define UVC_RECV_BUFF_STATIC        0
+#endif
+#define UVC_RECV_BUFF_STATIC_SIZE	(100*1024) //UVC一帧JPEG大小，建议100K
+
 #define UVC_REC_JPG_HEAD_SIZE	8
 #define UVC_REC_JPG_ALIGN     	512
 #define UVC_JPEG_HEAD 			0xE0FFD8FF
 #define UVC_JPEG_HEAD1 			0xC0FFD8FF
 #define USB_DMA_CP_ENABLE       (0)//注意：使用硬件dma copy需要异步接收推送数据，否则出现速度快数据错乱的问题
+
+#if UVC_RECV_BUFF_STATIC
+static void (*uvc_host_jpg_cb)(char *jpg_buf, u32 jpg_len);
+static u8 uvc_buff[UVC_RECV_BUFF_STATIC_SIZE];
+#endif
+void uvc_host_jpg_callback_register(void (*cb)(char *jpg_buf, u32 jpg_len))
+{
+#if UVC_RECV_BUFF_STATIC
+    uvc_host_jpg_cb = cb;
+#endif
+}
 
 static int uvc_jpeg_head_check(u32 head)
 {
@@ -241,7 +259,9 @@ int uvc_mjpg_stream_out(void *fd, int cnt, void *stream_list, int state)
     if ((cnt < 0) || !list) {
         /*putchar('E');*/
         if (fh->buf) {
+#if !UVC_RECV_BUFF_STATIC
             uvc_buf_free(fh, fh->buf);
+#endif
             fh->buf = NULL;
             if (state != STREAM_SOF) { // eof == 2 next frame start
                 fh->drop_frame = 1;
@@ -261,11 +281,16 @@ int uvc_mjpg_stream_out(void *fd, int cnt, void *stream_list, int state)
     }
 
     if (!fh->buf) {
+#if UVC_RECV_BUFF_STATIC
+        fh->buf = uvc_buff;
+        fh->free_size = sizeof(uvc_buff) - UVC_REC_JPG_ALIGN;
+#else
         fh->free_size = uvc_buf_free_space(fh);
         if (fh->free_size > 1024) {
             fh->buf = uvc_buf_malloc(fh, fh->free_size);
             fh->free_size -= UVC_REC_JPG_ALIGN;//减512防止realloc时512对齐断言
         }
+#endif
         if (!fh->buf) {
             err = -ENOMEM;
             goto _exit;
@@ -275,7 +300,9 @@ int uvc_mjpg_stream_out(void *fd, int cnt, void *stream_list, int state)
 
     for (i = 0; i < cnt; i++) {
         if ((fh->b_offset + list[i].length + UVC_REC_JPG_HEAD_SIZE) > fh->free_size) {
+#if !UVC_RECV_BUFF_STATIC
             uvc_buf_free(fh, fh->buf);
+#endif
             fh->buf = NULL;
             fh->drop_frame = 1;
             /*putchar('d');*/
@@ -302,12 +329,35 @@ int uvc_mjpg_stream_out(void *fd, int cnt, void *stream_list, int state)
             u32 drop = fh->frame_cnt * (fh->fps - fh->real_fps) / fh->fps;
             if (fh->drop_frame_cnt != drop) {
                 fh->drop_frame_cnt = drop;
+#if !UVC_RECV_BUFF_STATIC
                 uvc_buf_free(fh, fh->buf);
+#endif
                 fh->buf = NULL;
                 goto _exit;
             }
         }
         u32 req_size = ADDR_ALIGNE(fh->b_offset + UVC_REC_JPG_HEAD_SIZE, UVC_REC_JPG_ALIGN);
+#if UVC_RECV_BUFF_STATIC
+        if (uvc_host_jpg_cb) {
+            uvc_host_jpg_cb((char *)fh->buf + UVC_REC_JPG_HEAD_SIZE, fh->b_offset);
+        }
+        if (uvc_buf_free_space(fh) > 1024) {
+            u8 *pbuf = uvc_buf_malloc(fh, req_size);
+            if (pbuf) {
+                memcpy(pbuf + UVC_REC_JPG_HEAD_SIZE, fh->buf + UVC_REC_JPG_HEAD_SIZE, fh->b_offset);
+                fh->buf = pbuf;
+                if (fh->buf) {
+                    /*memset(fh->buf + fh->b_offset + UVC_REC_JPG_HEAD_SIZE, 0, req_size - fh->b_offset - UVC_REC_JPG_HEAD_SIZE);*/
+                    u32 *head = (u32 *)(fh->buf + UVC_REC_JPG_HEAD_SIZE);
+                    if (uvc_jpeg_head_check(*head)) {
+                        uvc_buf_stream_finish(fh, fh->buf);//注意：使用硬件dma copy需要异步接收推送数据，否则出现速度快数据错乱的问题
+                    } else {
+                        uvc_buf_free(fh, fh->buf);
+                    }
+                }
+            }
+        }
+#else
         fh->buf = uvc_buf_realloc(fh, fh->buf, req_size);
         if (fh->buf) {
             /*memset(fh->buf + fh->b_offset + UVC_REC_JPG_HEAD_SIZE, 0, req_size - fh->b_offset - UVC_REC_JPG_HEAD_SIZE);*/
@@ -318,6 +368,7 @@ int uvc_mjpg_stream_out(void *fd, int cnt, void *stream_list, int state)
                 uvc_buf_free(fh, fh->buf);
             }
         }
+#endif
         fh->buf = NULL;
     }
 
@@ -384,7 +435,9 @@ static int uvc_stream_off(void *_fh, int index)
     }
 
     if (fh->buf) {
+#if !UVC_RECV_BUFF_STATIC
         uvc_buf_free(fh, fh->buf);
+#endif
         fh->buf = NULL;
         fh->b_offset = 0;
     }

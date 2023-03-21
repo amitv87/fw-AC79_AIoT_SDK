@@ -434,6 +434,7 @@
                 "CONFIG_VIDEO_OSD_EN",
                 "CONFIG_SFC_ENABLE",
                 "CONFIG_AUDIO_ENABLE",
+                "CONFIG_UI_ENABLE",
                 "CONFIG_VIDEO_ENABLE=1",
                 "CONFIG_VIDEO0_ENABLE=1",
                 "CONFIG_NET_ENABLE=1",
@@ -511,6 +512,7 @@
                 "${workspaceFolder}/include_lib/driver/device/usb/device",
                 "${workspaceFolder}/include_lib/driver/device/usb/host",
                 "${workspaceFolder}/apps/common/rf_fcc_tool/include",
+                "${workspaceFolder}/apps/common/product_test_tool/includes",
                 "${workspaceFolder}/apps/common/net/testbox/include",
                 "C:/JL/pi32/pi32v2-include"
             ],
@@ -536,6 +538,7 @@
                 "CONFIG_VIDEO_OSD_EN",
                 "CONFIG_SFC_ENABLE",
                 "CONFIG_AUDIO_ENABLE",
+                "CONFIG_UI_ENABLE",
                 "CONFIG_VIDEO_ENABLE=1",
                 "CONFIG_VIDEO0_ENABLE=1",
                 "CONFIG_NET_ENABLE=1",
@@ -614,6 +617,7 @@
                 "${workspaceFolder}/include_lib/driver/device/usb/device",
                 "${workspaceFolder}/include_lib/driver/device/usb/host",
                 "${workspaceFolder}/apps/common/rf_fcc_tool/include",
+                "${workspaceFolder}/apps/common/product_test_tool/includes",
                 "${workspaceFolder}/apps/common/net/testbox/include",
                 "C:/JL/pi32/pi32v2-include"
             ],

@@ -29,6 +29,7 @@
 #define BROWN 			 0XBC40 //棕色
 #define BRRED 			 0XFC07 //棕红色
 #define GRAY  			 0X8430 //灰色i
+static void *lcd_hdl = NULL;
 
 void msleep(unsigned int ms);
 
@@ -151,6 +152,7 @@ void ST7735S_clear_screen(u16 color)
 
 void ST7735S_Fill(u8 *img, u16 len)
 {
+    dev_ioctl(lcd_hdl, IOCTL_SPI_WRITE_NON_BLOCK_FLUSH, 0);//等待上一次发包完成
     WriteCOM(0x2c);
     WriteDAT_DMA(img, len);
 }
@@ -310,24 +312,22 @@ static void ST7735S_reg_cfg(void)
 
 static void st7735s_test(void)
 {
-    while (1) {
-        os_time_dly(100);
-        ST7735S_clear_screen(BLUE);
-        printf("LCD_ST7735S_TSET_BLUE\n");
-        os_time_dly(100);
-        ST7735S_clear_screen(GRED);
-        printf("LCD_ST7735S_TSET_GRED\n");
-        os_time_dly(100);
-        ST7735S_clear_screen(BRRED);
-        printf("LCD_ST7735S_TSET_BRRED\n");
-        os_time_dly(100);
-        ST7735S_clear_screen(YELLOW);
-        printf("LCD_ST7735S_TSET_YELLOW\n");
-    }
+    ST7735S_clear_screen(BLUE);
+    printf("LCD_ST7735S_TSET_BLUE\n");
+    os_time_dly(10);
+    ST7735S_clear_screen(GRED);
+    printf("LCD_ST7735S_TSET_GRED\n");
+    os_time_dly(10);
+    ST7735S_clear_screen(BRRED);
+    printf("LCD_ST7735S_TSET_BRRED\n");
+    os_time_dly(10);
+    ST7735S_clear_screen(YELLOW);
+    printf("LCD_ST7735S_TSET_YELLOW\n");
 }
 
 static int ST7735S_init(void)
 {
+    lcd_hdl = get_lcd_hdl();
     ST7735S_io_init();
     lcd_d("LCD_ST7735S config...\n");
     ST7735S_reg_cfg();
@@ -336,6 +336,25 @@ static int ST7735S_init(void)
     st7735s_test();
     lcd_d("LCD_ST7735S config succes\n");
     return 0;
+}
+
+static void ST7735S_lvgl_Fill(u16 xs, u16 xe, u16 ys, u16 ye, char *img)
+{
+    u32 len = 0;
+    dev_ioctl(lcd_hdl, IOCTL_SPI_WRITE_NON_BLOCK_FLUSH, 0);//等待上一次发包完成
+    len = (xe + 1 - xs) * (ye + 1 - ys) * 2;
+    WriteCOM(0x2A);
+    WriteDAT_8(xs >> 8);
+    WriteDAT_8(xs);
+    WriteDAT_8(xe >> 8);
+    WriteDAT_8(xe);
+    WriteCOM(0x2B);
+    WriteDAT_8(ys >> 8);
+    WriteDAT_8(ys);
+    WriteDAT_8(ye >> 8);
+    WriteDAT_8(ye);
+    WriteCOM(0x2c);
+    WriteDAT_DMA(img, len);
 }
 
 // *INDENT-OFF*
@@ -353,6 +372,7 @@ REGISTER_LCD_DEV(LCD_ST7735S) = {
     .LCD_ClearScreen   = ST7735S_clear_screen,
     .Reset             = ST7735s_reset,
     .BackLightCtrl     = ST7735s_led_ctrl,
+    .LCD_Lvgl_Full     = ST7735S_lvgl_Fill,//LVGL发送数据接口
 };
 // *INDENT-ON*
 

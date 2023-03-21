@@ -136,6 +136,7 @@ void ILI9341_set_direction(u8 dir)
 
 void ILI9341_clear_screen(u16 color)
 {
+    lcd_interface_non_block_wait();
     WriteCOM(0x2c);
     u8 *buf = malloc(LCD_W * LCD_H * 2);
     if (!buf) {
@@ -152,6 +153,7 @@ void ILI9341_clear_screen(u16 color)
 
 void ILI9341_Fill(u8 *img, u16 len)
 {
+    lcd_interface_non_block_wait();
     WriteCOM(0x2c);
     WriteDAT_DMA(img, len);
 }
@@ -170,6 +172,7 @@ void ILI9341HS177PanelSleepOutMode(void)
 
 void st7735_shown_image(u8 *buff, u16 x_addr, u16 y_addr, u16 width, u16 height)
 {
+    lcd_interface_non_block_wait();
     u32 i = 0;
     ILI9341_set_xy_addr(x_addr, y_addr, width, height);
     WriteDAT_DMA(buff, width * height * 2);
@@ -183,6 +186,11 @@ static void ILI9341_draw(u8 *map, u32 size)//获取Ui发送出来的数据
 static void ILI9341_draw_1(u8 *map, u32 size)//获取camera发送出来的数据 //数据帧数以camera为基准
 {
     camera_send_data_ready(map, size);
+}
+
+static void ILI9341_draw_2(int x, int y, int w, int h, char *img)//摄像头层任意位置修改数据
+{
+    user_send_data_ready(x, y, w, h, img);
 }
 
 static void ILI9341_reset(void)

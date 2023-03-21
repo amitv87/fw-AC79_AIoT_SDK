@@ -845,20 +845,48 @@ void hwvec_exec(
     if (config & VEC_CPY_REAL_OR_VEC) {
         vec_cpy_real = 1;
         config &= ~VEC_CPY_REAL_OR_VEC;
-        memcpy(_xptr, xptr, nlen * 4);
+#ifdef CONFIG_CPU_WL82
+        if (xptr < 0x4000120) {
+            _xptr = xptr;
+        } else
+#endif
+        {
+            memcpy(_xptr, xptr, nlen * 4);
+        }
         //是否需要复制输入YPTR
         if (config & VEC_YPTR_NOCPY) {
             config &= ~VEC_YPTR_NOCPY;
         } else {
-            memcpy(_yptr, yptr, nlen * 4);
+#ifdef CONFIG_CPU_WL82
+            if (yptr < 0x4000120) {
+                _yptr = yptr;
+            } else
+#endif
+            {
+                memcpy(_yptr, yptr, nlen * 4);
+            }
         }
     } else {
-        memcpy(_xptr, xptr, nlen * 4 * 2);
+#ifdef CONFIG_CPU_WL82
+        if (xptr < 0x4000120) {
+            _xptr = xptr;
+        } else
+#endif
+        {
+            memcpy(_xptr, xptr, nlen * 4 * 2);
+        }
         //是否需要复制输入YPTR
         if (config & VEC_YPTR_NOCPY) {
             config &= ~VEC_YPTR_NOCPY;
         } else {
-            memcpy(_yptr, yptr, nlen * 4 * 2);
+#ifdef CONFIG_CPU_WL82
+            if (yptr < 0x4000120) {
+                _yptr = yptr;
+            } else
+#endif
+            {
+                memcpy(_yptr, yptr, nlen * 4 * 2);
+            }
         }
     }
 
@@ -866,9 +894,23 @@ void hwvec_exec(
     if (config & VEC_ZPTR_CPY) {
         config &= ~VEC_ZPTR_CPY;
         if (vec_cpy_real) {
-            memcpy(_zptr, zptr, nlen * 4);
+#ifdef CONFIG_CPU_WL82
+            if (zptr < 0x4000120) {
+                _zptr = zptr;
+            } else
+#endif
+            {
+                memcpy(_zptr, zptr, nlen * 4);
+            }
         } else {
-            memcpy(_zptr, zptr, nlen * 4 * 2);
+#ifdef CONFIG_CPU_WL82
+            if (zptr < 0x4000120) {
+                _zptr = zptr;
+            } else
+#endif
+            {
+                memcpy(_zptr, zptr, nlen * 4 * 2);
+            }
         }
     } else if (zptr == xptr) {
         _zptr = _xptr;

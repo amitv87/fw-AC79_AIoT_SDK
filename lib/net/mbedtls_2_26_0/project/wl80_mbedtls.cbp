@@ -28,10 +28,10 @@
 					<Add directory="../../../../include_lib/system/generic" />
 					<Add directory="../../../../include_lib/driver/cpu/wl80" />
 					<Add directory="../../../../include_lib/net" />
-					<Add directory="../../../../include_lib/net/lwip_2_1_2/lwip/app" />
-					<Add directory="../../../../include_lib/net/lwip_2_1_2/lwip/app/sock_api" />
-					<Add directory="../../../../include_lib/net/lwip_2_1_2/lwip/src/include" />
-					<Add directory="../../../../include_lib/net/lwip_2_1_2/lwip/port" />
+					<Add directory="../../../../include_lib/net/lwip_2_1_3/lwip/app" />
+					<Add directory="../../../../include_lib/net/lwip_2_1_3/lwip/app/sock_api" />
+					<Add directory="../../../../include_lib/net/lwip_2_1_3/lwip/src/include" />
+					<Add directory="../../../../include_lib/net/lwip_2_1_3/lwip/port" />
 					<Add directory="../../../../include_lib/system/os/FreeRTOS/pi32_lto" />
 					<Add directory="../../../../include_lib/net/mbedtls_2_26_0" />
 					<Add directory="../../../../include_lib/net/mbedtls_2_26_0/mbedtls" />

@@ -89,9 +89,16 @@ typedef enum {
 #define SEN_MBUS_FIELD_EVEN_LOW                (1 << 15)
 
 #define SEN_MBUS_FIELDS                        (SEN_MBUS_FIELD_EVEN_HIGH | SEN_MBUS_FIELD_EVEN_LOW)
-
 #define SEN_MBUS_SYNC0_HSYNC_SYNC1_VSYNC       (1 << 16)
 #define SEN_MBUS_SYNC0_VSYNC_SYNC1_HSYNC       (1 << 17)
+
+#define SEN_MBUS_DATA_WIDTH_1B                 (1 << 18)
+#define SEN_MBUS_DATA_WIDTH_2B                 (1 << 19)
+#define SEN_MBUS_DATA_WIDTH_4B                 (1 << 20)
+#define SEN_MBUS_DATA_WIDTH_REVERSE            (1 << 21)
+
+//在1/2/4bit情况下，SEN_MBUS_PCKL_NO_FILTER和SEN_MBUS_PCLK_SAMPLE_RISING、SEN_MBUS_PCLK_SAMPLE_FALLING相关
+#define SEN_MBUS_PCKL_NO_FILTER				   (1 << 22)
 
 /* Serial flags */
 /* How many lanes the client can use */

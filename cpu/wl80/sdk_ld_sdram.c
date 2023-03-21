@@ -7,7 +7,7 @@ _start
 
 #include "app_config.h"
 
-BOOT_INFO_SIZE = 48;
+BOOT_INFO_SIZE = 52;
 
 #if defined CONFIG_MMU_ENABLE
 TLB_SIZE =(0X2000 * 2);

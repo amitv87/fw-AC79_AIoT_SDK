@@ -185,7 +185,15 @@ static void usb_msd_free(const usb_dev usbfd)
 #if TCFG_USB_SLAVE_CDC_ENABLE
 static void usb_cdc_wakeup(struct usb_device_t *usb_device)
 {
-//先post到任务，由任务调用cdc_read_data()读取再执行后续工作
+#ifdef PRODUCT_TEST_ENABLE
+    //进入PRODUCT_MODE后，将占用CDC数据接收通道
+    u8 product_tool_cdc_post(void);
+    if (product_tool_cdc_post()) {
+        return;
+    }
+#endif
+
+    //先post到任务，由任务调用cdc_read_data()读取再执行后续工作
     struct device_event e = {0};
     e.arg = usb_device;
     device_event_notify(DEVICE_EVENT_FROM_CFG_TOOL, &e);

@@ -221,7 +221,13 @@ void vector_real_zs32_ys8_mul_xs8(void *zptr, void *yptr, void *xptr, short len,
 }
 
 
-//add
+void vector_real_zs32_ys16_dot_product_xs16(void *zptr, void *yptr, void *xptr, short len, char q)
+{
+    long config;
+    config = VECZ_S32 |  VECY_S16 |  VECX_S16;
+    vector_real_dot_product(zptr, yptr, xptr, len, q,  config);
+}
+
 void vector_real_zs32_ys8_dot_product_xs8(void *zptr, void *yptr, void *xptr, short len, char q)
 {
     long config;

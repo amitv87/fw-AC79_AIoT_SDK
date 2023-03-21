@@ -7,12 +7,11 @@ _start
 
 #include "app_config.h"
 
-
 #if defined CONFIG_NO_SDRAM_ENABLE && !defined CONFIG_SFC_ENABLE
 #error "IF DEFINE CONFIG_NO_SDRAM_ENABLE ,MUST DEFINE CONFIG_SFC_ENABLE"
 #endif
 
-BOOT_INFO_SIZE = 48;
+BOOT_INFO_SIZE = 52;
 
 #if defined CONFIG_MMU_ENABLE
 TLB_SIZE =(0X1000 * 2);
@@ -52,6 +51,22 @@ SECTIONS
         *(.LOG_TAG_CONST*)
         *(.rodata*)
         *(.fat_data_code)
+
+        *(.dlmalloc_code)
+        *(.dlmalloc_const)
+        *(.mem_heap_code)
+        *(.mem_heap_const)
+
+        _os_begin = .;
+        PROVIDE(os_begin = .);
+        *(.os_code)
+        *(.os_const)
+        *(.os_str)
+        *(.os_critical_code)
+        *(.os_port_code)
+        *(.os_port_const)
+        _os_end = .;
+        PROVIDE(os_end = .);
 
         . = ALIGN(4);
         __VERSION_BEGIN = .;
@@ -145,7 +160,6 @@ SECTIONS
         PROVIDE(__rtatcmdtab_end = .);
 
         . = ALIGN(32);
-
         _text_rodata_end = .;
         PROVIDE(text_rodata_end = .);
     } >rom
@@ -182,24 +196,6 @@ SECTIONS
         *(.flushinv_icache)
         *(.volatile_ram_code)
 
-        *(.dlmalloc_code)
-        *(.dlmalloc_const)
-        *(.mem_heap_code)
-        *(.mem_heap_const)
-
-		_os_begin = .;
-		PROVIDE(os_begin = .);
-   		*(.os_code)
-	    *(.os_const)
-		*(.os_str)
-		*(.os_data)
-		*(.os_critical_code)
-		*(.os_port_code)
-		*(.os_port_data)
-		*(.os_port_const)
-		_os_end = .;
-   		PROVIDE(os_end = .);
-
         _ram_text_rodata_end = .;
         PROVIDE(ram_text_rodata_end = .);
 
@@ -211,6 +207,8 @@ SECTIONS
         *(.non_volatile_ram)
         *(.fft_data)
         *(.deepsleep_target)
+        *(.os_data)
+        *(.os_port_data)
 
 #if defined CONFIG_DNS_ENC_ENABLE
         . = ALIGN(4);
@@ -218,11 +216,11 @@ SECTIONS
 #endif
         . = ALIGN(4);
         #include "net/server/net_server_data.ld"
-
         . = ALIGN(4);
         #include "btctrler/btctler_lib_data.ld"
         . = ALIGN(4);
         #include "btstack/btstack_lib_data.ld"
+
         . = ALIGN(4); // must at tail, make ram0_data size align 4
     } > ram0
 
@@ -289,6 +287,10 @@ SECTIONS
     PROVIDE(HEAP_END = 0x1c00000 + RAM0_SIZE - 32);
     _MALLOC_SIZE = _HEAP_END - _HEAP_BEGIN;
     PROVIDE(MALLOC_SIZE = _HEAP_END - _HEAP_BEGIN);
+
+    PROVIDE(RAM_HEAP_BEGIN = 0);
+    PROVIDE(RAM_HEAP_END = 0);
+    PROVIDE(RAM_MALLOC_SIZE = 0);
 
     . =ORIGIN(boot_info);
     .boot_info ALIGN(4):

@@ -20,6 +20,10 @@ static struct lcd_device *lcd_dev;
 static const struct ui_lcd_platform_data *lcd_pdata = NULL;
 static void *lcd_hdl = NULL;
 
+void *get_lcd_hdl(void)
+{
+    return lcd_hdl;
+}
 // io口操作
 void lcd_rst_pinstate(u8 state)
 {
@@ -120,6 +124,8 @@ static int lcd_interface_init(void)
     void *priv = lcd_dev->lcd_priv;
     if (lcd_pdata->lcd_if == LCD_SPI) {
         lcd_hdl = dev_open(lcd_pdata->spi_id, NULL);
+        dev_ioctl(lcd_hdl, EMI_USE_SEND_SEM, 0);
+        dev_ioctl(lcd_hdl, IOCTL_SPI_NON_BLOCK, 1);//设置为非阻塞发送数据包
     } else if (lcd_pdata->lcd_if == LCD_IMD) {
         lcd_hdl = dev_open("imd", priv);
     } else if (lcd_pdata->lcd_if == LCD_PAP) {
@@ -127,7 +133,8 @@ static int lcd_interface_init(void)
     } else if (lcd_pdata->lcd_if == LCD_EMI) {
         lcd_hdl = dev_open("emi", NULL);
         if (lcd_hdl) {
-            dev_ioctl(lcd_hdl, EMI_USE_SEND_SEM, 0);
+            dev_ioctl(lcd_hdl, EMI_USE_SEND_SEM, 1);
+            dev_ioctl(lcd_hdl, IOCTL_EMI_WRITE_NON_BLOCK, 1);
         }
     }
 
@@ -138,6 +145,39 @@ static int lcd_interface_init(void)
 
     return 0;
 }
+
+
+bool lcd_interface_get_non_block(void)
+{
+    bool non_block;
+    void *priv = lcd_dev->lcd_priv;
+    if (lcd_pdata->lcd_if == LCD_SPI) {
+        dev_ioctl(lcd_hdl, IOCTL_SPI_GET_NON_BLOCK, &non_block);
+    } else if (lcd_pdata->lcd_if == LCD_EMI) {
+        dev_ioctl(lcd_hdl, IOCTL_EMI_GET_NON_BLOCK, &non_block);
+    }
+    return non_block;
+}
+
+void lcd_interface_set_non_block(u8 block)
+{
+    void *priv = lcd_dev->lcd_priv;
+    if (lcd_pdata->lcd_if == LCD_SPI) {
+        dev_ioctl(lcd_hdl, IOCTL_SPI_NON_BLOCK, block);
+    } else if (lcd_pdata->lcd_if == LCD_EMI) {
+        dev_ioctl(lcd_hdl, IOCTL_EMI_WRITE_NON_BLOCK, block);
+    }
+}
+void lcd_interface_non_block_wait(void)
+{
+    void *priv = lcd_dev->lcd_priv;
+    if (lcd_pdata->lcd_if == LCD_SPI) {
+        dev_ioctl(lcd_hdl, IOCTL_SPI_WRITE_NON_BLOCK_FLUSH, 0);//等待上一次发包完成
+    } else if (lcd_pdata->lcd_if == LCD_EMI) {
+        dev_ioctl(lcd_hdl, IOCTL_EMI_WRITE_NON_BLOCK_FLUSH, 0);//等待上一次发包完成
+    }
+}
+
 
 static int lcd_init(void *p)
 {
@@ -238,6 +278,17 @@ static void lcd_draw(u8 *buf, u32 len, u8 wait)
         lcd_dev->LCD_Draw_1(buf, len);
     }
 }
+
+static void user_draw(int x, int y, int w, int h, char *img)
+{
+    if (!lcd_dev) {
+        return ;
+    }
+    if (lcd_dev->LCD_Draw_2) {
+        lcd_dev->LCD_Draw_2(x, y, w, h, img);
+    }
+}
+
 static void lcd_draw_to_dev(u8 *buf, u32 len)
 {
     if (!lcd_dev) {
@@ -343,7 +394,12 @@ void lcd_show_frame(u8 *buf, u32 len)//该接口主要用于用户显示数据 /
     lcd_draw(buf, len, 0);
 }
 
-void lcd_lvgl_full(u16 xs, u16 xe, u16 ys, u16 ye, char *img)
+void user_show_frame(int x, int y, int w, int h, u8 *img)//该接口主要用于修改摄像头层数据 传入RGB数据
+{
+    user_draw(x, y, w, h, img);
+}
+
+void lcd_lvgl_full(u16 xs, u16 xe, u16 ys, u16 ye, u8 *img)
 {
     lcd_dev->LCD_Lvgl_Full(xs, xe, ys, ye, img);
 }
@@ -355,6 +411,7 @@ REGISTER_LCD_INTERFACE(lcd) = {
     .buffer_free = lcd_buffer_free,
     .draw = ui_draw,
     .draw_1 = lcd_draw,
+    .draw_2 = user_draw,
     .draw_lvgl = lcd_lvgl_full,
     .set_draw_area = lcd_set_draw_area,
     .backlight_ctrl = lcd_backlight_power,

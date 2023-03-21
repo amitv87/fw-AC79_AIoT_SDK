@@ -109,6 +109,7 @@ DEFINES := \
 	-DCONFIG_VIDEO_OSD_EN \
 	-DCONFIG_SFC_ENABLE \
 	-DCONFIG_AUDIO_ENABLE \
+	-DCONFIG_UI_ENABLE \
 	-DCONFIG_VIDEO_ENABLE=1 \
 	-DCONFIG_VIDEO0_ENABLE=1 \
 	-DCONFIG_NET_ENABLE=1 \
@@ -190,6 +191,7 @@ INCLUDES := \
 	-I../../../../include_lib/driver/device/usb/device \
 	-I../../../../include_lib/driver/device/usb/host \
 	-I../../../../apps/common/rf_fcc_tool/include \
+	-I../../../../apps/common/product_test_tool/includes \
 	-I../../../../apps/common/net/testbox/include \
 	-I$(SYS_INC_DIR) \
 
@@ -239,6 +241,10 @@ c_SRC_FILES := \
 	../../../../apps/common/net/testbox/wbcp.c \
 	../../../../apps/common/net/voiceprint_cfg.c \
 	../../../../apps/common/net/wifi_conf.c \
+	../../../../apps/common/product_test_tool/communication.c \
+	../../../../apps/common/product_test_tool/devices_control.c \
+	../../../../apps/common/product_test_tool/product_main.c \
+	../../../../apps/common/product_test_tool/product_port.c \
 	../../../../apps/common/rf_fcc_tool/rf_fcc_main.c \
 	../../../../apps/common/system/device_mount.c \
 	../../../../apps/common/system/flash_write_protect.c \
@@ -386,7 +392,6 @@ LFLAGS := \
 	--plugin-opt=-dont-used-symbol-list=malloc,free,sprintf,printf,puts,putchar \
 	--plugin-opt=save-temps \
 	--plugin-opt=-pi32v2-enable-rep-memop \
-	--plugin-opt=-warn-stack-size=2560 \
 	--sort-common \
 	--plugin-opt=-used-symbol-file=../../../../cpu/wl82/sdk_used_list.used \
 	--plugin-opt=-enable-movable-region=true \
@@ -427,7 +432,13 @@ LFLAGS := \
 	../../../../cpu/wl82/liba/ftpserver_new.a \
 	../../../../cpu/wl82/liba/net_server.a \
 	../../../../cpu/wl82/liba/libqrcode.a \
+	../../../../cpu/wl82/liba/lib_mp3_dec.a  \
 	--end-group \
+	../../../../cpu/wl82/liba/video_dec_server.a \
+	../../../../cpu/wl82/liba/ui.a \
+	../../../../cpu/wl82/liba/res.a \
+	../../../../cpu/wl82/liba/font.a \
+	../../../../cpu/wl82/liba/ui_draw.a \
 	-T../../../../cpu/wl82/sdk.ld \
 	-M=../../../../cpu/wl82/tools/sdk.map \
 	--plugin-opt=mcpu=r3 \

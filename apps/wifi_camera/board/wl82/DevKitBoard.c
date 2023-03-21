@@ -282,6 +282,19 @@ static const struct spiflash_platform_data spiflash_data = {
     .sfc_run_mode   = SFC_FAST_READ_DUAL_OUTPUT_MODE,
 };
 
+#ifdef CONFIG_SPI_VIDEO_ENABLE
+SPI2_PLATFORM_DATA_BEGIN(spi2_data)
+    .clk    = 80000000,
+#if CONFIG_SPI_ONE_LINE_ENABLE
+    .mode   = SPI_1WIRE_MODE,
+#else
+    .mode   = SPI_DUAL_MODE,
+#endif
+    .port   = 'C',
+    .attr   = SPI_MODE_SLAVE | SPI_SCLK_L_UPL_SMPL | SPI_UNIDIR_MODE,//主机，CLK低 更新数据低，单向模式
+SPI2_PLATFORM_DATA_END()
+#endif
+
 #ifdef CONFIG_UI_ENABLE
 #if TCFG_LCD_ILI9341_ENABLE
 #define EMI_BAUD_DIV	EMI_BAUD_DIV6
@@ -634,6 +647,10 @@ REGISTER_DEVICES(device_table) = {
     { "spi1", &spi_dev_ops, (void *)&spi1_data },
 #if TCFG_LCD_ST7735S_ENABLE || TCFG_LCD_ST7789V_ENABLE
     { "spi2", &spi_dev_ops, (void *)&spi2_data },
+#else
+#ifdef CONFIG_SPI_VIDEO_ENABLE
+    { "spi2", &spi_dev_ops, (void *)&spi2_data },
+#endif
 #endif
 
     {"rtc", &rtc_dev_ops, NULL},

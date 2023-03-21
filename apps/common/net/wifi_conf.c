@@ -82,6 +82,13 @@ const u8 CONFIG_SDIO_SLAVE_MODE = 0; //wifi模块作为sdio从机
 const u8 WIFI_TX_FULL_WAIT_MODE = 1; // 可以设置为0,1,2, 数值越大一定程度上会提高wifi的吞吐率，但同时会加大wifi线程占据cpu的比重
 
 const u8 WIFI_RECV_POLL; //wifi接收数据方式：0为中断方式接收，1为轮询方式接收
+
+#if CONFIG_BLE_MESH_ENABLE
+u8 wifi_lowpower_mode = 1;
+#else
+u8 wifi_lowpower_mode = 0;
+#endif
+
 /*--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 
 static void print_debug_ipv4(u32 daddr, u32 saddr)
@@ -434,7 +441,7 @@ PMFSHA256=0"
 
 /*PSMode=CAM\n\*/
 /*PSMode=Legacy_PSP\n\//STA休眠*/
-#ifdef CONFIG_LOW_POWER_ENABLE
+#if defined CONFIG_LOW_POWER_ENABLE || CONFIG_BLE_MESH_ENABLE
 #define WL_STA_SLEEP	1
 #else
 #define WL_STA_SLEEP	0
@@ -1351,3 +1358,12 @@ const unsigned long wl_rfd_ram_lut [256][2] = {
 
 #endif
 
+/**
+ * @brief Log (Verbose/Info/Debug/Warn/Error)
+ */
+/*-----------------------------------------------------------*/
+const char log_tag_const_v_WEBSOCKET AT(.LOG_TAG_CONST) = CONFIG_DEBUG_LIB(FALSE);
+const char log_tag_const_d_WEBSOCKET AT(.LOG_TAG_CONST) = CONFIG_DEBUG_LIB(FALSE);
+const char log_tag_const_i_WEBSOCKET AT(.LOG_TAG_CONST) = CONFIG_DEBUG_LIB(TRUE);
+const char log_tag_const_w_WEBSOCKET AT(.LOG_TAG_CONST) = CONFIG_DEBUG_LIB(TRUE);
+const char log_tag_const_e_WEBSOCKET AT(.LOG_TAG_CONST) = CONFIG_DEBUG_LIB(TRUE);

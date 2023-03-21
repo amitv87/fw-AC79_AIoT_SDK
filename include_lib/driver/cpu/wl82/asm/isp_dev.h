@@ -97,6 +97,9 @@ typedef enum {
 #define SEN_MBUS_DATA_WIDTH_4B                 (1 << 20)
 #define SEN_MBUS_DATA_WIDTH_REVERSE            (1 << 21)
 
+//在1/2/4bit情况下，SEN_MBUS_PCKL_NO_FILTER和SEN_MBUS_PCLK_SAMPLE_RISING、SEN_MBUS_PCLK_SAMPLE_FALLING相关
+#define SEN_MBUS_PCKL_NO_FILTER				   (1 << 22)
+
 /* Serial flags */
 /* How many lanes the client can use */
 #define SEN_MBUS_CSI2_1_LANE                   (1 << 0)

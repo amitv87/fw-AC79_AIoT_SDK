@@ -11,10 +11,9 @@
 #include "ui_api.h"
 #include "touch_event.h"
 #include "sys_common.h"
+#include "lcd_config.h"
 
 #if TCFG_TOUCH_GT911_ENABLE
-#define TEST 0
-
 
 
 #if 0
@@ -28,7 +27,7 @@ struct touch_hdl {
     u16 y;
     u8 status;
 };
-
+struct touch_hdl lvgl_touch_hdl;
 static OS_SEM touch_sem;
 
 extern int ui_touch_msg_post(struct touch_event *event);
@@ -231,8 +230,13 @@ static void tpd_down(int x, int y)
         tp_down_cnt = 0;
 
         t.action = tp_last_staus;
+#if HORIZONTAL_SCREEN
+        t.x = LCD_W - y;
+        t.y = x;
+#else
         t.x = x;
         t.y = y;
+#endif
         log_info("----tpd_hold----x=%d, y=%d", x, y);
         ui_touch_msg_post(&t);
         return;
@@ -277,8 +281,13 @@ static void tpd_down(int x, int y)
     first_x = x;
     first_y = y;
     t.action = tp_last_staus;
+#if HORIZONTAL_SCREEN
+    t.x = LCD_W - y;
+    t.y = x;
+#else
     t.x = x;
     t.y = y;
+#endif
     ui_touch_msg_post(&t);
 }
 
@@ -311,8 +320,13 @@ static void tpd_up(int x, int y)
     tp_last_staus = ELM_EVENT_TOUCH_UP;
     tp_down_cnt = 0;
     t.action = tp_last_staus;
+#if HORIZONTAL_SCREEN
+    t.x = LCD_W - y;
+    t.y = x;
+#else
     t.x = x;
     t.y = y;
+#endif
     log_info("----tpd_up----x=%d, y=%d", x, y);
     ui_touch_msg_post(&t);
 }
@@ -388,7 +402,7 @@ static void my_touch_test_task(void *priv)
 
 static int GT911_task_init(void)
 {
-    return thread_fork("my_touch_test_task", 10, 1024, 0, NULL, my_touch_test_task, NULL);
+    return thread_fork("my_touch_test_task", 29, 1024, 0, NULL, my_touch_test_task, NULL);
 }
 late_initcall(GT911_task_init);
 #endif

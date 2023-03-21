@@ -20,10 +20,17 @@
 #define EMI_FALLING_COLT	1
 
 
-#define EMI_MAGIC                          'E'
+#define EMI_MAGIC                        'E'
 #define EMI_SET_ISR_CB                   _IOW(EMI_MAGIC,1,u32)
-#define EMI_USE_SEND_SEM                 _IO(EMI_MAGIC,2)
-#define EMI_SET_WRITE_BLOCK              _IOW(EMI_MAGIC,3,u32)
+#define EMI_USE_SEND_SEM                 _IOW(EMI_MAGIC,2,u32)
+#define EMI_SET_WRITE_BLOCK			     _IOW(EMI_MAGIC,6,u32)
+
+//////////////////无法使用 为同步下面添加为兼容WL82
+#define IOCTL_EMI_WRITE_NON_BLOCK        _IOW(EMI_MAGIC,3,u32)
+#define IOCTL_EMI_WRITE_NON_BLOCK_FLUSH  _IOW(EMI_MAGIC,4,u32)
+#define EMI_SET_WRITE_TIMER_OUT          _IOW(EMI_MAGIC,5,u32)
+#define IOCTL_EMI_GET_NON_BLOCK			 _IOR(EMI_MAGIC,7,u32)
+//////////////////////
 
 enum EMI_BAUD {
     EMI_BAUD_DIV1 = 0,

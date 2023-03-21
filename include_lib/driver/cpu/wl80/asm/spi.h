@@ -56,6 +56,12 @@
 
 //SPI同一组多ABC口同时使用时切换口命令，使用示例：ioctl(spi_hdl, IOCTL_SPI_SET_PORT, 0);
 #define IOCTL_SPI_SET_PORT      	_IOW('S', 19, 1)
+//非阻塞方式发包
+#define IOCTL_SPI_NON_BLOCK      	_IOW('S', 20, 1)
+//休眠前需要调用这个当使用非阻塞方式发包时候
+#define IOCTL_SPI_WRITE_NON_BLOCK_FLUSH      	_IOW('S', 21, 1)
+//获取spi配置是否阻塞发送
+#define IOCTL_SPI_GET_NON_BLOCK     _IOR('S', 22, 4)
 
 
 

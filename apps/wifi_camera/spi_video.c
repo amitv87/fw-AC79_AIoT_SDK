@@ -25,29 +25,39 @@
 #error "sdram size no enough , sdram size must >= (2*1024*1024), noto : CONFIG_VIDEO1_ENABLE !!!"
 #endif
 
-#define SPI_VIDEO_SPIDEV_NAME		"spi1"
-#define SPI_VIDEO_USE_SPI_RECV		0   //1使用SPI接收(需要软件分离YUV),0使用硬件接收YUV
+
+#define SPI_VIDEO_SPIDEV_NAME		"spi2"
+#define SPI_VIDEO_USE_SPI_RECV		1   //1使用SPI接收(需要软件分离YUV),0使用硬件接收YUV
 #define SPI_VIDEO_YUV_USE_DMA   	1   //使用DMA拷贝
-#define SPI_VIDEO_REVERSAL   		90  //spi镜头翻转 0 90 180 270
-#define SPI_VIDEO_XCLK_12M_EN		0   //spi镜头的xclk时钟12M/24M, 1:12M, 0:24M
+#define SPI_VIDEO_REVERSAL   		0  //spi镜头翻转 0 90 180 270
+#define SPI_VIDEO_XCLK_EN			0   //spi镜头的xclk时钟12M/24M, 1:12M, 0:24M
 #define SPI_VIDEO_ONLY_Y			0   //1:只有Y数据
 #define SPI_APP_USE_ORIGINAL_SIZE	0   //1:手机APP使用摄像头尺寸不缩放
 #define SPI_YUV_ALWAYS_ON           0   //1:YUV一直打开
 
-/////////////////摄像头时钟输出/////////////////////////
-#ifdef SPI_VIDEO_XCLK_12M_EN
-#ifdef CONFIG_CPU_WL80  //AC79N
-#define SPI_VIDEO_XCLK_PORT		IO_PORTC_00
+#if (SPI_VIDEO_USE_SPI_RECV == 1)
+#define CONFIG_SPI_VIDEO_USE_ISC1_RECV 0
 #else
-#define SPI_VIDEO_XCLK_PORT		IO_PORTC_00
+#define CONFIG_SPI_VIDEO_USE_ISC1_RECV 1
+#endif
+
+/////////////////摄像头时钟输出/////////////////////////
+#ifdef SPI_VIDEO_XCLK_EN
+#ifdef CONFIG_CPU_WL80  //AC79N
+#define SPI_VIDEO_XCLK_PORT		IO_PORTH_08
+#else
+#define SPI_VIDEO_XCLK_PORT		IO_PORTH_08
 #endif
 #endif
 
-#define SPI_VIDEO_POWERDOWN_IO  IO_PORTH_09
+/*#define SPI_VIDEO_POWERDOWN_IO  IO_PORTH_09*/
 
 /////////////////BT656硬件接收/////////////////////////
-#define SPI_VIDEO_PCLK_PORT		IO_PORTC_08
-#define SPI_VIDEO_MISO_PORT		IO_PORTC_07
+#define SPI_VIDEO_PCLK_PORT				IO_PORTH_04
+#define SPI_VIDEO_START_IO_DATA0		IO_PORTH_03
+
+/*#define SPI_VIDEO_PCLK_PORT				IO_PORTC_08*/
+/*#define SPI_VIDEO_START_IO_DATA0		IO_PORTC_00*/
 ///////////////////////////////////////////
 
 /**********SPI state ************/
@@ -61,15 +71,19 @@
 /**********SPI video ************/
 #define SPI_LSTART	ntohl(0xff000080)
 #define SPI_LEND	ntohl(0xff00009d)
-#define SPI_FSTART	ntohl(0xff0000ab)//ntohl(0xff0000a9)
+#define SPI_FSTART	ntohl(0xff0000ab)
 #define SPI_FEND	ntohl(0xff0000b6)
+
+#define SPI_FSTART1	ntohl(0xff0000a9)//spi边缘接收偶尔某些镜头会偏差在头尾
+#define SPI_FEND1	ntohl(0xff0000a6)//spi边缘接收偶尔某些镜头会偏差在头尾
+
 #define SPI_FHEAD_SIZE	4
 #define SPI_FEND_SIZE	4
 #define SPI_LHEAD_SIZE	4
 #define SPI_LEND_SIZE	4
 
-#define SPI_CAMERA_W						240
-#define SPI_CAMERA_H						320
+#define SPI_CAMERA_W						320//CONFIG_VIDEO1_IMAGE_W //摄像头的分辨率-宽，需要和摄像头驱动设置的输出分辨率寄存器配置一致
+#define SPI_CAMERA_H						240//CONFIG_VIDEO1_IMAGE_H //摄像头的分辨率-高，需要和摄像头驱动设置的输出分辨率寄存器配置一致
 
 #if SPI_VIDEO_ONLY_Y
 #define SPI_CAMERA_ONLINE_SIZE				(SPI_CAMERA_W + SPI_LHEAD_SIZE + SPI_LEND_SIZE)//y
@@ -87,10 +101,10 @@
 #define SPI_CAMERA_MAX_DMA_CNT				(SPI_CAMERA_ONEFRAM_SIZE > SPI_MAX_SIZE ? (SPI_MAX_SIZE / SPI_CAMERA_ONLINE_SIZE * SPI_CAMERA_ONLINE_SIZE) : SPI_MAX_SIZE)
 
 #define SPI_CAMERA_BUFF_FPS	2
-#if SPI_VIDEO_USE_SPI_RECV
+#if !CONFIG_SPI_VIDEO_USE_ISC1_RECV
 static u8 spi_video_buf[SPI_CAMERA_ONEFRAM_SIZE * SPI_CAMERA_BUFF_FPS] SEC(.sram) ALIGNE(32);
 #else
-static u8 spi_video_buf[SPI_CAMERA_ONFRAM_YUV420_SIZE * SPI_CAMERA_BUFF_FPS] SEC(.sram) ALIGNE(32);
+static u8 spi_video_buf[SPI_CAMERA_ONFRAM_YUV420_SIZE * SPI_CAMERA_BUFF_FPS] ALIGNE(32);
 #endif
 
 #define SPI_VIDEO_BUFF_SIZE		(100*1024)
@@ -118,7 +132,7 @@ struct spi_video {
     void *net_priv;
     void (*yuv_cb)(u8 *buf, u32 size, int width, int height);
 
-#if !SPI_VIDEO_USE_SPI_RECV
+#if CONFIG_SPI_VIDEO_USE_ISC1_RECV
     u8 *frame_buf;
     u32 frame_buf_size;
     u32 frame_buf_cnt;
@@ -129,11 +143,6 @@ struct spi_video {
 
 } spi_video_info = {0};
 
-extern void bt656_one_line_init(u32 y, u32 yuv_size, int width, int height, sen_in_format_t mode);
-extern void bt656_one_line_io_init(u32 pclk_gpio, u32 miso_gpio);
-extern void bt656_one_line_framedone_reg(int *fdone_cb, void *parm);
-extern void bt656_one_line_en(char en);
-extern void bt656_one_line_exit(void);
 void sdfile_save_test(char *buf, int len, char one_file, char close);
 
 int spi_video_task_create(void *priv);
@@ -156,7 +165,7 @@ static void yuv_frame_done_callback_clear(void)
     yuv_done_callback_priv = NULL;
     __asm_csync();
 }
-#if !SPI_VIDEO_USE_SPI_RECV
+#if CONFIG_SPI_VIDEO_USE_ISC1_RECV
 int bt656_one_line_framedone_callback(void *priv, int id, void *blk_info)
 {
     struct yuv_block_info *block_info = (struct yuv_block_info *)blk_info;
@@ -394,8 +403,8 @@ static int spi_camera_open(void *net_priv)
 #ifdef SPI_VIDEO_POWERDOWN_IO
     gpio_direction_output(SPI_VIDEO_POWERDOWN_IO, 0);
 #endif
-#ifdef SPI_VIDEO_XCLK_12M_EN
-#if SPI_VIDEO_XCLK_12M_EN
+#ifdef SPI_VIDEO_XCLK_EN
+#if SPI_VIDEO_XCLK_EN
     gpio_set_output_clk(SPI_VIDEO_XCLK_PORT, 12);
 #else
     gpio_output_channle(SPI_VIDEO_XCLK_PORT, CH3_PLL_24M);
@@ -450,8 +459,8 @@ static int spi_camera_close(void)
 #ifdef SPI_VIDEO_POWERDOWN_IO
     gpio_direction_output(SPI_VIDEO_POWERDOWN_IO, 1);
 #endif
-#ifdef SPI_VIDEO_XCLK_12M_EN
-#if SPI_VIDEO_XCLK_12M_EN
+#ifdef SPI_VIDEO_XCLK_EN
+#if SPI_VIDEO_XCLK_EN
     gpio_clear_output_clk(SPI_VIDEO_XCLK_PORT, 12);
 #else
     gpio_clear_output_channle(SPI_VIDEO_XCLK_PORT, CH3_PLL_24M);
@@ -490,9 +499,8 @@ reinit:
     spi_video_info.frame 				= SPI_CAMERA_BUFF_FPS;
     spi_video_info.width 				= SPI_CAMERA_W;
     spi_video_info.height 				= SPI_CAMERA_H;
-    spi_video_info.frame_done 			= FALSE;
 
-#if SPI_VIDEO_USE_SPI_RECV
+#if !CONFIG_SPI_VIDEO_USE_ISC1_RECV
 #if SPI_VIDEO_ONLY_Y
     spi_video_info.fsize 				= SPI_CAMERA_ONFRAM_ONLY_Y_SIZE;
 #else
@@ -523,7 +531,8 @@ reinit:
         goto exit;
     }
 #else
-    spi_video_info.frame_buf_cnt 	= 0;
+    spi_video_info.frame_done 			= FALSE;
+    spi_video_info.frame_buf_cnt 		= 0;
     spi_video_info.fsize 				= SPI_CAMERA_ONFRAM_YUV420_SIZE;
     spi_video_info.frame_buf_size		= SPI_CAMERA_ONFRAM_YUV420_SIZE * SPI_CAMERA_BUFF_FPS;
     if (!spi_video_info.frame_buf) {
@@ -546,9 +555,7 @@ reinit:
                         spi_video_info.width,
                         spi_video_info.height,
                         SEN_IN_FORMAT_YUYV);
-    bt656_one_line_io_init(SPI_VIDEO_PCLK_PORT, SPI_VIDEO_MISO_PORT);
     bt656_one_line_framedone_reg((int *)bt656_one_line_framedone_callback, NULL);
-    bt656_one_line_en(1);
 #endif
     u8 cnt = 5;
 redo:
@@ -558,17 +565,30 @@ redo:
         }
         goto exit;
     }
-#if SPI_VIDEO_USE_SPI_RECV
+#if !CONFIG_SPI_VIDEO_USE_ISC1_RECV
     dev_ioctl(spi_video_info.spi_hdl, IOCTL_SPI_SET_IRQ_CPU_ID, (u32)1);
-    dev_ioctl(spi_video_info.spi_hdl, IOCTL_SPI_SET_USER_INFO, (u32)&spi_video_info.su);
+    dev_ioctl(spi_video_info.spi_hdl, IOCTL_SPI_SET_USER_INFO, (u32)&spi_video_info.su);//最后一步再设置
+#else
+    //在1/2/4bit情况下，SEN_MBUS_PCKL_NO_FILTER和SEN_MBUS_PCLK_SAMPLE_RISING、SEN_MBUS_PCLK_SAMPLE_FALLING相关
+    bt656_one_line_io_init(SPI_VIDEO_PCLK_PORT,
+                           SEN_MBUS_PCLK_SAMPLE_FALLING,
+                           0,
+                           SPI_VIDEO_START_IO_DATA0,
+                           CONFIG_SPI_ONE_LINE_ENABLE == 0 ? 2 : 1);//单双线
+#if (CONFIG_SPI_ONE_LINE_ENABLE == 0)
+    /* 使能硬件接收，在2/4bit下，最后一步在配置MSB正反向和移位（因为camera_device_open有可能会对MSB正反向和移位进行重置）*/
+    bt656_one_line_databits_config(SEN_MBUS_DATA_WIDTH_2B, 0, 6);//按照移位来配置对应输入IO
+    /*bt656_one_line_databits_config(SEN_MBUS_DATA_WIDTH_2B, 1, 6);//按照移位来配置对应输入IO*/
+    /*bt656_one_line_databits_config(SEN_MBUS_DATA_WIDTH_2B, 1, 1);//按照移位来配置对应输入IO*/
+#endif
+    bt656_one_line_en(1);//最后一步再打开
 #endif
 
     spi_video_info.init = TRUE;
     spi_video_info.out_frame = 0;
-    printf("---> read_buf \n");
     while (1) {
         os_taskq_accept(ARRAY_SIZE(msg), msg);
-#if SPI_VIDEO_USE_SPI_RECV
+#if !CONFIG_SPI_VIDEO_USE_ISC1_RECV
         ret = dev_ioctl(spi_video_info.spi_hdl, IOCTL_SPI_READ_DATA, (u32)&read_addr);
         if (thread_kill_req()) {
             break;
@@ -576,7 +596,7 @@ redo:
         if (ret > 0) {
             head = (int *)read_addr; //校验
             end = (int *)&read_addr[ret - 4]; //校验
-            if (*head == SPI_FSTART && *end == SPI_FEND) {
+            if ((*head == SPI_FSTART || *head == SPI_FSTART1) && (*end == SPI_FEND || *end == SPI_FEND1)) {
                 spi_video_info.out_frame++;
                 if (spi_video_info.out_frame <= 4) {//打开镜头后的前几帧出现光强变化：由黑变亮，在接收数据出错重新打开会使得APP出现闪光
                     dev_ioctl(spi_video_info.spi_hdl, IOCTL_SPI_FREE_DATA, 0);
@@ -619,7 +639,9 @@ redo:
                     read_buf = read_addr;
                     wlen = YUYV422ToYUV422p(spi_video_info.fbuf, read_buf, src_w, src_h);
                     wlen = YUV422pToYUV420p(read_buf, spi_video_info.fbuf, src_w, src_h);
+#if SPI_VIDEO_REVERSAL
                     wlen = YUV420p_REVERSAL(spi_video_info.fbuf, read_buf, src_w, src_h, &out_w, &out_h, SPI_VIDEO_REVERSAL);
+#endif
                     if (!wlen) {
                         goto free_data;
                     }
@@ -642,10 +664,7 @@ redo:
                         /*
                         static u32 cnt = 0;
                         cnt++;
-                        sdfile_save_test(read_buf, src_w * src_h * 3 / 2, 1, 0);
-                        if(cnt == 100){
-                        	sdfile_save_test(read_buf, src_w * src_h * 3 / 2, 1, 1);
-                        }
+                        sdfile_save_test(read_buf, src_w * src_h * 3 / 2, 1, cnt % 100 == 0);
                         */
                     }
 #endif
@@ -654,8 +673,9 @@ free_data:
                 dev_ioctl(spi_video_info.spi_hdl, IOCTL_SPI_FREE_DATA, 0);
             } else {
                 printf("---->SPI_FSTART = 0x%x , 0x%x \n", SPI_FSTART, SPI_FEND);
-                printf("---->head       = 0x%x , 0x%x \n", *head, *end);
-                printf("---->recv data err , reinit spi camera !!!\n");
+                printf("     SPI_FSTART = 0x%x , 0x%x \n", SPI_FSTART1, SPI_FEND1);
+                printf("---->err head       = 0x%x , 0x%x \n", *head, *end);
+                printf("recv data err , reinit spi camera !!!\n");
                 dev_ioctl(spi_video_info.spi_hdl, IOCTL_SPI_FREE_DATA, 0);
                 spi_video_info.reinit = TRUE;//需要重新打开摄像头
                 spi_video_info.state = SPI_VIDEO_RESEST;
@@ -701,13 +721,17 @@ free_data:
                     yuv_done_callback((void *)yuv_done_callback_priv, 1, (void *)&spi_blk_info);
                 } else {
                     putchar('R');
-                    /*static u32 cnt = 0;
+                    /*
+                    static u32 cnt = 0;
                     cnt++;
-                    sdfile_save_test(read_buf, src_w * src_h * 3 / 2, 1, cnt >= 100);*/
+                    sdfile_save_test(read_buf, src_w * src_h * 3 / 2, 1, cnt % 100 == 0);
+                    */
                 }
 free_data:
                 spi_video_info.frame_done = FALSE;
             }
+        } else {
+            printf("yuv recv timeout \n");
         }
 #endif
     }
@@ -720,7 +744,7 @@ exit:
     if (spi_video_info.reinit) {
         goto reinit;
     }
-#if !SPI_VIDEO_USE_SPI_RECV
+#if CONFIG_SPI_VIDEO_USE_ISC1_RECV
     bt656_one_line_exit();
 #endif
 
@@ -776,7 +800,7 @@ int spi_video_task_create(void *priv)
     }
 #endif
 
-#if !SPI_VIDEO_USE_SPI_RECV
+#if CONFIG_SPI_VIDEO_USE_ISC1_RECV
     if (!os_sem_valid(&spi_video_info.sem)) {
         os_sem_create(&spi_video_info.sem, 0);
     }
@@ -807,7 +831,7 @@ int spi_video_task_kill(void *priv)
 
     spi_video_wait_done();
 
-#if !SPI_VIDEO_USE_SPI_RECV
+#if CONFIG_SPI_VIDEO_USE_ISC1_RECV
     if (os_sem_valid(&spi_video_info.sem)) {
         os_sem_post(&spi_video_info.sem);
     }
@@ -830,7 +854,7 @@ int spi_video_task_kill(void *priv)
     if (spi_video_info.init && !spi_video_info.app_state && !spi_video_info.yuv_flow) {
         printf("---> spi video task kill \n");
         thread_kill(&spi_video_info.pid, 0);
-#if !SPI_VIDEO_USE_SPI_RECV
+#if CONFIG_SPI_VIDEO_USE_ISC1_RECV
         if (os_sem_valid(&spi_video_info.sem)) {
             os_sem_del(&spi_video_info.sem, 0);
         }
@@ -843,7 +867,7 @@ int spi_video_task_kill(void *priv)
 void sdfile_save_test(char *buf, int len, char one_file, char close)
 {
     static FILE *one_fd = NULL;
-    if (one_file && !close) {
+    if (one_file) {
         if (!one_fd) {
             /*one_fd = fopen(CONFIG_ROOT_PATH"YUV/test/jpg_***.jpg", "w+");*/
             one_fd = fopen(CONFIG_ROOT_PATH"YUV/test/yuv_***.yuv", "w+");

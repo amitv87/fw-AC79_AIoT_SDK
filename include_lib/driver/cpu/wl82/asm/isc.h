@@ -196,6 +196,13 @@ extern void isc_sen_frame_done_priv_set(void *isc, void *priv);
 extern void isc_sen_connet_to_jpeg(void *isc, char reset_isc);
 extern void isc_vhsync_exchange(void *isc, char isc_id, int sync);
 
+extern void bt656_one_line_init(void *yuv, u32 yuv_size, int width, int height, sen_in_format_t mode);
+extern void bt656_one_line_io_init(u32 pclk_gpio, u32 pclk_sample, u32 pclk_no_filter, u32 data0_gpio,  u32 data_gpio_num);
+extern void bt656_one_line_databits_config(u32 databit, u8 msb_lsb_rev, u8 shift);
+extern void bt656_one_line_pclk(u32 pclk_sample, u32 pclk_no_filter);
+extern void bt656_one_line_framedone_reg(int *fdone_cb, void *parm);
+extern void bt656_one_line_en(char en);
+extern void bt656_one_line_exit(void);
 
 
 #endif

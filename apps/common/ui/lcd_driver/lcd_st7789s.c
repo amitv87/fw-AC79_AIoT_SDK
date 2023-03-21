@@ -71,6 +71,7 @@ static void WriteDAT_8(u8 dat)
 
 static void WriteDAT_DMA(u8 *dat, u32 len)
 {
+    lcd_interface_non_block_wait();
     lcd_cs_pinstate(0);
     lcd_rs_pinstate(1);//dat
     lcd_send_map(dat, len);
@@ -137,6 +138,7 @@ void ST7789S_SetRange_1(u16 xs, u16 xe, u16 ys, u16 ye)
 
 void ST7789S_clear_screen(u32 color)
 {
+    lcd_interface_non_block_wait();
     WriteCOM(0x2c);
 
     u8 *buf = malloc(LCD_W * LCD_H * 2);
@@ -154,6 +156,7 @@ void ST7789S_clear_screen(u32 color)
 
 void ST7789S_Fill(u8 *img, u16 len)
 {
+    lcd_interface_non_block_wait();
     WriteCOM(0x2c);
     WriteDAT_DMA(img, len);
 }
@@ -172,6 +175,7 @@ void ST7789S_SleepOutMode(void)
 
 void st7789_shown_image(u8 *buff, u16 x_addr, u16 y_addr, u16 width, u16 height)
 {
+    lcd_interface_non_block_wait();
     ST7789S_SetRange(x_addr, y_addr, width, height);
     WriteDAT_DMA(buff, width * height * 2);
 }
