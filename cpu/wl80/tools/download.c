@@ -57,14 +57,17 @@ echo "packres\packres.exe -n tone -o packres/AUPACKRES audlogo" >> ${PROJ_BUILD}
 echo "set AUDIO_RES=audlogo" >> ${PROJ_BUILD}
 #endif
 #endif
+#if CONFIG_DOUBLE_BANK_ENABLE
+echo "UPDATE_FILES=-update_files normal" >> ${PROJ_BUILD}
+#endif
 #if defined CONFIG_SFC_ENABLE
-echo "isd_download.exe isd_config.ini -tonorflash -dev wl80 -boot 0x1c02000 -div1 -wait 300 -uboot uboot.boot -app app.bin cfg_tool.bin -res %AUDIO_RES% %UI_RES% cfg -reboot 500 -update_files normal" >> ${PROJ_BUILD}
+echo "isd_download.exe isd_config.ini -tonorflash -dev wl80 -boot 0x1c02000 -div1 -wait 300 -uboot uboot.boot -app app.bin cfg_tool.bin -res %AUDIO_RES% %UI_RES% cfg -reboot 500 %UPDATE_FILES%" >> ${PROJ_BUILD}
 #else
 echo "set run_addr=0x2000" >> ${PROJ_BUILD}
 echo "set load_addr=0x4000" >> ${PROJ_BUILD}
 echo "set mask_addr=0x100000" >> ${PROJ_BUILD}
 echo "uboot_lz4.exe app.bin app.lz4 %run_addr% %load_addr% rom.image %mask_addr%" >> ${PROJ_BUILD}
-echo "isd_download.exe isd_config.ini -tonorflash -dev wl80 -boot 0x1c02000 -div1 -wait 300 -uboot uboot.boot -app app.lz4 cfg_tool.bin -res %AUDIO_RES% %UI_RES% cfg -reboot 500 -update_files normal" >> ${PROJ_BUILD}
+echo "isd_download.exe isd_config.ini -tonorflash -dev wl80 -boot 0x1c02000 -div1 -wait 300 -uboot uboot.boot -app app.lz4 cfg_tool.bin -res %AUDIO_RES% %UI_RES% cfg -reboot 500 %UPDATE_FILES%" >> ${PROJ_BUILD}
 #endif
 
 
@@ -182,11 +185,14 @@ set mask_addr=0x100000
 uboot_lz4.exe app.bin app.lz4 %run_addr% %load_addr% rom.image %mask_addr%
 REM @@@@@@@@@@@@@@@
 
-isd_download.exe isd_config.ini -tonorflash -dev wl82 -boot 0x1c02000 -div1 -wait 300 -uboot uboot.boot -app app.lz4 cfg_tool.bin -res %AUDIO_RES% %UI_RES% %CFG_FILE% -reboot 500 %KEY_FILE% -update_files normal
+#if CONFIG_DOUBLE_BANK_ENABLE
+set UPDATE_FILES=-update_files normal
+#endif
+isd_download.exe isd_config.ini -tonorflash -dev wl80 -boot 0x1c02000 -div1 -wait 300 -uboot uboot.boot -app app.lz4 cfg_tool.bin -res %AUDIO_RES% %UI_RES% %CFG_FILE% -reboot 500 %KEY_FILE% %UPDATE_FILES%
 
 #else
 
-isd_download.exe isd_config.ini -tonorflash -dev wl82 -boot 0x1c02000 -div1 -wait 300 -uboot uboot.boot -app app.bin cfg_tool.bin -res %AUDIO_RES% %UI_RES% %CFG_FILE% -reboot 500 %KEY_FILE% -update_files normal
+isd_download.exe isd_config.ini -tonorflash -dev wl80 -boot 0x1c02000 -div1 -wait 300 -uboot uboot.boot -app app.bin cfg_tool.bin -res %AUDIO_RES% %UI_RES% %CFG_FILE% -reboot 500 %KEY_FILE% %UPDATE_FILES%
 
 #endif
 
