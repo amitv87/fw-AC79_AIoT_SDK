@@ -48,6 +48,11 @@ echo "packres\packres.exe -n ui -o packres/UIPACKRES ui_res" >> ${PROJ_BUILD}
 echo "set UI_RES=ui_res" >> ${PROJ_BUILD}
 #endif
 #endif
+
+#if CONFIG_DOUBLE_BANK_ENABLE
+echo "set UPDATE_FILES=-update_files normal" >> ${PROJ_BUILD}
+#endif
+
 #if defined CONFIG_AUDIO_ENABLE && defined CONFIG_VOICE_PROMPT_FILE_PATH
 #if defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_EXPAND_ZONE || defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_ZONE
 echo "packres\packres.exe -n tone -o packres/AUPACKRES audlogo" >> ${PROJ_BUILD}
@@ -55,7 +60,7 @@ echo "packres\packres.exe -n tone -o packres/AUPACKRES audlogo" >> ${PROJ_BUILD}
 echo "set AUDIO_RES=audlogo" >> ${PROJ_BUILD}
 #endif
 #endif
-echo "isd_download.exe isd_config.ini -tonorflash -dev wl82 -boot 0x1c02000 -div1 -wait 300 -uboot uboot.boot -app app.bin cfg_tool.bin -res %AUDIO_RES% cfg %UI_RES% -reboot 500 -update_files normal -expend-bin" >> ${PROJ_BUILD}
+echo "isd_download.exe isd_config.ini -tonorflash -dev wl82 -boot 0x1c02000 -div1 -wait 300 -uboot uboot.boot -app app.bin cfg_tool.bin -res %AUDIO_RES% cfg %UI_RES% -reboot 500 %UPDATE_FILES% -expend-bin" >> ${PROJ_BUILD}
 
 
 #if 0
@@ -129,7 +134,7 @@ REM %OBJDUMP% -D -address-mask=0x1ffffff -print-dbg %ELFFILE% > sdk.lst
 
 copy /b text.bin+data.bin+ram0_data.bin+cache_ram_data.bin app.bin
 
-#if defined CONFIG_UI_ENABLE 
+#if defined CONFIG_UI_ENABLE
 #if (defined CONFIG_UI_FILE_SAVE_IN_RESERVED_EXPAND_ZONE || defined CONFIG_UI_FILE_SAVE_IN_RESERVED_ZONE)
 packres\packres.exe -n ui -o packres/UIPACKRES ui_res
 #else
@@ -137,7 +142,7 @@ set UI_RES=ui_res
 #endif
 #endif
 
-#if defined CONFIG_AUDIO_ENABLE 
+#if defined CONFIG_AUDIO_ENABLE
 #if defined CONFIG_VOICE_PROMPT_FILE_PATH && \
 (defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_EXPAND_ZONE || defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_ZONE)
 packres\packres.exe -n tone -o packres/AUPACKRES audlogo
@@ -167,9 +172,11 @@ REM  生成code + res + 预留区资源升级文件
 REM  -update_files embedded $(files) ,其中$(files)为需要添加的资源文件
 REM  生成的文件名字为：db_update_files_data.bin
 
+#if CONFIG_DOUBLE_BANK_ENABLE
+set UPDATE_FILES=-update_files normal
+#endif
 
-isd_download.exe isd_config.ini -tonorflash -dev wl82 -boot 0x1c02000 -div1 -wait 300 -uboot uboot.boot -app app.bin cfg_tool.bin -res %AUDIO_RES% %UI_RES% %CFG_FILE% -reboot 500 %KEY_FILE% -update_files normal -expend-bin
-
+isd_download.exe isd_config.ini -tonorflash -dev wl82 -boot 0x1c02000 -div1 -wait 300 -uboot uboot.boot -app app.bin cfg_tool.bin -res %AUDIO_RES% %UI_RES% %CFG_FILE% -reboot 500 %KEY_FILE% %UPDATE_FILES% -expend-bin
 
 
 @REM 常用命令说明
