@@ -37,9 +37,9 @@ static u8 aim_filter_color_l;//rgb565
 static u8 aim_filter_color_h;
 static u8 turn_90_mode = HORIZONTAL_SCREEN;
 
-static u8 ui_save_buf[LCD_RGB565_DATA_SIZE]  ALIGNE(32);
-static u8 camera_save_buf[LCD_RGB565_DATA_SIZE] ALIGNE(32);
-static u8 show_buf[LCD_RGB565_DATA_SIZE]  ALIGNE(32);
+static u8 ui_save_buf[LCD_RGB565_DATA_SIZE]  ALIGNE(4);
+static u8 camera_save_buf[LCD_RGB565_DATA_SIZE] ALIGNE(4);
+static u8 show_buf[LCD_RGB565_DATA_SIZE]  ALIGNE(4);
 
 struct lbuf_test_head {
     u32 len;
@@ -106,7 +106,7 @@ static void picture_compose(u8 *ui_in, u8 *camera_in, u16 in_LCD_W, u16 in_LCD_H
     case 0://两张整图合成
         for (int j = 0; j < in_LCD_H; j++) {
             for (int i = 0; i < in_LCD_W; i++) {
-                if ((ui_in[n] != aim_filter_color_h) || (ui_in[n + 1] != aim_filter_color_l)) {
+                if ((ui_in[n] != aim_filter_color_h) && (ui_in[n + 1] != aim_filter_color_l)) {
                     camera_in[n] = ui_in[n];
                     camera_in[n + 1] = ui_in[n + 1];
                 }
@@ -117,7 +117,7 @@ static void picture_compose(u8 *ui_in, u8 *camera_in, u16 in_LCD_W, u16 in_LCD_H
     case 1://UI顶部条状合成
         for (int j = 0; j < user1_y_len; j++) {//Y
             for (int i = 0; i < LCD_W; i++) {//X
-                if (ui_in[n] != aim_filter_color_l || ui_in[n + 1] != aim_filter_color_h) {
+                if (ui_in[n] != aim_filter_color_l && ui_in[n + 1] != aim_filter_color_h) {
                     camera_in[n] = ui_in[n];
                     camera_in[n + 1] = ui_in[n + 1];
                 }
@@ -128,7 +128,7 @@ static void picture_compose(u8 *ui_in, u8 *camera_in, u16 in_LCD_W, u16 in_LCD_H
     case 2://ui顶部和底部条状合成
         for (int j = 0; j < user1_y_len; j++) {//Y
             for (int i = 0; i < LCD_W; i++) {//X
-                if (ui_in[n] != aim_filter_color_l || ui_in[n + 1] != aim_filter_color_h) {
+                if (ui_in[n] != aim_filter_color_l && ui_in[n + 1] != aim_filter_color_h) {
                     camera_in[n] = ui_in[n];
                     camera_in[n + 1] = ui_in[n + 1];
                 }
@@ -139,7 +139,7 @@ static void picture_compose(u8 *ui_in, u8 *camera_in, u16 in_LCD_W, u16 in_LCD_H
         n = user2_y * LCD_W * 2;
         for (int j = 0; j < user2_y_len; j++) {//Y
             for (int i = 0; i < LCD_W; i++) {//X
-                if (ui_in[n] != aim_filter_color_l || ui_in[n + 1] != aim_filter_color_h) {
+                if (ui_in[n] != aim_filter_color_l && ui_in[n + 1] != aim_filter_color_h) {
                     camera_in[n] = ui_in[n];
                     camera_in[n + 1] = ui_in[n + 1];
                 }

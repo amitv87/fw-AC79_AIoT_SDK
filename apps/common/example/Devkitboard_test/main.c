@@ -17,8 +17,8 @@
 static void get_yuv(u8 *yuv_buf, u32 len, int yuv_in_w, int yuv_in_h)//YUV数据回调线程
 {
     /*******将YUV输出数据转成屏幕大小的YUV*********************/
-    /*YUV420p_Cut(yuv_buf, yuv_in_w, yuv_in_h, yuv_buf, len, 480, LCD_W+480, 240, LCD_H+240);//裁剪取屏大小数据*/
-    YUV420p_Soft_Scaling(yuv_buf, NULL, yuv_in_w, yuv_in_h, LCD_W, LCD_H);
+    /*YUV420p_Cut(yuv_buf, yuv_in_w, yuv_in_h, yuv_buf, len, 480, LCD_H+480, 240, LCD_W+240);//裁剪取屏大小数据*/
+    YUV420p_Soft_Scaling(yuv_buf, NULL, yuv_in_w, yuv_in_h, LCD_H, LCD_W);
     lcd_show_frame(yuv_buf, LCD_YUV420_DATA_SIZE); //这里输出的是对应屏幕大小的YUV数据 发送到TE线程处理数据
 }
 

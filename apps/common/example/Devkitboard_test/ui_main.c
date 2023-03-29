@@ -27,14 +27,18 @@
 
 
 #define POST_TASK_DevKitBoard "DevKitBoard_task"
+#ifdef CONFIG_MP3_DEC_ENABLE
 extern void post_msg_play_flash_mp3(char *file_name, u8 dec_volume);
+#endif
 static u8 ui_show_text_flog = 0;
 /*==================开机播提示音已经开机动画==================*/
 static void open_animation(char speed)//开机图片以及开机音乐播放
 {
     set_lcd_show_data_mode(ui);
 
+#ifdef CONFIG_MP3_DEC_ENABLE
     post_msg_play_flash_mp3("poweron.mp3", 100); //开机提示音
+#endif
     ui_show_main(PAGE_0);
 
     for (u8 i = 0; i < 4; i++) {
@@ -404,7 +408,9 @@ static int music_ontouch(void *ctr, struct element_touch_event *e)
     case ELM_EVENT_TOUCH_DOWN:
         ui_hide_main(PAGE_8);
         ui_show_main(PAGE_1);
+#ifdef CONFIG_MP3_DEC_ENABLE
         post_msg_play_flash_mp3("NetDisc.mp3", 100);
+#endif
         wifi_music_end();
         break;
     }
@@ -492,7 +498,9 @@ static void ui_main_task(void *priv)
             }
             break;
         case UI_MSG_WIFI_STA_CONNT_OK://sta连接成功
+#ifdef CONFIG_MP3_DEC_ENABLE
             post_msg_play_flash_mp3("NetMusic.mp3", 100);
+#endif
             ui_text_set_textu_by_id(BASEFORM_48, str1, strlen(str1), FONT_DEFAULT | FONT_SHOW_MULTI_LINE);
             os_time_dly(150);
             ui_hide_main(PAGE_9);
@@ -536,4 +544,3 @@ static int ui_main_task_init(void)
 late_initcall(ui_main_task_init);
 
 #endif
-
