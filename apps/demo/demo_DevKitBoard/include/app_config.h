@@ -357,6 +357,7 @@
 
 #define USE_LCD_240X320_ILI9341                   0
 #define USE_LCD_320X480_ILI9481                   1
+#define USE_LCD_128X128_ST7735S                   0
 
 #if USE_LCD_240X320_ILI9341
 #define TCFG_TOUCH_GT911_ENABLE             	  1
@@ -367,6 +368,10 @@
 #define TCFG_TOUCH_FT6236_ENABLE                  1
 #define TCFG_LCD_ILI9481_ENABLE	    	    	  1
 #endif //USE_LCD_320X480_ILI9481
+
+#if USE_LCD_128X128_ST7735S
+#define TCFG_LCD_ST7735S_ENABLE                   1
+#endif //USE_LCD_128X128_ST7735S
 
 
 #ifdef USE_CAMERA_DVP_SHOW_TO_LCD_DEMO
@@ -390,5 +395,4 @@
 //**********************************END*******************************************//
 
 #endif
-
 

@@ -564,27 +564,18 @@ static const struct otg_dev_data otg_data = {
 //                                   UI模块配置                                    //
 //*********************************************************************************//
 #ifdef CONFIG_UI_ENABLE //注意使用UI不能使用SD卡D口 建议使用A口 io冲突问题
-#if TCFG_LCD_ILI9481_ENABLE
-#define EMI_BAUD		EMI_BAUD_DIV8
-#endif
-#if TCFG_LCD_ILI9341_ENABLE
-#define EMI_BAUD  		EMI_BAUD_DIV8
-#endif
 static const struct emi_platform_data emi_data = {
     .bits_mode      = EMI_8BITS_MODE,
-    .baudrate       = EMI_BAUD,			//clock = HSB_CLK / (baudrate + 1) , HSB分频
+    .baudrate       = EMI_BAUD_DIV8,			//clock = HSB_CLK / (baudrate + 1) , HSB分频
     .colection      = EMI_FALLING_COLT,		//EMI_FALLING_COLT / EMI_RISING_COLT : 下降沿 上升沿 采集数据
     .time_out       = 1 * 1000,				//最大写超时时间ms
     .th             = EMI_TWIDTH_NO_HALF,
     .ts             = 0,
-#if TCFG_LCD_ILI9481_ENABLE
-    .tw             = EMI_BAUD_DIV5 ,
-#else
-    .tw             = EMI_BAUD / 2,
-#endif
+    .tw             = EMI_BAUD_DIV6 ,
     .data_bit_en    = 0,					//0默认根据bits_mode数据位来配置
 };
 static const struct ui_lcd_platform_data pdata = {
+#if TCFG_LCD_ILI9481_ENABLE || TCFG_LCD_ILI9341_ENABLE
     .rst_pin = -1,
     .cs_pin = -1,
     .rs_pin = IO_PORTC_09,
@@ -593,6 +584,15 @@ static const struct ui_lcd_platform_data pdata = {
     .touch_int_pin = IO_PORTB_04,
    	.touch_reset_pin = IO_PORTB_00,
     .lcd_if  = LCD_EMI,//屏幕接口类型还有 PAP , SPI
+#endif
+#if TCFG_LCD_ST7735S_ENABLE
+    .spi_id  = "spi2",
+    .rs_pin  = IO_PORTA_05,
+    .te_pin  = -1,
+    .rst_pin = IO_PORTA_06,
+    .cs_pin  = -1,//接地
+    .lcd_if  = LCD_SPI,//屏幕接口类型还有 PAP , SPI
+#endif
 };
 const struct ui_devices_cfg ui_cfg_data = {
     .type = TFT_LCD,

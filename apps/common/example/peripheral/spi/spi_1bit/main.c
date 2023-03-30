@@ -2,7 +2,9 @@
 #include "system/includes.h"
 #include "device/device.h"
 #include "asm/spi.h"
+#include "device/gpio.h"
 
+#ifdef  USE_1BIT_TSET_DEMO
 //定义中断回调函数
 void spi_irq_cb(void *priv, u8 **data, u32 *len)
 {
@@ -75,7 +77,8 @@ static void spi_test_task(void *p)
             dev_ioctl(spi_hdl, IOCTL_SPI_FREE_DATA, 0);
         }
     }
-#else
+#endif
+
 
     /* 使用方法1：单次指定接收固定数据量。
     注意：此方法spi接收数据比较慢，因此对方主机的spi连续发送字节不能过快，否则丢数据（当数对方主机spi数据过快，请使用上述：用户指定接收块方法）
@@ -118,8 +121,6 @@ static void spi_test_task(void *p)
         }
     }
 
-#endif
-
 exit:
     if (su.buf) { //释放内存
         free(su.buf);
@@ -141,3 +142,26 @@ static int c_main(void)
     return 0;
 }
 late_initcall(c_main);
+#endif
+
+#ifdef USE_SPI_LCD_ST7735S_1BIT_TEST
+
+//说明该测试例子为spi1线推屏接口测试 最要用于测试接口推屏能力
+//需要将isd_config_rule.c
+//LSB_DIV=1; [低速总线时钟分频系数 LSB_DIV+1]
+//测试结果 320*240 1bit推屏帧率 44帧
+/* SPI2_PLATFORM_DATA_BEGIN(spi2_data) */
+/* .clk    = 80000000, */
+/* .clk    = 1000000,//开始测试的时候需要先将clk时钟降低 先点亮屏再逐步调高时钟 这个时钟跟屏的驱动配置相关 配置不佳clk上不去  */
+/* .mode   = SPI_1WIRE_MODE, */
+/* .port   = 'C', */
+/* .attr   = SPI_SCLK_L_UPH_SMPH | SPI_UNIDIR_MODE , */
+/* SPI2_PLATFORM_DATA_END() */
+
+static int c_main(void)
+{
+    user_lcd_init();
+}
+late_initcall(c_main);
+
+#endif

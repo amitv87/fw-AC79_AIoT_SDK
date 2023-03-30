@@ -4,11 +4,11 @@
 //对应测试例子放在apps/common/example文件夹下
 
 /****综合测试类*****/
-// #define USE_DevKitBoard_TEST_DEMO
-// #ifdef USE_DevKitBoard_TEST_DEMO
-// #define USE_DEMO_WIFI_TEST
-// #define USE_EDR_DEMO
-// #endif //USE_DevKitBoard_TEST_DEMO
+#define USE_DevKitBoard_TEST_DEMO
+#ifdef USE_DevKitBoard_TEST_DEMO
+#define USE_DEMO_WIFI_TEST
+#define USE_EDR_DEMO
+#endif //USE_DevKitBoard_TEST_DEMO
 
 /*****综合测试类******/
 //#define USE_WIFI_MUSIC_PLAY
@@ -49,7 +49,7 @@
 
 /*****VDIEO类******/
 //#define USE_SD_PLAY_AVI_DEMO
-#define USE_CAMERA_DVP_SHOW_TO_LCD_DEMO
+//#define USE_CAMERA_DVP_SHOW_TO_LCD_DEMO
 //#define FACE_DETECT_DEMO  // MUST DEFINE USE_CAMERA_DVP_SHOW_TO_LCD_DEMO
 
 
@@ -133,7 +133,7 @@
 //#define USE_GSENSOR_TEST_DEMO
 //#ifdef USE_GSENSOR_TEST_DEMO
 //#define CONFIG_GSENSOR_ENABLE
-
+//#define USE_SPI_LCD_ST7735S_1BIT_TEST
 //#endif
 
 /****传感器类*****/
