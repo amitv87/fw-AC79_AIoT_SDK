@@ -124,7 +124,6 @@ static int lcd_interface_init(void)
     void *priv = lcd_dev->lcd_priv;
     if (lcd_pdata->lcd_if == LCD_SPI) {
         lcd_hdl = dev_open(lcd_pdata->spi_id, NULL);
-        dev_ioctl(lcd_hdl, EMI_USE_SEND_SEM, 0);
         dev_ioctl(lcd_hdl, IOCTL_SPI_NON_BLOCK, 1);//设置为非阻塞发送数据包
     } else if (lcd_pdata->lcd_if == LCD_IMD) {
         lcd_hdl = dev_open("imd", priv);

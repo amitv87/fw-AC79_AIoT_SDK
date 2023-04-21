@@ -19,9 +19,11 @@
   */
 #ifndef __USB_BULK_TRANSFER_H__
 #define __USB_BULK_TRANSFER_H__
+
 #include "typedef.h"
 #include "device/device.h"
 
+#include "asm/usb.h"
 
 /**@brief   批量传输只读取（异步模式）
   * @param[in] device定义的结构体指针

@@ -212,17 +212,6 @@ const u8 speakerStringDescriptor[20] = {
 */
 /*********************************************************/
 
-///Standard Interface Association Descriptor
-static const u8 uac_mic_interface_association[] = {
-    USB_DT_INTERFACE_ASSOCIATION_SIZE,//Size of this descriptor in bytes
-    USB_DT_INTERFACE_ASSOCIATION,//INTERFACE ASSOCIATION Descriptor
-    2,//Interface number of the first interface that is associated with this function ****
-    1,//Number of contiguous interfaces that are associated with this function.
-    USB_CLASS_AUDIO,//AUDIO_FUNCTION Function Class code
-    USB_SUBCLASS_AUDIOSTREAMING,//FUNCTION_SUBCLASS_UNDEFINED
-    PC_PROTOCOL_UNDEFINED,//AF_VERSION_02_00 Function Protocol code.
-    MIC_STR_INDEX,//Index of a string descriptor that describes this interface
-};
 static const u8 uac_mic_ac_interface[] = {
 ///class-specific AC interface descriptor
     0x09,    //Length
@@ -1157,6 +1146,7 @@ u32 uac_mic_desc_config(const usb_dev usb_id, u8 *ptr, u32 *cur_itf_num)
     memcpy(tptr, (u8 *)uac_audio_interface_association, sizeof(uac_audio_interface_association));
     tptr[2] = *cur_itf_num;
     tptr[3] = 2;
+    tptr[7] = MIC_STR_INDEX;
     tptr += sizeof(uac_audio_interface_association);
 
     memcpy(tptr, (u8 *)uac_ac_standard_interface_desc, sizeof(uac_ac_standard_interface_desc));

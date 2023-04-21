@@ -348,6 +348,7 @@ static void putdebugreg(void)
     uart_putchar('\n');
 }
 AT(.volatile_ram_code)
+___interrupt
 static void exception_analyze_sram(void)
 {
     u32 rets, reti, cpu_id;

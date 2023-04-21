@@ -329,6 +329,7 @@ static void ILI9341_reg_cfg(void)
 
 static void ILI9341_lvgl_Fill(u16 xs, u16 xe, u16 ys, u16 ye, char *img)
 {
+    lcd_interface_non_block_wait();
     u32 len = 0;
     len = (xe + 1 - xs) * (ye + 1 - ys) * 2;
     WriteCOM(0x2A);

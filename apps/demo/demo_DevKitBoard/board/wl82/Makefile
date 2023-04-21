@@ -285,6 +285,7 @@ c_SRC_FILES := \
 	../../../../../apps/common/example/peripheral/gsensor/main.c \
 	../../../../../apps/common/example/peripheral/pwm/main.c \
 	../../../../../apps/common/example/peripheral/pwm/pwm_led.c \
+	../../../../../apps/common/example/peripheral/spi/spi_1bit/main.c \
 	../../../../../apps/common/example/peripheral/timer/test1.c \
 	../../../../../apps/common/example/peripheral/timer/test2.c \
 	../../../../../apps/common/example/peripheral/uart/uart_test.c \

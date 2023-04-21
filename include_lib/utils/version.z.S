@@ -4,4 +4,4 @@
 
 include_lib_utils_version:
 
-.asciz "INCLUDE_UTILS-$f88faa8"
+.asciz "INCLUDE_UTILS-$1e8b1e8"

@@ -136,7 +136,6 @@ void ST7735S_set_direction(u8 dir)
 
 void ST7735S_clear_screen(u16 color)
 {
-    dev_ioctl(lcd_hdl, IOCTL_SPI_WRITE_NON_BLOCK_FLUSH, 0);//等待上一次发包完成
     WriteCOM(0x2c);
     u8 *buf = malloc(st7735s_lcd_w * st7735s_lcd_h * 2);
     if (!buf) {
@@ -173,7 +172,6 @@ void ST7735SHS177PanelSleepOutMode(void)
 void st7735_shown_image(u8 *buff, u16 x_addr, u16 y_addr, u16 width, u16 height)
 {
     u32 i = 0;
-    dev_ioctl(lcd_hdl, IOCTL_SPI_WRITE_NON_BLOCK_FLUSH, 0);//等待上一次发包完成
     st7735s_set_xy_addr(x_addr, y_addr, width, height);
     WriteDAT_DMA(buff, width * height * 2);
 }
@@ -314,19 +312,17 @@ static void ST7735S_reg_cfg(void)
 
 static void st7735s_test(void)
 {
-    while (1) {
-        ST7735S_clear_screen(BLUE);
-        printf("LCD_ST7735S_TSET_BLUE\n");
-        os_time_dly(10);
-        ST7735S_clear_screen(GRED);
-        printf("LCD_ST7735S_TSET_GRED\n");
-        os_time_dly(10);
-        ST7735S_clear_screen(BRRED);
-        printf("LCD_ST7735S_TSET_BRRED\n");
-        os_time_dly(10);
-        ST7735S_clear_screen(YELLOW);
-        printf("LCD_ST7735S_TSET_YELLOW\n");
-    }
+    ST7735S_clear_screen(BLUE);
+    printf("LCD_ST7735S_TSET_BLUE\n");
+    os_time_dly(10);
+    ST7735S_clear_screen(GRED);
+    printf("LCD_ST7735S_TSET_GRED\n");
+    os_time_dly(10);
+    ST7735S_clear_screen(BRRED);
+    printf("LCD_ST7735S_TSET_BRRED\n");
+    os_time_dly(10);
+    ST7735S_clear_screen(YELLOW);
+    printf("LCD_ST7735S_TSET_YELLOW\n");
 }
 
 static int ST7735S_init(void)

@@ -82,7 +82,7 @@ int yuv420_block_scan(void *info)
     }
     if (yuv_info->start && yuv_app.line < yuv_app.h) { //根据传入的Y进行裁剪
         for (j = 0, k = 0; j < yuv_info->line && k < yuv_info->line; yuv_app.line++) {
-            for (i = 0; i < yuv_app.w; i++) {
+            for (i = 0; i < yuv_app.w && yuv_app.y < (yuv_app.base + yuv_app.w * yuv_app.h); i++) {
                 *yuv_app.y++ = *(u8 *)(yuv_info->y + k * yuv_info->width + i * yuv_info->width / yuv_app.w);
             }
             k = (++j) * yuv_info->height / yuv_app.h;
@@ -90,7 +90,7 @@ int yuv420_block_scan(void *info)
     } else if (!yuv_info->start && yuv_app.line >= (yuv_app.h - 8)) { //减8是位流为了防止裁剪不是整除导致行不足
         u8 *tmp = yuv_app.y - yuv_app.w;
         for (; yuv_app.line < yuv_app.h; yuv_app.line++) {
-            for (i = 0; i < yuv_app.w; i++) {
+            for (i = 0; i < yuv_app.w && yuv_app.y < (yuv_app.base + yuv_app.w * yuv_app.h); i++) {
                 *yuv_app.y++ = *(u8 *)(tmp + i);
             }
         }

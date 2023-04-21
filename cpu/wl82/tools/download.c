@@ -21,18 +21,18 @@ echo "echo 加一下中文注释,防止服务器导出不了报错" >> ${PROJ_BU
 echo "echo 加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释,防止服务器导出不了报错,加一下中文注释" >> ${PROJ_BUILD}
 
 #if defined CONFIG_UI_ENABLE
+#if UI_USE_WIFI_CAMERA_PROJECT
 echo "@echo                                        "是否输出UI资源文件_按Y_不生成继续_按N生成并继续_倒计时3s自动选择Y"" >> ${PROJ_BUILD}
 echo "choice /t 3 /c ync /n /d y" >> ${PROJ_BUILD}
 echo "if %errorlevel%==1 goto end" >> ${PROJ_BUILD}
 echo "if %errorlevel%==2 goto continue" >> ${PROJ_BUILD}
 echo ":continue" >> ${PROJ_BUILD}
-#if defined UI_USE_WIFI_CAMERA_PROJECT
 echo "cd ..\..\..\ui_project\3.ui_demo_wifi_camera\ui_320x480_test\project" >> ${PROJ_BUILD}
 echo "start auto_ui_res.bat" >> ${PROJ_BUILD}
 echo "cd ..\..\..\..\cpu\wl82\tools" >> ${PROJ_BUILD}
 echo "TIMEOUT /T 8" >> ${PROJ_BUILD}
-#endif
 echo ":end" >> ${PROJ_BUILD}
+#endif
 #endif
 
 echo "set OBJDUMP=C:\JL\pi32\bin\llvm-objdump.exe" >> ${PROJ_BUILD}
@@ -121,7 +121,7 @@ cd /d %~dp0
 echo %*
 
 #if defined CONFIG_UI_ENABLE
-#if defined UI_USE_WIFI_CAMERA_PROJECT
+#if UI_USE_WIFI_CAMERA_PROJECT
 cd ..\..\..\ui_project\3.ui_demo_wifi_camera\ui_320x480_test\project
 start auto_ui_res.bat
 cd ..\..\..\..\cpu\wl82\tools

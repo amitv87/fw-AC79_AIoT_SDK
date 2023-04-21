@@ -1,4 +1,6 @@
 #include "app_config.h"
+
+#if defined CONFIG_UI_ENABLE && defined CONFIG_VIDEO_ENABLE && !(defined RAW_STREAM_ENABLE)
 #include "device/device.h"
 #include "os/os_api.h"
 #include "generic/lbuf.h"
@@ -205,8 +207,9 @@ extern int uvc_host_online(void);
 static u32 jpeg_cb(void *hdr, u8 *data, u32 len)
 {
 #define JPEG_HEAD 0xE0FFD8FF
+#define JPEG_HEAD1 0xC0FFD8FF
     u32 *head = (u32 *)data;
-    if (*head == JPEG_HEAD) {
+    if (*head == JPEG_HEAD || *head == JPEG_HEAD1) {
         //video
         jpeg2yuv_jpeg_frame_write(data, len);
     } else {
@@ -285,4 +288,5 @@ static int camera_to_lcd_init(void)
 }
 late_initcall(camera_to_lcd_init);
 
+#endif
 #endif

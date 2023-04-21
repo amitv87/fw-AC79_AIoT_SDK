@@ -589,8 +589,8 @@ static const struct ui_lcd_platform_data pdata = {
     .spi_id  = "spi2",
     .rs_pin  = IO_PORTA_05,
     .te_pin  = -1,
-    .rst_pin = IO_PORTA_06,
-    .cs_pin  = -1,//接地
+    .rst_pin = -1,
+    .cs_pin  = -1,
     .lcd_if  = LCD_SPI,//屏幕接口类型还有 PAP , SPI
 #endif
 };

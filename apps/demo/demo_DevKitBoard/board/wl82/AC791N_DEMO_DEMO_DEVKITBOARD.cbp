@@ -350,6 +350,7 @@
 <Unit filename="../../../../../apps/common/example/peripheral/gsensor/main.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/example/peripheral/pwm/main.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/example/peripheral/pwm/pwm_led.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../apps/common/example/peripheral/spi/spi_1bit/main.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/example/peripheral/timer/test1.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/example/peripheral/timer/test2.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/example/peripheral/uart/uart_test.c"><Option compilerVer="CC"/></Unit>
@@ -881,7 +882,6 @@
 <Unit filename="../../../../../include_lib/system/app_msg.h" />
 <Unit filename="../../../../../include_lib/system/bank_switch.h" />
 <Unit filename="../../../../../include_lib/system/boot.h" />
-<Unit filename="../../../../../include_lib/system/child_face_detect.h" />
 <Unit filename="../../../../../include_lib/system/database.h" />
 <Unit filename="../../../../../include_lib/system/debug.h" />
 <Unit filename="../../../../../include_lib/system/generic/ascii.h" />

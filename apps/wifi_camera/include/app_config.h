@@ -328,6 +328,7 @@
 //*********************************************************************************//
 #ifdef CONFIG_UI_ENABLE
 
+#define UI_USE_WIFI_CAMERA_PROJECT          0  //是否使用自动批处理生成资源文件
 #define CONFIG_VIDEO_DEC_ENABLE             1  //打开视频解码器
 #define TCFG_LCD_ENABLE                     1  //使用lcd屏幕
 #define TCFG_DEMO_UI_RUN                    1  //开机运行ui_demo.c

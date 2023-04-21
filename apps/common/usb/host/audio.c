@@ -1743,6 +1743,8 @@ void usb_audio_start_player(const usb_dev usb_id, u8 channel, u8 bit_reso, u32 s
     usb_host_speaker_set_mute(usb_id, 0);
     usb_host_speaker_set_volume(usb_id, HOST_SPK_VOLUME);
 
+    /* user_host_speaker_control(host_dev); */ //与AC53通信开启dac
+
     OS_SEM sem;
     os_sem_create(&sem, 0);
     __this->wait_sem = &sem;

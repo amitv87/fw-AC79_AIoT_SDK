@@ -544,3 +544,4 @@ static int ui_main_task_init(void)
 late_initcall(ui_main_task_init);
 
 #endif
+
