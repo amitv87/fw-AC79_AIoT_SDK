@@ -102,6 +102,7 @@ struct low_power_param {
 
 #define RISING_EDGE         0
 #define FALLING_EDGE        1
+#define AUTO_PUPD           BIT(1)  //IO边缘自动配置内部上下拉（IO外部不能接高于VDDIO电压，否则电流倒灌）
 
 #define POWER_KEEP_DACVDD	BIT(0) //休眠:DACVDD保持工作
 #define POWER_KEEP_RTC		BIT(1) //休眠:RTC保持工作

@@ -256,9 +256,9 @@ static void aisp_task(void *priv)
 
     dui_auth_info_t auth_info;
     /* 此处信息请根据dui信息修改 https://www.duiopen.com/ */
-    auth_info.productKey = "请向思必驰购买lisence";
-    auth_info.productId = "请向思必驰购买lisence";
-    auth_info.ProductSecret = "请向思必驰购买lisence";
+    auth_info.productKey = "58f1aeeb54fadab27a6ce70fd222ec46";
+    auth_info.productId = "279594353";
+    auth_info.ProductSecret = "89249b0fb48d7c12454a079fc97aee72";
     extern int app_dui_auth_second(dui_auth_info_t *auth_info, u8 mark);
     if (0 != app_dui_auth_second(&auth_info, 0)) {
         printf("dui auth fail, please contact aispeech!!!\n");

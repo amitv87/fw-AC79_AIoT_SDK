@@ -407,6 +407,13 @@ static u32 _usb_host_mount(const usb_dev usb_id, u32 retry, u32 reset_delay, u32
 
     for (int i = 0; i < retry; i++) {
         usb_h_sie_init(usb_id);
+#if defined(FUSB_MODE) && FUSB_MODE
+        usb_write_power(usb_id, 0x40);
+#elif defined(FUSB_MODE) && (FUSB_MODE==0)
+        usb_write_power(usb_id, 0x60);
+#else
+#error "USB_SPEED_MODE not defined"
+#endif
         ret = usb_host_init(usb_id, reset_delay, mount_timeout);
         if (ret) {
             reset_delay += 10;

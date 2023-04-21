@@ -1071,6 +1071,12 @@ u32 uac_spk_desc_config(const usb_dev usb_id, u8 *ptr, u32 *cur_itf_num)
     u32 frame_len;
 
     log_debug("spkdc:%d\n", *cur_itf_num);
+
+    memcpy(tptr, (u8 *)uac_spk_interface_association, sizeof(uac_spk_interface_association));
+    tptr[2] = *cur_itf_num;
+    tptr[3] = 2;
+    tptr += sizeof(uac_spk_interface_association);
+
     memcpy(tptr, (u8 *)uac_ac_standard_interface_desc, sizeof(uac_ac_standard_interface_desc));
     tptr[2] = *cur_itf_num;
     tptr += sizeof(uac_ac_standard_interface_desc);//0x09
@@ -1145,6 +1151,11 @@ u32 uac_mic_desc_config(const usb_dev usb_id, u8 *ptr, u32 *cur_itf_num)
     u32 frame_len;
 
     log_debug("micdc:%d\n", *cur_itf_num);
+
+    memcpy(tptr, (u8 *)uac_spk_interface_association, sizeof(uac_spk_interface_association));
+    tptr[2] = *cur_itf_num;
+    tptr[3] = 2;
+    tptr += sizeof(uac_spk_interface_association);
 
     memcpy(tptr, (u8 *)uac_ac_standard_interface_desc, sizeof(uac_ac_standard_interface_desc));
     tptr[2] = *cur_itf_num;
@@ -1240,6 +1251,11 @@ u32 uac_audio_desc_config(const usb_dev usb_id, u8 *ptr, u32 *cur_itf_num)
     u8 *tptr = ptr;
     u32 offset;
     u32 frame_len;
+
+    memcpy(tptr, (u8 *)uac_spk_interface_association, sizeof(uac_spk_interface_association));
+    tptr[2] = *cur_itf_num;
+    tptr[3] = 3;
+    tptr += sizeof(uac_spk_interface_association);
 
     memcpy(tptr, (u8 *)uac_ac_standard_interface_desc, sizeof(uac_ac_standard_interface_desc));
     tptr[2] = *cur_itf_num;

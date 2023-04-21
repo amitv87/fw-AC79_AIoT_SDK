@@ -19,7 +19,7 @@ const int MP3_OUTPUT_LEN = 4;
 const int MP3_TGF_TWS_EN = 0;
 const int MP3_TGF_AB_EN  = 0;
 const int MP3_TGF_FASTMO = 0;
-const int MP3_SEARCH_MAX = 13;
+const int MP3_SEARCH_MAX = 20;
 const int MP3_TGF_POSPLAY_EN = 1;
 #endif
 
