@@ -28,6 +28,7 @@ const u8 audio_eq_ver[4] 			= {0, 8, 0, 0};
 #define EQ_FILE_CP_TO_CUSTOM  0
 #endif
 #ifndef TCFG_USER_EQ_MODE_NUM
+//该宏由于使用枚举成员的值, 不能够使用该宏做预处理条件判断
 #define TCFG_USER_EQ_MODE_NUM EQ_MODE_MAX
 #endif
 /*************************************************************/
@@ -39,7 +40,6 @@ const u8 audio_eq_ver[4] 			= {0, 8, 0, 0};
 
 #if !TCFG_EQ_FILE_ENABLE
 static const struct eq_seg_info eq_tab_normal[] = {
-#if TCFG_USER_EQ_MODE_NUM > 0
     {0, EQ_IIR_TYPE_BAND_PASS, 31,    0, AUDIO_EQ_Q},
     {1, EQ_IIR_TYPE_BAND_PASS, 62,    0, AUDIO_EQ_Q},
     {2, EQ_IIR_TYPE_BAND_PASS, 125,   0, AUDIO_EQ_Q},
@@ -65,11 +65,9 @@ static const struct eq_seg_info eq_tab_normal[] = {
     {19, EQ_IIR_TYPE_BAND_PASS, 96000, 0, AUDIO_EQ_Q},
 #endif
 
-#endif
 };
 
 static const struct eq_seg_info eq_tab_rock[] = {
-#if TCFG_USER_EQ_MODE_NUM > 1
     {0, EQ_IIR_TYPE_BAND_PASS, 31,    -2, AUDIO_EQ_Q},
     {1, EQ_IIR_TYPE_BAND_PASS, 62,     0, AUDIO_EQ_Q},
     {2, EQ_IIR_TYPE_BAND_PASS, 125,    2, AUDIO_EQ_Q},
@@ -95,11 +93,9 @@ static const struct eq_seg_info eq_tab_rock[] = {
     {19, EQ_IIR_TYPE_BAND_PASS, 96000, 0, AUDIO_EQ_Q},
 #endif
 
-#endif
 };
 
 static const struct eq_seg_info eq_tab_pop[] = {
-#if TCFG_USER_EQ_MODE_NUM > 2
     {0, EQ_IIR_TYPE_BAND_PASS, 31,     3, AUDIO_EQ_Q},
     {1, EQ_IIR_TYPE_BAND_PASS, 62,     1, AUDIO_EQ_Q},
     {2, EQ_IIR_TYPE_BAND_PASS, 125,    0, AUDIO_EQ_Q},
@@ -125,11 +121,9 @@ static const struct eq_seg_info eq_tab_pop[] = {
     {19, EQ_IIR_TYPE_BAND_PASS, 96000, 0, AUDIO_EQ_Q},
 #endif
 
-#endif
 };
 
 static const struct eq_seg_info eq_tab_classic[] = {
-#if TCFG_USER_EQ_MODE_NUM > 3
     {0, EQ_IIR_TYPE_BAND_PASS, 31,     0, AUDIO_EQ_Q},
     {1, EQ_IIR_TYPE_BAND_PASS, 62,     8, AUDIO_EQ_Q},
     {2, EQ_IIR_TYPE_BAND_PASS, 125,    8, AUDIO_EQ_Q},
@@ -155,11 +149,9 @@ static const struct eq_seg_info eq_tab_classic[] = {
     {19, EQ_IIR_TYPE_BAND_PASS, 96000, 0, AUDIO_EQ_Q},
 #endif
 
-#endif
 };
 
 static const struct eq_seg_info eq_tab_country[] = {
-#if TCFG_USER_EQ_MODE_NUM > 5
     {0, EQ_IIR_TYPE_BAND_PASS, 31,     -2, AUDIO_EQ_Q},
     {1, EQ_IIR_TYPE_BAND_PASS, 62,     0, AUDIO_EQ_Q},
     {2, EQ_IIR_TYPE_BAND_PASS, 125,    0, AUDIO_EQ_Q},
@@ -184,11 +176,9 @@ static const struct eq_seg_info eq_tab_country[] = {
     {18, EQ_IIR_TYPE_BAND_PASS, 96000, 0, AUDIO_EQ_Q},
     {19, EQ_IIR_TYPE_BAND_PASS, 96000, 0, AUDIO_EQ_Q},
 #endif
-#endif
 };
 
 static const struct eq_seg_info eq_tab_jazz[] = {
-#if TCFG_USER_EQ_MODE_NUM > 4
     {0, EQ_IIR_TYPE_BAND_PASS, 31,     0, AUDIO_EQ_Q},
     {1, EQ_IIR_TYPE_BAND_PASS, 62,     0, AUDIO_EQ_Q},
     {2, EQ_IIR_TYPE_BAND_PASS, 125,    0, AUDIO_EQ_Q},
@@ -213,12 +203,10 @@ static const struct eq_seg_info eq_tab_jazz[] = {
     {18, EQ_IIR_TYPE_BAND_PASS, 96000, 0, AUDIO_EQ_Q},
     {19, EQ_IIR_TYPE_BAND_PASS, 96000, 0, AUDIO_EQ_Q},
 #endif
-#endif
 
 };
 
 static struct eq_seg_info eq_tab_custom[] = {
-#if TCFG_USER_EQ_MODE_NUM > 6
     {0, EQ_IIR_TYPE_BAND_PASS, 31,    0, AUDIO_EQ_Q},
     {1, EQ_IIR_TYPE_BAND_PASS, 62,    0, AUDIO_EQ_Q},
     {2, EQ_IIR_TYPE_BAND_PASS, 125,   0, AUDIO_EQ_Q},
@@ -244,7 +232,6 @@ static struct eq_seg_info eq_tab_custom[] = {
     {19, EQ_IIR_TYPE_BAND_PASS, 96000, 0, AUDIO_EQ_Q},
 #endif
 
-#endif
 };
 
 static const EQ_CFG_SEG *eq_type_tab[EQ_MODE_MAX] = {
@@ -504,7 +491,7 @@ static int eq_init(void)
     parm.eq_mode_use_idx = (u8 *)eq_mode_use_idx;
 
     parm.eq_type_tab = (void *)get_eq_mode_tab();
-#if TCFG_USER_EQ_MODE_NUM
+#ifdef TCFG_USER_EQ_MODE_NUM
     parm.type_num = TCFG_USER_EQ_MODE_NUM;//EQ_MODE_MAX;
 #endif
 
