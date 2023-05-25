@@ -52,8 +52,6 @@
 <Add option="-DCONFIG_UPDATA_ENABLE" />
 <Add option="-DCONFIG_OTA_UPDATA_ENABLE" />
 <Add option="-DCONFIG_ITEM_FORMAT_VM" />
-<Add option="-fno-exceptions" />
-<Add option="-fno-rtti" />
 <Add option="-fno-unwind-tables" />
 <Add option="-ffunction-sections" />
 <Add option="-fdata-sections" />
@@ -127,9 +125,8 @@
 </Build>
 <Unit filename="../../../../../apps/common/c++/cpp_run_init.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/c++/cxx_runtime.cpp">
-<Option compiler="pi32v2_r3_lto_compiler" use="1" buildCommand="$compiler $options -std=c++11 $includes -c $file -o $object" />
+<Option compiler="pi32v2_r3_lto_compiler" use="1" buildCommand="$compiler $options -std=c++11 -fno-exceptions -fno-rtti $includes -c $file -o $object" />
 </Unit>
-<Unit filename="../../../../../apps/common/c++/cxx_runtime.cpp" />
 <Unit filename="../../../../../apps/common/config/log_config/lib_driver_config.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/config/log_config/lib_system_config.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/config/log_config/lib_update_config.c"><Option compilerVer="CC"/></Unit>

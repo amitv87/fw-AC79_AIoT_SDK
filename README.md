@@ -190,4 +190,4 @@
 
 * 芯片数据手册&原理图 : [doc/datasheet/AC791N规格书](./doc/datasheet/AC791N规格书)
 * SDK 发布版本信息 : [AC79NN_SDK_发布版本信息](https://doc.zh-jieli.com/AC79/zh-cn/release_v1.0.3/other/version/index.html)
-* 钉钉技术支持群号 : 31275808
+* 钉钉技术支持群号 : 15375032297 或 31275808

@@ -102,7 +102,6 @@ void cpu1_main(void)
 
     __local_irq_enable();
 
-
 #if defined CONFIG_UCOS_ENABLE ||  (CPU_CORE_NUM == 1)
     //在这句话之后 不可用操作系统接口,printf/puts等打印接口,并且需要替换单核专用的system库,
     while (1) {
@@ -146,7 +145,6 @@ static void rtos_stack_check_func(void *p)
     printf("cpu0 use: %d%%, cpu1 use: %d%%\n", ucGetCpuUsage(0), ucGetCpuUsage(1));
 #endif
     /*cpu_effic_calc();*/
-
 }
 #endif
 
@@ -195,6 +193,7 @@ static void app_task_handler(void *p)
 #endif
     }
 #endif
+
     __do_initcall(initcall);
     __do_initcall(module_initcall);
     app_core_init();
@@ -206,9 +205,9 @@ static void app_task_handler(void *p)
     finsh_system_init();
 #endif
 
-
     int res;
     int msg[32];
+
     while (1) {
         res = os_task_pend("taskq", msg, ARRAY_SIZE(msg));
         if (res != OS_TASKQ) {
@@ -261,6 +260,7 @@ int main()
 #endif
 
     os_init();
+
     task_create(app_task_handler, NULL, "app_core");
 
 #if CPU_CORE_NUM == 1 //本来改 prvIdleTask
@@ -331,51 +331,93 @@ void local_irq_enable(void)
 
 #endif
 
-#if 1
+#ifdef CONFIG_IPMASK_ENABLE
 
-__attribute__((always_inline))
+//外部用到宏控制的函数, 库里面不能够内联
+SEC_USED(.volatile_ram_code)
+__attribute__((noinline))
+void __local_irq_disable(void)
+{
+    __builtin_pi32v2_cli();
+    q32DSP(current_cpu_id())->IPMASK = 7;//把中断优先级大于等于7的中断设定为不可屏蔽中断
+    irq_lock_cnt[current_cpu_id()]++;
+    __asm_csync();
+    __builtin_pi32v2_sti();
+}
+
+//外部用到宏控制的函数, 库里面不能够内联
+SEC_USED(.volatile_ram_code)
+__attribute__((noinline))
+void __local_irq_enable(void)
+{
+    if (--irq_lock_cnt[current_cpu_id()] == 0) {
+        __builtin_pi32v2_cli();
+        q32DSP(current_cpu_id())->IPMASK = 0;
+        __asm_csync();
+        __builtin_pi32v2_sti();
+    }
+}
+
+//外部用到宏控制的函数, 库里面不能够内联
+SEC_USED(.volatile_ram_code)
+__attribute__((noinline))
+int cpu_irq_disabled(void)
+{
+    int flag, flag2;
+    __asm__ volatile("%0 = icfg" : "=r"(flag));
+    int first = ((flag & 0x300) != 0x300) || (q32DSP(current_cpu_id())->IPMASK == 7);//不可屏蔽中断
+    //只读一遍有可能出现实际上没关中断但又条件成立的情况，需要再读一次确保正确，读取前使用ssync也没效果，原因未知
+    __asm__ volatile("%0 = icfg" : "=r"(flag2));
+    int second = ((flag2 & 0x300) != 0x300) || (q32DSP(current_cpu_id())->IPMASK == 7);//不可屏蔽中断
+    return (first && second);
+}
+
+#else
+
+//外部用到宏控制的函数, 库里面不能够内联
+SEC_USED(.volatile_ram_code)
+__attribute__((noinline))
 void __local_irq_disable(void)
 {
     __builtin_pi32v2_cli();
     irq_lock_cnt[current_cpu_id()]++;
+    __asm_csync();
 }
 
-__attribute__((always_inline))
+//外部用到宏控制的函数, 库里面不能够内联
+SEC_USED(.volatile_ram_code)
+__attribute__((noinline))
 void __local_irq_enable(void)
 {
     if (--irq_lock_cnt[current_cpu_id()] == 0) {
+        __asm_csync();
         __builtin_pi32v2_sti();
     }
 }
+
+//外部用到宏控制的函数, 库里面不能够内联
+SEC_USED(.volatile_ram_code)
+__attribute__((noinline))
+int cpu_irq_disabled(void)
+{
+    int flag, flag2;
+    __asm__ volatile("%0 = icfg" : "=r"(flag));
+    int first = ((flag & 0x300) != 0x300);
+    //只读一遍有可能出现实际上没关中断但又条件成立的情况，需要再读一次确保正确，读取前使用ssync也没效果，原因未知
+    __asm__ volatile("%0 = icfg" : "=r"(flag2));
+    int second = ((flag2 & 0x300) != 0x300);
+    return (first && second);
+}
+
+#endif
 
 __attribute__((always_inline))
 int __local_irq_lock_cnt(void)
 {
+    __asm_csync();
     return irq_lock_cnt[current_cpu_id()];
 }
 
-__attribute__((always_inline))
-void sys_local_irq_disable(void)
-{
-    __builtin_pi32v2_cli();
-    irq_lock_cnt[current_cpu_id()]++;
-    if (cpu_lock_cnt[current_cpu_id()]++ == 0) {
-        asm volatile("lockset;");
-    }
-    __asm_csync();
-}
-
-__attribute__((always_inline))
-void sys_local_irq_enable(void)
-{
-    __asm_csync();
-    if (--cpu_lock_cnt[current_cpu_id()] == 0) {
-        asm volatile("lockclr;");
-    }
-    if (--irq_lock_cnt[current_cpu_id()] == 0) {
-        __builtin_pi32v2_sti();
-    }
-}
 __attribute__((always_inline))
 int cpu_in_irq(void)
 {
@@ -383,54 +425,14 @@ int cpu_in_irq(void)
     __asm__ volatile("%0 = icfg" : "=r"(flag));
     return flag & 0xff;
 }
-__attribute__((always_inline))
-int cpu_irq_disabled()
-{
-    int flag;
-    __asm__ volatile("%0 = icfg" : "=r"(flag));
-    return (flag & 0x300) != 0x300;
-}
-
-#else //把中断优先级大于等于7的中断设定为不可屏蔽中断
-
-SEC_USED(.volatile_ram_code)
-void __local_irq_disable(void)
-{
-    __builtin_pi32v2_cli();
-    q32DSP(current_cpu_id())->IPMASK = 7;
-    asm volatile("csync;");
-    irq_lock_cnt[current_cpu_id()]++;
-    __builtin_pi32v2_sti();
-}
 
 __attribute__((always_inline))
-void __local_irq_enable(void)
-{
-    if (--irq_lock_cnt[current_cpu_id()] == 0) {
-        __builtin_pi32v2_cli();
-        q32DSP(current_cpu_id())->IPMASK = 0;
-        asm volatile("csync;");
-        __builtin_pi32v2_sti();
-    }
-}
-__attribute__((always_inline))
-int __local_irq_lock_cnt(void)
-{
-    return irq_lock_cnt[current_cpu_id()];
-}
-
-SEC_USED(.volatile_ram_code)
 void sys_local_irq_disable(void)
 {
-    __builtin_pi32v2_cli();
-    q32DSP(current_cpu_id())->IPMASK = 7;
-    asm volatile("csync;");
-    irq_lock_cnt[current_cpu_id()]++;
-    __builtin_pi32v2_sti();
+    __local_irq_disable();
     if (cpu_lock_cnt[current_cpu_id()]++ == 0) {
         asm volatile("lockset;");
     }
-
     __asm_csync();
 }
 
@@ -441,30 +443,8 @@ void sys_local_irq_enable(void)
     if (--cpu_lock_cnt[current_cpu_id()] == 0) {
         asm volatile("lockclr;");
     }
-    if (--irq_lock_cnt[current_cpu_id()] == 0) {
-        __builtin_pi32v2_cli();
-        q32DSP(current_cpu_id())->IPMASK = 0;
-        asm volatile("csync;");
-        __builtin_pi32v2_sti();
-    }
+    __local_irq_enable();
 }
-__attribute__((always_inline))
-int cpu_in_irq(void)
-{
-    int flag;
-    __asm__ volatile("%0 = icfg" : "=r"(flag));
-    return flag & 0x7f;
-}
-
-__attribute__((always_inline))
-int cpu_irq_disabled(void)
-{
-    int flag;
-    __asm__ volatile("%0 = icfg" : "=r"(flag));
-    return ((flag & 0x300) != 0x300) || (q32DSP(current_cpu_id())->IPMASK == 7);//不可屏蔽中断
-    /* return __local_irq_lock_cnt(); */
-}
-#endif
 
 // just fix build&link
 #include "app_config.h"
