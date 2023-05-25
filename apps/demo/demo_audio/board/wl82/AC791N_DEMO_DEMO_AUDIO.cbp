@@ -166,6 +166,8 @@
 <Add option="../../../../../cpu/wl82/liba/cJSON.a" />
 <Add option="../../../../../cpu/wl82/liba/lc3_codec_lib.a" />
 <Add option="../../../../../cpu/wl82/liba/update.a" />
+<Add option="../../../../../cpu/wl82/liba/lib_spectrum_show.a" />
+<Add option="../../../../../cpu/wl82/liba/lib_ogg_vorbis_dec.a" />
 <Add option="../../../../../cpu/wl82/liba/libcompressor.a" />
 <Add option="../../../../../cpu/wl82/liba/lib_crossover_coff.a" />
 <Add option="../../../../../cpu/wl82/liba/libdrc.a" />

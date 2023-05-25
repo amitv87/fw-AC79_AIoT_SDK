@@ -334,7 +334,9 @@ void local_irq_enable(void)
 
 #ifdef CONFIG_IPMASK_ENABLE
 
+//外部用到宏控制的函数, 库里面不能够内联
 SEC_USED(.volatile_ram_code)
+__attribute__((noinline))
 void __local_irq_disable(void)
 {
     __builtin_pi32v2_cli();
@@ -344,7 +346,9 @@ void __local_irq_disable(void)
     __builtin_pi32v2_sti();
 }
 
-__attribute__((always_inline))
+//外部用到宏控制的函数, 库里面不能够内联
+SEC_USED(.volatile_ram_code)
+__attribute__((noinline))
 void __local_irq_enable(void)
 {
     if (--irq_lock_cnt[current_cpu_id()] == 0) {
@@ -355,9 +359,25 @@ void __local_irq_enable(void)
     }
 }
 
+//外部用到宏控制的函数, 库里面不能够内联
+SEC_USED(.volatile_ram_code)
+__attribute__((noinline))
+int cpu_irq_disabled(void)
+{
+    int flag, flag2;
+    __asm__ volatile("%0 = icfg" : "=r"(flag));
+    int first = ((flag & 0x300) != 0x300) || (q32DSP(current_cpu_id())->IPMASK == 7);//不可屏蔽中断
+    //只读一遍有可能出现实际上没关中断但又条件成立的情况，需要再读一次确保正确，读取前使用ssync也没效果，原因未知
+    __asm__ volatile("%0 = icfg" : "=r"(flag2));
+    int second = ((flag2 & 0x300) != 0x300) || (q32DSP(current_cpu_id())->IPMASK == 7);//不可屏蔽中断
+    return (first && second);
+}
+
 #else
 
-__attribute__((always_inline))
+//外部用到宏控制的函数, 库里面不能够内联
+SEC_USED(.volatile_ram_code)
+__attribute__((noinline))
 void __local_irq_disable(void)
 {
     __builtin_pi32v2_cli();
@@ -365,13 +385,29 @@ void __local_irq_disable(void)
     __asm_csync();
 }
 
-__attribute__((always_inline))
+//外部用到宏控制的函数, 库里面不能够内联
+SEC_USED(.volatile_ram_code)
+__attribute__((noinline))
 void __local_irq_enable(void)
 {
     if (--irq_lock_cnt[current_cpu_id()] == 0) {
         __asm_csync();
         __builtin_pi32v2_sti();
     }
+}
+
+//外部用到宏控制的函数, 库里面不能够内联
+SEC_USED(.volatile_ram_code)
+__attribute__((noinline))
+int cpu_irq_disabled(void)
+{
+    int flag, flag2;
+    __asm__ volatile("%0 = icfg" : "=r"(flag));
+    int first = ((flag & 0x300) != 0x300);
+    //只读一遍有可能出现实际上没关中断但又条件成立的情况，需要再读一次确保正确，读取前使用ssync也没效果，原因未知
+    __asm__ volatile("%0 = icfg" : "=r"(flag2));
+    int second = ((flag2 & 0x300) != 0x300);
+    return (first && second);
 }
 
 #endif
@@ -389,18 +425,6 @@ int cpu_in_irq(void)
     int flag;
     __asm__ volatile("%0 = icfg" : "=r"(flag));
     return flag & 0xff;
-}
-
-__attribute__((always_inline))
-int cpu_irq_disabled(void)
-{
-    int flag, flag2;
-    __asm__ volatile("%0 = icfg" : "=r"(flag));
-    int first = ((flag & 0x300) != 0x300) || (q32DSP(current_cpu_id())->IPMASK == 7);//不可屏蔽中断
-    //只读一遍有可能出现实际上没关中断但又条件成立的情况，需要再读一次确保正确，读取前使用ssync也没效果，原因未知
-    __asm__ volatile("%0 = icfg" : "=r"(flag2));
-    int second = ((flag2 & 0x300) != 0x300) || (q32DSP(current_cpu_id())->IPMASK == 7);//不可屏蔽中断
-    return (first && second);
 }
 
 __attribute__((always_inline))

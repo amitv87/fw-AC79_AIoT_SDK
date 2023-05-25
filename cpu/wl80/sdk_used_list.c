@@ -177,6 +177,10 @@ subdev_vad_enc
 subdev_dns_enc
 #endif
 
+#ifdef CONFIG_OGG_VORBIS_DEC_ENABLE
+ogg_vorbis_decoder
+#endif
+
 #ifdef CONFIG_AEC_ENC_ENABLE
 subdev_aec_enc
 #endif

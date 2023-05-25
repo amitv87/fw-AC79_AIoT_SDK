@@ -173,6 +173,8 @@
 <Add option="../../../../cpu/wl80/liba/lib_usb_syn.a" />
 <Add option="../../../../cpu/wl80/liba/lib_spectrum_show.a" />
 <Add option="../../../../cpu/wl80/liba/img_stitch.a" />
+<Add option="../../../../cpu/wl80/liba/lib_ogg_vorbis_dec.a" />
+<Add option="../../../../cpu/wl80/liba/media_app.a" />
 <Add option="../../../../cpu/wl80/liba/liblimiter.a" />
 <Add option="../../../../cpu/wl80/liba/net_server.a" />
 <Add option="../../../../cpu/wl80/liba/video_rec_server.a" />

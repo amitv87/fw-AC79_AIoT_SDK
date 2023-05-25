@@ -161,6 +161,10 @@ flac_decoder
 dts_decoder
 #endif
 
+#ifdef CONFIG_OGG_VORBIS_DEC_ENABLE
+ogg_vorbis_decoder
+#endif
+
 #ifdef CONFIG_OPUS_DEC_ENABLE
 opus_decoder
 #endif

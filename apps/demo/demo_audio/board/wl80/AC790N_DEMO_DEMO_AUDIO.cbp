@@ -153,6 +153,8 @@
 <Add option="../../../../../cpu/wl80/liba/cJSON.a" />
 <Add option="../../../../../cpu/wl80/liba/lc3_codec_lib.a" />
 <Add option="../../../../../cpu/wl80/liba/update.a" />
+<Add option="../../../../../cpu/wl80/liba/lib_spectrum_show.a" />
+<Add option="../../../../../cpu/wl80/liba/lib_ogg_vorbis_dec.a" />
 <Add option="../../../../../cpu/wl80/liba/liblimiter.a" />
 <Add option="../../../../../cpu/wl80/liba/lwip_2_1_3_sfc.a" />
 <Add option="../../../../../cpu/wl80/liba/wl_wifi_sta_sfc.a" />

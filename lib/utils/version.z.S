@@ -3,5 +3,5 @@
 .global lib_utils_version
 
 lib_utils_version:
-.asciz "UTILS-$74db5ec"
+.asciz "UTILS-$ff70aec"
 

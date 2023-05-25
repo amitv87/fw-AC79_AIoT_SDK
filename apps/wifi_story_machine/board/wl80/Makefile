@@ -18,7 +18,7 @@ TOOL_DIR := C:/JL/pi32/bin
 CC    := clang.exe
 CXX   := clang.exe
 LD    := pi32v2-lto-wrapper.exe
-AR    := pi32v2-lto-ar.exe
+AR    := llvm-ar.exe
 MKDIR := mkdir_win -p
 RM    := rm -rf
 
@@ -35,7 +35,7 @@ else
 # Linux 下工具链位置
 TOOL_DIR := /opt/jieli/pi32v2/bin
 CC    := clang
-CXX   := clang++
+CXX   := clang
 LD    := lto-wrapper
 AR    := lto-ar
 MKDIR := mkdir -p
@@ -464,6 +464,8 @@ LFLAGS := \
 	../../../../cpu/wl80/liba/lib_usb_syn.a \
 	../../../../cpu/wl80/liba/lib_spectrum_show.a \
 	../../../../cpu/wl80/liba/img_stitch.a \
+	../../../../cpu/wl80/liba/lib_ogg_vorbis_dec.a \
+	../../../../cpu/wl80/liba/media_app.a \
 	../../../../cpu/wl80/liba/liblimiter.a \
 	../../../../cpu/wl80/liba/net_server.a \
 	../../../../cpu/wl80/liba/video_rec_server.a \
@@ -605,38 +607,38 @@ endif
 
 $(BUILD_DIR)/%.c.o : $(ROOT_PREFIX)/%.c
 	$(info +CC $<)
-	@$(MKDIR) $(@D)
-	@$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -MM -MT $@ $< -o $(@:.o=.d)
+	$(QUITE) $(MKDIR) $(@D)
+	$(QUITE) $(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -MM -MT $@ $< -o $(@:.o=.d)
 	$(QUITE) $(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -c $< -o $@
 
 $(BUILD_DIR)/%.S.o : $(ROOT_PREFIX)/%.S
 	$(info +AS $<)
-	@$(MKDIR) $(@D)
-	@$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -MM -MT $@ $< -o $(@:.o=.d)
+	$(QUITE) $(MKDIR) $(@D)
+	$(QUITE) $(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -MM -MT $@ $< -o $(@:.o=.d)
 	$(QUITE) $(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -c $< -o $@
 
 $(BUILD_DIR)/%.s.o : $(ROOT_PREFIX)/%.s
 	$(info +AS $<)
-	@$(MKDIR) $(@D)
-	@$(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -MM -MT $@ $< -o $(@:.o=.d)
+	$(QUITE) $(MKDIR) $(@D)
+	$(QUITE) $(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -MM -MT $@ $< -o $(@:.o=.d)
 	$(QUITE) $(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -c $< -o $@
 
 $(BUILD_DIR)/%.cpp.o : $(ROOT_PREFIX)/%.cpp
 	$(info +CXX $<)
-	@$(MKDIR) $(@D)
-	@$(CXX) $(CFLAGS) $(CXXFLAGS) $(DEFINES) $(INCLUDES) -MM -MT $@ $< -o $(@:.o=.d)
+	$(QUITE) $(MKDIR) $(@D)
+	$(QUITE) $(CXX) $(CXXFLAGS) $(CFLAGS) $(DEFINES) $(INCLUDES) -MM -MT $@ $< -o $(@:.o=.d)
 	$(QUITE) $(CXX) $(CXXFLAGS) $(CFLAGS) $(DEFINES) $(INCLUDES) -c $< -o $@
 
 $(BUILD_DIR)/%.cxx.o : $(ROOT_PREFIX)/%.cxx
 	$(info +CXX $<)
-	@$(MKDIR) $(@D)
-	@$(CXX) $(CFLAGS) $(CXXFLAGS) $(DEFINES) $(INCLUDES) -MM -MT $@ $< -o $(@:.o=.d)
+	$(QUITE) $(MKDIR) $(@D)
+	$(QUITE) $(CXX) $(CXXFLAGS) $(CFLAGS) $(DEFINES) $(INCLUDES) -MM -MT $@ $< -o $(@:.o=.d)
 	$(QUITE) $(CXX) $(CXXFLAGS) $(CFLAGS) $(DEFINES) $(INCLUDES) -c $< -o $@
 
 $(BUILD_DIR)/%.cc.o : $(ROOT_PREFIX)/%.cc
 	$(info +CXX $<)
-	@$(MKDIR) $(@D)
-	@$(CXX) $(CFLAGS) $(CXXFLAGS) $(DEFINES) $(INCLUDES) -MM -MT $@ $< -o $(@:.o=.d)
+	$(QUITE) $(MKDIR) $(@D)
+	$(QUITE) $(CXX) $(CXXFLAGS) $(CFLAGS) $(DEFINES) $(INCLUDES) -MM -MT $@ $< -o $(@:.o=.d)
 	$(QUITE) $(CXX) $(CXXFLAGS) $(CFLAGS) $(DEFINES) $(INCLUDES) -c $< -o $@
 
 -include $(DEP_FILES)

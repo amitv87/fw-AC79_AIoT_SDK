@@ -976,9 +976,9 @@ static int local_music_dec_switch_dir(int fsel_mode)
             fscan_release(__this->fscan);
         }
 #if CONFIG_DEC_DECRYPT_ENABLE
-        __this->fscan = fscan(__this->local_path, "-r -tMP3MP2MP1WMAWAVM4AAMRAPEFLAAACSPXOPUDTSADPSMP -sn", 9);
+        __this->fscan = fscan(__this->local_path, "-r -tOGGMP3MP2MP1WMAWAVM4AAMRAPEFLAAACSPXOPUDTSADPSMP -sn", 9);
 #else
-        __this->fscan = fscan(__this->local_path, "-r -tMP3MP2MP1WMAWAVM4AAMRAPEFLAAACSPXOPUDTSADP -sn", 9);
+        __this->fscan = fscan(__this->local_path, "-r -tOGGMP3MP2MP1WMAWAVM4AAMRAPEFLAAACSPXOPUDTSADP -sn", 9);
 #endif
         if (!__this->fscan) {
             return -ENOENT;
@@ -1105,9 +1105,9 @@ __again:
 
     printf("fscan path : %s\n", path);
 #if CONFIG_DEC_DECRYPT_ENABLE
-    __this->fscan = fscan(path, "-tMP3MP2MP1WMAWAVM4AAMRAPEFLAAACSPXOPUDTSADPSMP -sn", 1);
+    __this->fscan = fscan(path, "-tOGGMP3MP2MP1WMAWAVM4AAMRAPEFLAAACSPXOPUDTSADPSMP -sn", 1);
 #else
-    __this->fscan = fscan(path, "-tMP3MP2MP1WMAWAVM4AAMRAPEFLAAACSPXOPUDTSADP -sn", 1);
+    __this->fscan = fscan(path, "-tOGGMP3MP2MP1WMAWAVM4AAMRAPEFLAAACSPXOPUDTSADP -sn", 1);
 #endif
 
     if (!file) {

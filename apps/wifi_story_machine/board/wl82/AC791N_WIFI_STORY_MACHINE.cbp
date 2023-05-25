@@ -185,10 +185,11 @@
 <Add option="../../../../cpu/wl82/liba/lib_usb_syn.a" />
 <Add option="../../../../cpu/wl82/liba/lib_spectrum_show.a" />
 <Add option="../../../../cpu/wl82/liba/img_stitch.a" />
+<Add option="../../../../cpu/wl82/liba/lib_ogg_vorbis_dec.a" />
+<Add option="../../../../cpu/wl82/liba/media_app.a" />
 <Add option="../../../../cpu/wl82/liba/libcompressor.a" />
 <Add option="../../../../cpu/wl82/liba/lib_crossover_coff.a" />
 <Add option="../../../../cpu/wl82/liba/libdrc.a" />
-<Add option="../../../../cpu/wl82/liba/media_app.a" />
 <Add option="../../../../cpu/wl82/liba/net_server.a" />
 <Add option="../../../../cpu/wl82/liba/video_rec_server.a" />
 <Add option="../../../../cpu/wl82/liba/aisIntlib_single_xiaoai.a" />
