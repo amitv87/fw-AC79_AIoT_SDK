@@ -12,6 +12,45 @@
 /****************************注意！！！量产时不能使能CONFIG_OVERCLOCKING_ENABLE宏使用超频配置，否则后果自负**********************************/
 /****************************注意！！！量产时不能使能CONFIG_OVERCLOCKING_ENABLE宏使用超频配置，否则后果自负**********************************/
 
+/********************以下宏定义的值需要和p33.h保持一致**************************/
+//Macro for VDDIOM_VOL_SEL
+#define VDDIOM_VOL_28V 0
+#define VDDIOM_VOL_29V 1
+#define VDDIOM_VOL_30V 2
+#define VDDIOM_VOL_31V 3
+#define VDDIOM_VOL_32V 4
+#define VDDIOM_VOL_33V 5
+#define VDDIOM_VOL_34V 6
+#define VDDIOM_VOL_35V 7
+//Macro for SYSVDD_VOL_SEL
+#define SYSVDD_VOL_SEL_093V 0
+#define SYSVDD_VOL_SEL_096V 1
+#define SYSVDD_VOL_SEL_099V 2
+#define SYSVDD_VOL_SEL_102V 3
+#define SYSVDD_VOL_SEL_105V 4
+#define SYSVDD_VOL_SEL_108V 5
+#define SYSVDD_VOL_SEL_111V 6
+#define SYSVDD_VOL_SEL_114V 7
+#define SYSVDD_VOL_SEL_117V 8
+#define SYSVDD_VOL_SEL_120V 9
+#define SYSVDD_VOL_SEL_123V 10
+#define SYSVDD_VOL_SEL_126V 11
+#define SYSVDD_VOL_SEL_129V 12
+#define SYSVDD_VOL_SEL_132V 13
+#define SYSVDD_VOL_SEL_135V 14
+#define SYSVDD_VOL_SEL_138V 15
+//Macro for VDC14_VOL_SEL
+#define VDC14_VOL_SEL_125V  0
+#define VDC14_VOL_SEL_130V  1
+#define VDC14_VOL_SEL_135V  2
+#define VDC14_VOL_SEL_140V  3
+#define VDC14_VOL_SEL_145V  4
+#define VDC14_VOL_SEL_150V  5
+#define VDC14_VOL_SEL_155V  6
+#define VDC14_VOL_SEL_160V  7
+/*******************************************************************************/
+
+
 [配置项预留起始项一_注意该位置不要定义子配置项]
 
 [EXTRA_CFG_PARAM]
@@ -109,7 +148,9 @@ LSB_DIV=2; [低速总线时钟分频系数 LSB_DIV+1]
 #endif//CONFIG_RTC_ENABLE
 #endif//CONFIG_OVERCLOCKING_ENABLE
 
-//BOOT_DELAY=100;[系统起来前增加延时配置，针对电源不稳时一些外设拉电导致系统跑飞情况，单位为毫秒]
+//ERR_PORT_OUTPUT=PA09_112;[UBOOT/SDRAM出错IO翻转电平，PXXX_电平(0/1)+翻转(0/1，1翻转)+周期(0-F,100ms周期的倍数) ,如PA09_112代表PA09输出高电平翻转周期2*100m]
+
+//BOOT_DELAY=100; [系统起来前增加延时配置，针对电源不稳时一些外设拉电导致系统跑飞的情况, 单位为毫秒]
 //UTTX=PB03; [配置UBOOT调试输出Pin] //uboot串口tx
 UTBD=1000000; [配置UBOOT调试波特率]//uboot串口波特率
 //UTRX=PB05;串口升级[PB00 PB05 PA05]
@@ -130,8 +171,27 @@ UPDATE_JUMP=0;
 #psram=1;
 */
 
-VLVD=4;//VDDIO_LVD挡位，0: 1.9V   1: 2.0V   2: 2.1V   3: 2.2V   4: 2.3V   5: 2.4V   6: 2.5V   7: 2.6V
-
+#if defined CONFIG_OVERCLOCKING_ENABLE
+VDDIO=4;[VDDIO挡位 2:3.0V、3:3.1V、4:3.2V、5:3.3V、6:3.4V、7:3.5V，默认使用3.2V档位，实际芯片偏低则需要提高]
+DVDD=14;[DVDD-1.2V内核电压档位 9:1.20V、10:1.23V、11:1.26V、12:1.29V、13:1.32V、14:1.35V、15:1.38V，默认使用1.26V档位，实际芯片偏低则需要提高]
+DCDC14=4;[DCDC-1.4V电压档位 3:1.40V、4:1.45V、5:1.50V、6:1.55V、7:1.60V，默认使用1.40V档位，实际芯片偏低则需要提高]
+#else
+#if defined TCFG_LOWPOWER_VDDIOM_LEVEL
+VDDIO=TCFG_LOWPOWER_VDDIOM_LEVEL;[VDDIO挡位 2:3.0V、3:3.1V、4:3.2V、5:3.3V、6:3.4V、7:3.5V，默认使用3.2V档位，实际芯片偏低则需要提高]
+#else
+VDDIO=4;[VDDIO挡位 2:3.0V、3:3.1V、4:3.2V、5:3.3V、6:3.4V、7:3.5V，默认使用3.2V档位，实际芯片偏低则需要提高]
+#endif
+#if defined SYSVDD_VOL_SEL_LEVEL
+DVDD=SYSVDD_VOL_SEL_LEVEL;[DVDD-1.2V内核电压档位 9:1.20V、10:1.23V、11:1.26V、12:1.29V、13:1.32V、14:1.35V、15:1.38V，默认使用1.26V档位，实际芯片偏低则需要提高]
+#else
+DVDD=11;[DVDD-1.2V内核电压档位 9:1.20V、10:1.23V、11:1.26V、12:1.29V、13:1.32V、14:1.35V、15:1.38V，默认使用1.26V档位，实际芯片偏低则需要提高]
+#endif
+#if defined VDC14_VOL_SEL_LEVEL
+DCDC14=VDC14_VOL_SEL_LEVEL;[DCDC-1.4V电压档位 3:1.40V、4:1.45V、5:1.50V、6:1.55V、7:1.60V，默认使用1.40V档位，实际芯片偏低则需要提高]
+#else
+DCDC14=3;[DCDC-1.4V电压档位 3:1.40V、4:1.45V、5:1.50V、6:1.55V、7:1.60V，默认使用1.40V档位，实际芯片偏低则需要提高]
+#endif
+#endif
 //#############################################################################################################################################
 
 
