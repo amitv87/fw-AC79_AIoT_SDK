@@ -77,8 +77,6 @@
 #define CONFIG_VIDEO_IMAGE_H    480
 #endif//CONFIG_VIDEO_720P
 
-//#define SDTAP_DEBUG
-#endif
 
 //*********************************************************************************//
 //                                  电源配置                                       //
@@ -142,13 +140,13 @@
 //                                  库打印配置                                         //
 //*********************************************************************************//
 #define CONFIG_DEBUG_ENABLE            /* 打印开关 */
-#ifdef CONFIG_RELEASE_ENABLE
+
+#if !defined CONFIG_DEBUG_ENABLE || defined CONFIG_LIB_DEBUG_DISABLE
 #define LIB_DEBUG    0
 #else
 #define LIB_DEBUG    1
 #endif
 #define CONFIG_DEBUG_LIB(x)         (x & LIB_DEBUG)
 
-
-
-
+//#define SDTAP_DEBUG
+#endif

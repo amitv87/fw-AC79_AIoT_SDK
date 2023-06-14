@@ -2,10 +2,12 @@
 
 #ifdef PRODUCT_TEST_ENABLE
 
-static u8 *args_str;
-static u8 conn_status;
-static OS_SEM conn_sem;
-static u32 ping_on = FALSE, ping_total;
+static struct dev_ctl_type {
+    u8 *args_str;
+    u8 conn_status;
+    OS_SEM conn_sem;
+    u32 ping_on, ping_total;
+} *__THIS = NULL;
 
 
 __attribute__((weak)) u8 product_uuid_wr(u8 *uuid, u8 is_write)
@@ -201,7 +203,7 @@ __attribute__((weak)) u8 product_uvc_switch(u8 idx)
 
 u8 *get_args_str(void)
 {
-    return args_str;
+    return __THIS->args_str;
 }
 
 
@@ -232,7 +234,7 @@ static u8 sd_control_handler(u8 id, cmd, json_object *args_obj)
     u32 status, cap_size, block_size;
     struct json_object *sub_obj;
 
-    args_str = NULL;
+    __THIS->args_str = NULL;
 
     switch (cmd) {
     case CTL_GET_DEV_INFO:
@@ -243,7 +245,7 @@ static u8 sd_control_handler(u8 id, cmd, json_object *args_obj)
         json_object_object_add(sub_obj, "online", json_object_new_string(json_itoa(status, 10)));
         json_object_object_add(sub_obj, "cap_size", json_object_new_string(json_itoa(cap_size / 1024 * block_size, 10)));
         json_object_object_add(sub_obj, "block_size", json_object_new_string(json_itoa(block_size, 10)));
-        asprintf(&args_str, "%s", json_object_to_json_string(sub_obj));
+        asprintf(&__THIS->args_str, "%s", json_object_to_json_string(sub_obj));
         json_object_put(sub_obj);
         break;
 
@@ -265,7 +267,7 @@ static u8 battery_control_handler(u8 id, cmd, json_object *args_obj)
     u8 rscorr = ERR_NULL;
     struct json_object *sub_obj;
 
-    args_str = NULL;
+    __THIS->args_str = NULL;
 
     switch (cmd) {
     case CTL_GET_DEV_INFO:
@@ -274,7 +276,7 @@ static u8 battery_control_handler(u8 id, cmd, json_object *args_obj)
         }
         sub_obj = json_object_new_object();
         json_object_object_add(sub_obj, "power", json_object_new_string(json_itoa(percent, 10)));
-        asprintf(&args_str, "%s", json_object_to_json_string(sub_obj));
+        asprintf(&__THIS->args_str, "%s", json_object_to_json_string(sub_obj));
         json_object_put(sub_obj);
         break;
 
@@ -292,7 +294,7 @@ static u8 lcd_control_handler(u8 id, cmd, json_object *args_obj)
     u32 width, height;
     u8 rscorr = ERR_NULL, *str;
 
-    args_str = NULL;
+    __THIS->args_str = NULL;
 
     switch (cmd) {
     case CTL_GET_DEV_INFO:
@@ -302,7 +304,7 @@ static u8 lcd_control_handler(u8 id, cmd, json_object *args_obj)
         sub_obj = json_object_new_object();
         json_object_object_add(sub_obj, "width", json_object_new_string(json_itoa(width, 10)));
         json_object_object_add(sub_obj, "height", json_object_new_string(json_itoa(height, 10)));
-        asprintf(&args_str, "%s", json_object_to_json_string(sub_obj));
+        asprintf(&__THIS->args_str, "%s", json_object_to_json_string(sub_obj));
         json_object_put(sub_obj);
         break;
 
@@ -329,7 +331,7 @@ static u8 pir_control_handler(u8 id, cmd, json_object *args_obj)
 {
     u8 rscorr = ERR_NULL;
 
-    args_str = NULL;
+    __THIS->args_str = NULL;
 
     switch (cmd) {
     case CTL_GET_DEV_INFO:
@@ -356,7 +358,7 @@ static u8 motor_control_handler(u8 id, cmd, json_object *args_obj)
     int step = 0, flag;
     u8 rscorr = ERR_NULL;
 
-    args_str = NULL;
+    __THIS->args_str = NULL;
 
     switch (cmd) {
     case CTL_MOTOR_LEFT:
@@ -383,7 +385,7 @@ static u8 gsensor_control_handler(u8 id, cmd, json_object *args_obj)
 {
     u8 rscorr = ERR_NULL;
 
-    args_str = NULL;
+    __THIS->args_str = NULL;
 
     switch (cmd) {
     case CTL_GET_DEV_INFO:
@@ -409,7 +411,7 @@ static u8 touchpanel_control_handler(u8 id, cmd, json_object *args_obj)
 {
     u8 rscorr = ERR_NULL;
 
-    args_str = NULL;
+    __THIS->args_str = NULL;
 
     switch (cmd) {
     case CTL_GET_DEV_INFO:
@@ -438,7 +440,7 @@ static u8 camera_control_handler(u8 id, cmd, json_object *args_obj)
     struct procudt_camera_info info;
     u8 rscorr = ERR_NULL, *str, array_cnt, idx;
 
-    args_str = NULL;
+    __THIS->args_str = NULL;
 
     switch (cmd) {
     case CTL_GET_DEV_INFO:
@@ -448,7 +450,7 @@ static u8 camera_control_handler(u8 id, cmd, json_object *args_obj)
         json_object_object_add(sub_obj, "fps", json_object_new_string(json_itoa(info.fps, 10)));
         json_object_object_add(sub_obj, "width", json_object_new_string(json_itoa(info.width, 10)));
         json_object_object_add(sub_obj, "height", json_object_new_string(json_itoa(info.height, 10)));
-        asprintf(&args_str, "%s", json_object_to_json_string(sub_obj));
+        asprintf(&__THIS->args_str, "%s", json_object_to_json_string(sub_obj));
         json_object_put(sub_obj);
         break;
 
@@ -466,7 +468,7 @@ static u8 camera_control_handler(u8 id, cmd, json_object *args_obj)
             }
             json_object_string_set(json_object_object_get(sub_obj, "value"), json_itoa(value, 16), strlen(json_itoa(value, 16)));
         }
-        asprintf(&args_str, "%s", json_object_get_string(args_obj));
+        asprintf(&__THIS->args_str, "%s", json_object_get_string(args_obj));
         product_camera_reg_wr(0, 0, 0, 1);
         break;
 
@@ -519,7 +521,7 @@ static u8 led_control_handler(u8 id, cmd, json_object *args_obj)
 {
     u8 rscorr = ERR_NULL;
 
-    args_str = NULL;
+    __THIS->args_str = NULL;
 
     switch (cmd) {
     case CTL_LED_ON:
@@ -582,7 +584,7 @@ static int wifi_event_callback(void *network_ctx, enum WIFI_EVENT event)
         break;
     case WIFI_EVENT_STA_DISCONNECT:
         puts("|network_user_callback->WIFI_STA_DISCONNECT\n");
-        conn_status = 0;
+        __THIS->conn_status = 0;
         break;
     case WIFI_EVENT_STA_SCAN_COMPLETED:
         puts("|network_user_callback->WIFI_STA_SCAN_COMPLETED\n");
@@ -601,21 +603,21 @@ static int wifi_event_callback(void *network_ctx, enum WIFI_EVENT event)
     case WIFI_EVENT_STA_CONNECT_TIMEOUT_NOT_FOUND_SSID:
         puts("|network_user_callback->WIFI_STA_CONNECT_TIMEOUT_NOT_FOUND_SSID\n");
         //cpu_reset();
-        os_sem_post(&conn_sem);
-        conn_status = 0;
+        os_sem_post(&__THIS->conn_sem);
+        __THIS->conn_status = 0;
         break;
 
     //case WIFI_EVENT_STA_CONNECT_TIMEOUT_ASSOCIAT_FAIL:
     //    puts("|network_user_callback->WIFI_STA_CONNECT_TIMEOUT_ASSOCIAT_FAIL .....\n");
     //    //cpu_reset();
-    //    os_sem_post(&conn_sem);
-    //    conn_status = 0;
+    //    os_sem_post(&__THIS->conn_sem);
+    //    __THIS->conn_status = 0;
     //    break;
 
     case WIFI_EVENT_STA_NETWORK_STACK_DHCP_SUCC:
         puts("|network_user_callback->WIFI_EVENT_STA_NETWPRK_STACK_DHCP_SUCC\n");
-        os_sem_post(&conn_sem);
-        conn_status = 1;
+        os_sem_post(&__THIS->conn_sem);
+        __THIS->conn_status = 1;
         break;
     case WIFI_EVENT_STA_NETWORK_STACK_DHCP_TIMEOUT:
         puts("|network_user_callback->WIFI_EVENT_STA_NETWPRK_STACK_DHCP_TIMEOUT\n");
@@ -683,10 +685,10 @@ static u8 wifi_switch_mode(u8 mode, u8 *ssid, u8 *pwd)
     switch (mode) {
     case STA_MODE:
         wifi_enter_sta_mode(ssid, pwd);
-        conn_status = 0;
-        os_sem_set(&conn_sem, 0);
-        os_sem_pend(&conn_sem, 30 * 100);
-        rscorr = conn_status ? ERR_NULL : ERR_DEV_FAULT;
+        __THIS->conn_status = 0;
+        os_sem_set(&__THIS->conn_sem, 0);
+        os_sem_pend(&__THIS->conn_sem, 30 * 100);
+        rscorr = __THIS->conn_status ? ERR_NULL : ERR_DEV_FAULT;
         if (rscorr) {
             wifi_enter_smp_cfg_mode();
         }
@@ -736,7 +738,7 @@ static void ping_cb(void *priv, u32 cnt, u32 time)
         free(pingstr);
     }
     last_cnt = cnt;
-    ping_on = (ping_on && cnt >= ping_total) ? FALSE : TRUE;
+    __THIS->ping_on = (__THIS->ping_on && cnt >= __THIS->ping_total) ? FALSE : TRUE;
 }
 
 
@@ -755,7 +757,7 @@ static u8 wifi_control_handler(u8 id, cmd, json_object *args_obj)
         os_time_dly(1);
     }
 
-    args_str = NULL;
+    __THIS->args_str = NULL;
 
     switch (cmd) {
     case CTL_GET_DEV_INFO:
@@ -796,7 +798,7 @@ static u8 wifi_control_handler(u8 id, cmd, json_object *args_obj)
             json_object_array_add(array_obj, sub_obj);
         }
 
-        asprintf(&args_str, "%s", json_object_to_json_string(array_obj));
+        asprintf(&__THIS->args_str, "%s", json_object_to_json_string(array_obj));
         wifi_clear_scan_result();
         free(info);
         break;
@@ -822,18 +824,18 @@ static u8 wifi_control_handler(u8 id, cmd, json_object *args_obj)
         }
 
         if (entry_num) {
-            asprintf(&args_str, "%s", json_object_to_json_string(array_obj));
+            asprintf(&__THIS->args_str, "%s", json_object_to_json_string(array_obj));
         }
         break;
 
     case CTL_NETWORK_PING_START:
 #if(defined(CONFIG_WIFI_ENABLE) && !defined(PRODUCT_NET_CLIENT_ENABLE))
 #if LWIP_RAW
-        if (!conn_status) {
+        if (!__THIS->conn_status) {
             rscorr = ERR_NETWORK_DISCONNECT;
             break;
         }
-        if (ping_on) {
+        if (__THIS->ping_on) {
             rscorr = ERR_NULL;
             break;
         }
@@ -849,8 +851,8 @@ static u8 wifi_control_handler(u8 id, cmd, json_object *args_obj)
                            json_object_get_int(interval_obj), \
                            json_object_get_int(count_obj), \
                            ping_cb, NULL) ? ERR_DEV_FAULT : ERR_NULL;
-        ping_on = rscorr == ERR_NULL ? TRUE : FALSE;
-        ping_total = json_object_get_int(count_obj);
+        __THIS->ping_on = rscorr == ERR_NULL ? TRUE : FALSE;
+        __THIS->ping_total = json_object_get_int(count_obj);
 #else
         rscorr = ERR_NO_SUPPORT_DEV_CMD;
 #endif
@@ -858,7 +860,7 @@ static u8 wifi_control_handler(u8 id, cmd, json_object *args_obj)
         break;
 
     case CTL_WIFI_GET_STA_CONN_INFO:
-        if (!conn_status) {
+        if (!__THIS->conn_status) {
             rscorr = ERR_NETWORK_DISCONNECT;
             break;
         }
@@ -873,7 +875,7 @@ static u8 wifi_control_handler(u8 id, cmd, json_object *args_obj)
         json_object_object_add(sub_obj, "ssid", json_object_new_string(cur_info.ssid));
         json_object_object_add(sub_obj, "rssi", json_object_new_string(strength));
         //json_object_object_add(sub_obj, "cqi", json_object_new_string(json_itoa(wifi_get_cqi(), 10)));
-        asprintf(&args_str, "%s", json_object_to_json_string(sub_obj));
+        asprintf(&__THIS->args_str, "%s", json_object_to_json_string(sub_obj));
         json_object_put(sub_obj);
         break;
 
@@ -1009,8 +1011,15 @@ u8 devices_module_init(void)
 {
     u8 rscorr;
 
+    if (!__THIS) {
+        __THIS = zalloc(sizeof(struct dev_ctl_type));
+        ASSERT(__THIS);
+    }
+
+    product_port_init();
+
 #if(defined(CONFIG_WIFI_ENABLE) && !defined(PRODUCT_NET_CLIENT_ENABLE))
-    os_sem_create(&conn_sem, 0);
+    os_sem_create(&__THIS->conn_sem, 0);
     //wifi_set_sta_connect_timeout(30);
     wifi_set_event_callback(wifi_event_callback);
     wifi_on();

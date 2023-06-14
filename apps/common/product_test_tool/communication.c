@@ -120,41 +120,7 @@ static void *host_sock = NULL;
 static u8 online_flag = 0;
 static u8 conn_flag = 0, reset;
 static struct product_conn conn;
-
-static  const  struct  {
-    const char *string;
-    u8 phy;
-    u8 mcs;
-} tx_rate_tab[] = {
-    {"1M",		0,		0},
-    {"2M",		0,		1},
-    {"5.5M",	0,		2},
-    {"11M",		0,		3},
-
-    {"6M",		1,		0},
-    {"9M",		1,		1},
-    {"12M",		1,		2},
-    {"18M",		1,		3},
-    {"24M",		1,		4},
-    {"36M",		1,		5},
-    {"48M",		1,		6},
-    {"54M",		1,		7},
-
-    {"HTMCS0",	2,		0},
-    {"HTMCS1",	2,		1},
-    {"HTMCS2",	2,		2},
-    {"HTMCS3",	2,		3},
-    {"HTMCS4",	2,		4},
-    {"HTMCS5",	2,		5},
-    {"HTMCS6",	2,		6},
-    {"HTMCS7",	2,		7},
-};
-
-
-__attribute__((aligned(4))) static u8 wifi_send_pkg[1564] = {
-    0xc6, 0x00, 0x00, 0x04, 0xB0, 0x00, 0x04, 0x80, 0x35, 0x01, 0xB6, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x08, 0x00, 0x88, 0x88, /*dst*/ 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6,/*src*/0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6,/*BSSID*/ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, /*Seq,Frag num*/0x88, 0x88,
-};
+static __attribute__((aligned(4))) u8 *wifi_send_pkg = NULL;
 
 
 static void wifi_tx_data(u8 *pkg, int len, u32 rate, u8 bw, u8 short_gi)// 最大包1513
@@ -163,6 +129,34 @@ static void wifi_tx_data(u8 *pkg, int len, u32 rate, u8 bw, u8 short_gi)// 最�
     u16 *MPDUtotalByteCount = &wifi_send_pkg[10];
     *PktLen = WIFI_80211_FILL_SIZE + len + WIFI_TXWI_HEAD_SIZE + 4 - 8;
     *MPDUtotalByteCount = WIFI_80211_FILL_SIZE + len;
+    const  struct  {
+        const char *string;
+        u8 phy;
+        u8 mcs;
+    } tx_rate_tab[] = {
+        {"1M",		0,		0},
+        {"2M",		0,		1},
+        {"5.5M",	0,		2},
+        {"11M",		0,		3},
+
+        {"6M",		1,		0},
+        {"9M",		1,		1},
+        {"12M",		1,		2},
+        {"18M",		1,		3},
+        {"24M",		1,		4},
+        {"36M",		1,		5},
+        {"48M",		1,		6},
+        {"54M",		1,		7},
+
+        {"HTMCS0",	2,		0},
+        {"HTMCS1",	2,		1},
+        {"HTMCS2",	2,		2},
+        {"HTMCS3",	2,		3},
+        {"HTMCS4",	2,		4},
+        {"HTMCS5",	2,		5},
+        {"HTMCS6",	2,		6},
+        {"HTMCS7",	2,		7},
+    };
 
     if (pkg) {
         //put_buf(pkg, len);
@@ -197,6 +191,17 @@ static void broadcast_resp_task(void *priv)
         .str = "product_resp",
         .reset = 0,
     };
+    u8 head[] = {
+        0xc6, 0x00, 0x00, 0x04, 0xB0, 0x00, 0x04, 0x80, 0x35, 0x01, 0xB6, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x08, 0x00, 0x88, 0x88, /*dst*/ 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6,/*src*/0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6,/*BSSID*/ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, /*Seq,Frag num*/0x88, 0x88,
+    };
+
+    if (!wifi_send_pkg) {
+        wifi_send_pkg = zalloc(1564);
+        ASSERT(wifi_send_pkg);
+        memcpy(wifi_send_pkg, head, sizeof(head));
+    }
+
 
     conn.mode = info->mode;
     if (info->mode == AP_MODE) {
@@ -360,6 +365,9 @@ static int wifi_event_callback(void *network_ctx, enum WIFI_EVENT event)
         break;
     case WIFI_EVENT_STA_START:
         puts("|network_user_callback->WIFI_EVENT_STA_START\n");
+        host_conn_init();
+        breathe_init();
+        camera_conn_init();
         break;
     case WIFI_EVENT_MODULE_START_ERR:
         puts("|network_user_callback->WIFI_EVENT_MODULE_START_ERR\n");
@@ -463,7 +471,7 @@ u8 product_info_check(void)
 }
 
 
-void product_wifi_rx_frame_cb(void *rxwi, void *header, void *data, u32 len, void *reserve)
+static void wifi_rx_frame_cb(void *rxwi, void *header, void *data, u32 len, void *reserve)
 {
     u32 size = len;
     u8 *buf, offset;
@@ -472,9 +480,10 @@ void product_wifi_rx_frame_cb(void *rxwi, void *header, void *data, u32 len, voi
     struct wifi_store_info *info = get_cur_wifi_info();
     offset = (info->mode == AP_MODE) ? 27 : 51;
     size = len - offset;
-    if (size < sizeof(struct product_conn)) {
-        return;
-    }
+    //if (size < sizeof(struct product_conn)) {
+    //    putchar('N');
+    //	return;
+    //}
     buf = ((u8 *)data) + offset;
     conn = buf;
 
@@ -485,6 +494,20 @@ void product_wifi_rx_frame_cb(void *rxwi, void *header, void *data, u32 len, voi
         syscfg_write(CFG_PRODUCT_CFG_INDEX, conn, sizeof(struct product_conn));
         broadcast_resp();
     }
+}
+
+
+static void net_check_timer_hdl(void *priv)
+{
+    product_info("%s\n", __FUNCTION__);
+    wifi_set_frame_cb(NULL, NULL);
+}
+
+
+void product_net_client_init(void)
+{
+    sys_timeout_add(NULL, net_check_timer_hdl, PRODUCT_NET_CHECK_TIMEOUT);
+    wifi_set_frame_cb(wifi_rx_frame_cb, NULL);
 }
 
 

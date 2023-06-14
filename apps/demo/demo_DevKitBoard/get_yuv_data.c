@@ -14,6 +14,7 @@
 
 #define YUV_TEST 	0
 #define YUV_BLOCK_SCAN	0
+#define YUV_FORMAT_422  0
 
 #if YUV_BLOCK_SCAN
 #define YUV_BLOCK_TEST	1 //只获取Y的blok测试
@@ -25,7 +26,12 @@
 static u8 isc_buf[YUV_DATA_WIDTH * 64 * 3 / 2] SEC(.sram) ALIGNE(32);
 #endif
 
+#if YUV_FORMAT_422
+static u8 yuv_buf[YUV_DATA_WIDTH * YUV_DATA_HEIGHT * 2] ALIGNE(32);
+#else
 static u8 yuv_buf[YUV_DATA_WIDTH * YUV_DATA_HEIGHT * 3 / 2] ALIGNE(32);
+#endif
+
 
 #if YUV_BLOCK_TEST
 struct yuv_app_info {
@@ -126,7 +132,13 @@ static void get_yuv_task(void *priv)
      *step 2
      */
     f.type = VIDEO_BUF_TYPE_VIDEO_OVERLAY;
+
+#if YUV_FORMAT_422
+    f.pixelformat = VIDEO_PIX_FMT_YUV422;
+#else
     f.pixelformat = VIDEO_PIX_FMT_YUV420;
+#endif
+
 #if YUV_BLOCK_SCAN
     f.static_buf = (u8 *)isc_buf;
     f.sbuf_size = sizeof(isc_buf);

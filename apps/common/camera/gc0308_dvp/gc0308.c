@@ -25,7 +25,7 @@ static u8 gc0308_power_io[2] = {-1, -1};
 #define GC0308_WRCMD 0x42
 #define GC0308_RDCMD 0x43
 
-#define CONFIG_INPUT_FPS	20 //0自动帧率 5/10/15/20/25固定帧率, 25帧需要关闭ppbuf, 加大实时流内存(cpu_config.h)
+#define CONFIG_INPUT_FPS	20 //0自动帧率 5/10/15/20/33固定帧率, 33帧需要关闭ppbuf, 加大实时流内存(cpu_config.h)
 
 #define DELAY_TIME	10
 static s32 GC0308_set_output_size(u16 *width, u16 *height, u8 *freq);
@@ -750,7 +750,7 @@ static void GC0308_config_SENSOR(u16 *width, u16 *height, u8 *format, u8 *frame_
     wrGC0308Reg(0x02, 0xf8);
 #else
 
-    //25 fps
+    //33 fps
     wrGC0308Reg(0x12, 0x10);
     wrGC0308Reg(0x0f, 0x00);
     wrGC0308Reg(0x01, 0x40);

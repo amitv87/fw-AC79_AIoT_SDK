@@ -173,7 +173,7 @@
 #define TCFG_LIMITER_ENABLE                 1     	//限幅器
 #define TCFG_DRC_ENABLE                     TCFG_LIMITER_ENABLE
 #define TCFG_EQ_FILE_ENABLE                 1     	//从bin文件读取eq配置数据
-#define TCFG_EQ_MODE_CHOOSE                 1		//0:多通道共用1个eq, drc功能丰富; 1:多通道独立eq,独立drc, 请替换对应的bin文件
+#define TCFG_EQ_MODE_CHOOSE                 0		//0:多通道共用1个eq, drc功能丰富; 1:多通道独立eq,独立drc, 请替换对应的bin文件
 
 #if (TCFG_EQ_MODE_CHOOSE == 0)
 #define TCFG_AUDIO_MDRC_ENABLE              2		//0:不使能低中DRC 1: 多带分频器使能 2: 多带分频后，再做一次全带处理使能
@@ -260,7 +260,7 @@
 
 //#define SDTAP_DEBUG
 
-#ifdef CONFIG_RELEASE_ENABLE
+#if !defined CONFIG_DEBUG_ENABLE || defined CONFIG_LIB_DEBUG_DISABLE
 #define LIB_DEBUG    0
 #else
 #define LIB_DEBUG    1

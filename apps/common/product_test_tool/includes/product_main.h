@@ -37,15 +37,19 @@
 #define 	HOST_PORT 			(32769)
 #define 	BREATHE_PORT        (39769)
 #define		BREATHE_TIMEOUT		(1000)
-#define		PRODUCT_AP_PREFIX	"PRODUCT_AP_"
-#define		PRODUCT_AP_PWD      "9876543210"
-#define		BREATHE_STR			"product_breathe"
+#define		PRODUCT_SER_AP_CH   (7)
+#define		PRODUCT_SER_AP_PREFIX	"PRODUCT_SER_AP_"
+#define		PRODUCT_SER_AP_PWD      "0123456789"
+#define		PRODUCT_AP_PREFIX		"PRODUCT_AP_"
+#define		PRODUCT_AP_PWD      	"9876543210"
+#define		BREATHE_STR				"product_breathe"
 
 #define 	DATA_BUFFER_ALIGN	(4)
 #define 	TEST_BUFFER_SIZE	(sizeof(struct comm_head) + sizeof(u16) + 1024 * 1)
 #define 	RESP_BUFFER_SIZE	(sizeof(struct comm_head) + sizeof(u16) + 1024 * 3)
 #define 	RECV_BUFFER_SIZE	(sizeof(struct comm_head) + sizeof(u16) + 1024 * 3)
 
+#define		PRODUCT_NET_CHECK_TIMEOUT	(10 * 1000)
 #define		PRODUCT_CAMERA_NUM			(2)
 #define 	PRODUCT_UVC_FPS			    (5)
 #define 	PRODUCT_MAC_SIZE			(6)

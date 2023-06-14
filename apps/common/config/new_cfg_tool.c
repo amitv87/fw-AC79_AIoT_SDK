@@ -505,9 +505,8 @@ static void online_cfg_tool_data_deal(void *buf, u32 len)
 
 void usb_cdc_read_data_handler(struct device_event *event)
 {
-    struct usb_device_t *usb_device = event->arg;
 
-    const usb_dev usb_id = usb_device2id(usb_device);
+    const usb_dev usb_id = event->value;
     static u8 buf_rx[256] = {0};
     static u8 rx_len_total = 0;
     u8 buf[64] = {0};
@@ -515,20 +514,13 @@ void usb_cdc_read_data_handler(struct device_event *event)
 
     rlen = cdc_read_data(usb_id, buf, 64);
 
-    /* put_buf(buf, rlen); */
-    /* printf("rlen = %d\n\r",rlen); */
-    /* cdc_write_data(usb_id, buf, rlen); */
-
     if ((buf[0] == 0x5A) && (buf[1] == 0xAA) && (buf[2] == 0xA5)) {
         memset(buf_rx, 0, 256);
         memcpy(buf_rx, buf, rlen);
-        /* log_info("need len = %d\n", buf_rx[5] + 6); */
-        /* log_info("rx len = %d\n", rlen); */
         if ((buf_rx[5] + 6) == rlen) {
             rx_len_total = 0;
 #if	TCFG_EQ_ONLINE_ENABLE
 #if (TCFG_COMM_TYPE == TCFG_USB_COMM)
-            /* put_buf(buf_rx, rlen); */
             online_cfg_tool_data_deal(buf_rx, rlen);
 #else
             put_buf(buf, rlen);
@@ -545,12 +537,9 @@ void usb_cdc_read_data_handler(struct device_event *event)
             return;
         }
         memcpy(buf_rx + rx_len_total, buf, rlen);
-        /* log_info("need len = %d\n", buf_rx[5] + 6); */
-        /* log_info("rx len = %d\n", rx_len_total + rlen); */
         if ((buf_rx[5] + 6) == (rx_len_total + rlen)) {
 #if	TCFG_EQ_ONLINE_ENABLE
 #if (TCFG_COMM_TYPE == TCFG_USB_COMM)
-            /* put_buf(buf_rx, rx_len_total + rlen); */
             online_cfg_tool_data_deal(buf_rx, rx_len_total + rlen);
 #else
             put_buf(buf, rlen);

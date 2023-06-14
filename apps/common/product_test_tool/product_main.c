@@ -2,22 +2,19 @@
 
 #ifdef PRODUCT_TEST_ENABLE
 
-static OS_MUTEX rsp_mutex;
 
-static struct {
+static struct product_hdl_type {
     u8 *test_buf;
     u8 *recv_buf;
     u8 *resp_buf;
     u8 enter_flag;
     u32 license_size;
+    OS_MUTEX rsp_mutex;
     u32 startup_screens_size;
     u32 shutdown_screens_size;
     u32 user_data_size;
     struct list_head msg_list;
-} product_hdl = {0};
-
-
-#define __this		(&product_hdl)
+} *__THIS = NULL;
 
 
 static u8 mac_str_to_bin(char *str, unsigned char *mac)
@@ -98,9 +95,9 @@ static void create_msg_demo(u8 *msg)
     u32 crc_len;
     u16 *crc_value;
     static u8 init = 0;
-    struct comm_head *head = (struct comm_head *)__this->test_buf;
+    struct comm_head *head = (struct comm_head *)__THIS->test_buf;
 
-    memset(__this->test_buf, 0, TEST_BUFFER_SIZE);
+    memset(__THIS->test_buf, 0, TEST_BUFFER_SIZE);
     if (!init) {
         head->mark[0] = 'J';
         head->mark[1] = 'L';
@@ -109,14 +106,14 @@ static void create_msg_demo(u8 *msg)
     }
 
     head->len = (strlen(msg) + DATA_BUFFER_ALIGN - 1) / DATA_BUFFER_ALIGN * DATA_BUFFER_ALIGN;
-    strcpy(__this->test_buf + sizeof(struct comm_head), msg);
+    strcpy(__THIS->test_buf + sizeof(struct comm_head), msg);
 
     crc_len = sizeof(struct comm_head) + head->len;
-    crc_value = (u16 *)(__this->test_buf + crc_len);
+    crc_value = (u16 *)(__THIS->test_buf + crc_len);
     *crc_value = CRC16(head, crc_len);
 
     product_info("%s, len = %d, %d\n", msg, head->len, strlen(msg));
-    put_buf(__this->test_buf, crc_len + sizeof(u16));
+    put_buf(__THIS->test_buf, crc_len + sizeof(u16));
 }
 
 
@@ -197,35 +194,35 @@ void data_respond(u8 idx, u8 type, u8 *data, u32 len)
 {
     u32 crc_len;
     u16 *crc_value;
-    struct comm_head *head = (struct comm_head *)__this->resp_buf;
+    struct comm_head *head = (struct comm_head *)__THIS->resp_buf;
 
     if (!(comm_ops()->online())) {
         return;
     }
 
-    os_mutex_pend(&rsp_mutex, 0);
+    os_mutex_pend(&__THIS->rsp_mutex, 0);
 
-    memset(__this->resp_buf, 0, RESP_BUFFER_SIZE);
+    memset(__THIS->resp_buf, 0, RESP_BUFFER_SIZE);
     head->mark[0] = 'J';
     head->mark[1] = 'L';
     head->idx     = idx;
     head->type    = type;
 
     head->len = (len + DATA_BUFFER_ALIGN - 1) / DATA_BUFFER_ALIGN * DATA_BUFFER_ALIGN;
-    memcpy(__this->resp_buf + sizeof(struct comm_head), data, len);
+    memcpy(__THIS->resp_buf + sizeof(struct comm_head), data, len);
 
     crc_len = sizeof(struct comm_head) + head->len;
-    crc_value = (u16 *)(__this->resp_buf + crc_len);
+    crc_value = (u16 *)(__THIS->resp_buf + crc_len);
     *crc_value = CRC16(head, crc_len);
 
-    if (comm_ops()->write(__this->resp_buf, crc_len + sizeof(u16)) != crc_len + sizeof(u16)) {
+    if (comm_ops()->write(__THIS->resp_buf, crc_len + sizeof(u16)) != crc_len + sizeof(u16)) {
         product_err("%s error\n", __func__);
     }
 
-    os_mutex_post(&rsp_mutex);
+    os_mutex_post(&__THIS->rsp_mutex);
     //s32 ret, retry_cnt = 0;
     //do {
-    //    ret = comm_ops()->write(__this->resp_buf, crc_len + sizeof(u16));
+    //    ret = comm_ops()->write(__THIS->resp_buf, crc_len + sizeof(u16));
     //    product_info("%s, retry = %d, ret = %d / %d\n", __func__, retry_cnt, ret, crc_len + sizeof(u16));
     //    retry_cnt++;
     //} while ((ret != crc_len + sizeof(u16)) && retry_cnt < 10);
@@ -242,7 +239,7 @@ static void msg_handle_task(void *priv)
     u8 mac[PRODUCT_MAC_SIZE], uuid[PRODUCT_UUID_SIZE + 1] = {0}, sn[PRODUCT_SN_SIZE + 1] = {0}, macstr[3][32] = {0}, *str, opcode, rscorr, rscorr_str[4] = {0}, free_flag, license_flag = 0, dev_type, res_value;
 
     for (;;) {
-        list_for_each_entry(msg, &__this->msg_list, entry) {
+        list_for_each_entry(msg, &__THIS->msg_list, entry) {
 
             product_info("--->recv cjson\n\n%s\n\n", msg->data);
             if (!(new_obj = json_tokener_parse(msg->data))) {
@@ -351,20 +348,20 @@ static void msg_handle_task(void *priv)
                 sub_obj = json_object_object_get(params_obj, "type");
                 switch (json_object_get_int(sub_obj)) {
                 case DATA_TYPE_LICENSE_WRITE:
-                    __this->license_size = json_object_get_int(json_object_object_get(params_obj, "size"));
-                    product_info("license_size = %d\n", __this->license_size);
+                    __THIS->license_size = json_object_get_int(json_object_object_get(params_obj, "size"));
+                    product_info("license_size = %d\n", __THIS->license_size);
                     break;
                 case DATA_TYPE_BOOTSCREENS:
-                    __this->startup_screens_size = json_object_get_int(json_object_object_get(params_obj, "size"));
-                    product_info("startup_screens_size = %d\n", __this->startup_screens_size);
+                    __THIS->startup_screens_size = json_object_get_int(json_object_object_get(params_obj, "size"));
+                    product_info("startup_screens_size = %d\n", __THIS->startup_screens_size);
                     break;
                 case DATA_TYPE_SHUTDOWN_SCREENS:
-                    __this->shutdown_screens_size = json_object_get_int(json_object_object_get(params_obj, "size"));
-                    product_info("shutdown_screens_size = %d\n", __this->shutdown_screens_size);
+                    __THIS->shutdown_screens_size = json_object_get_int(json_object_object_get(params_obj, "size"));
+                    product_info("shutdown_screens_size = %d\n", __THIS->shutdown_screens_size);
                     break;
                 case DATA_TYPE_USER_DATA_WRITE:
-                    __this->user_data_size = json_object_get_int(json_object_object_get(params_obj, "size"));
-                    product_info("user_data_size = %d\n", __this->user_data_size);
+                    __THIS->user_data_size = json_object_get_int(json_object_object_get(params_obj, "size"));
+                    product_info("user_data_size = %d\n", __THIS->user_data_size);
                     break;
                 default:
                     rscorr = ERR_PARAMS;
@@ -460,8 +457,8 @@ static void data_handle_task(void *priv)
     struct comm_msg *msg;
     struct comm_head *head;
 
-    head = (struct comm_head *)__this->recv_buf;
-    data = __this->recv_buf + sizeof(struct comm_head);
+    head = (struct comm_head *)__THIS->recv_buf;
+    data = __THIS->recv_buf + sizeof(struct comm_head);
 
     for (;;) {
         if (!(comm_ops()->online())) {
@@ -469,7 +466,7 @@ static void data_handle_task(void *priv)
             continue;
         }
 
-        len = comm_ops()->read(__this->recv_buf, MAXP_SIZE_CDC_BULKOUT);
+        len = comm_ops()->read(__THIS->recv_buf, MAXP_SIZE_CDC_BULKOUT);
         if (len < sizeof(struct comm_head)) {
             continue;
         }
@@ -479,7 +476,7 @@ static void data_handle_task(void *priv)
         }
 
         recv_size  = len;
-        read_addr  = __this->recv_buf + len;
+        read_addr  = __THIS->recv_buf + len;
         total_size = sizeof(struct comm_head) + head->len + sizeof(u16);
         while (recv_size < total_size) {
             if ((len = comm_ops()->read(read_addr, MAXP_SIZE_CDC_BULKOUT)) <= 0) {
@@ -493,10 +490,10 @@ static void data_handle_task(void *priv)
             continue;
         }
 
-        //put_buf(__this->recv_buf, total_size);
+        //put_buf(__THIS->recv_buf, total_size);
 
         crc_len = sizeof(struct comm_head) + head->len;
-        crc_value = (u16 *)(__this->recv_buf + crc_len);
+        crc_value = (u16 *)(__THIS->recv_buf + crc_len);
         if (CRC16(head, crc_len) != *crc_value) {
             continue;
         }
@@ -511,16 +508,16 @@ static void data_handle_task(void *priv)
             msg->len = head->len;
             msg->self = msg;
             memcpy(msg->data, data, head->len);
-            list_add_tail(&msg->entry, &__this->msg_list);
+            list_add_tail(&msg->entry, &__THIS->msg_list);
             break;
 
         case DATA_TYPE_LICENSE_WRITE:
-            rscorr = product_write_license(head->idx, data, head->len, __this->license_size);
+            rscorr = product_write_license(head->idx, data, head->len, __THIS->license_size);
             data_respond(head->idx, head->type, &rscorr, 1);
             break;
 
         case DATA_TYPE_BOOTSCREENS:
-            rscorr = product_write_bootscreens(head->idx, data, head->len, __this->startup_screens_size);
+            rscorr = product_write_bootscreens(head->idx, data, head->len, __THIS->startup_screens_size);
             data_respond(head->idx, head->type, &rscorr, 1);
             break;
 
@@ -538,12 +535,12 @@ static void data_handle_task(void *priv)
             break;
 
         case DATA_TYPE_SHUTDOWN_SCREENS:
-            rscorr = product_write_shutdown_screens(head->idx, data, head->len, __this->shutdown_screens_size);
+            rscorr = product_write_shutdown_screens(head->idx, data, head->len, __THIS->shutdown_screens_size);
             data_respond(head->idx, head->type, &rscorr, 1);
             break;
 
         case DATA_TYPE_USER_DATA_WRITE:
-            rscorr = product_write_user_data(head->idx, data, head->len, __this->user_data_size);
+            rscorr = product_write_user_data(head->idx, data, head->len, __THIS->user_data_size);
             data_respond(head->idx, head->type, &rscorr, 1);
             break;
 
@@ -564,7 +561,7 @@ static void data_handle_task(void *priv)
 
 u8 is_product_mode(void)
 {
-    return __this->enter_flag;
+    return __THIS->enter_flag;
 }
 
 
@@ -581,13 +578,21 @@ void product_online_tips(void)
 u8 product_main(void)
 {
     if (!product_enter_check()) {
+#ifdef PRODUCT_NET_CLIENT_ENABLE
+        product_net_client_init();
+#endif
         return 0;
     }
 
+    if (!__THIS) {
+        __THIS = zalloc(sizeof(struct product_hdl_type));
+        ASSERT(__THIS);
+    }
+
 #ifdef PRODUCT_NET_SERVER_ENABLE
-    __this->enter_flag = 1;
-    os_mutex_create(&rsp_mutex);
-    __this->resp_buf = zalloc(RESP_BUFFER_SIZE);
+    __THIS->enter_flag = 1;
+    os_mutex_create(&__THIS->rsp_mutex);
+    __THIS->resp_buf = zalloc(RESP_BUFFER_SIZE);
     return product_net_main();
 #endif
 
@@ -600,22 +605,22 @@ u8 product_main(void)
 #endif
 
 #ifdef MSG_TEST_DEBUG
-    __this->test_buf = zalloc(TEST_BUFFER_SIZE);
-    ASSERT(__this->test_buf, "product tool zalloc buffer err");
+    __THIS->test_buf = zalloc(TEST_BUFFER_SIZE);
+    ASSERT(__THIS->test_buf, "product tool zalloc buffer err");
     msg_demo_display();
 #endif
 
-    __this->enter_flag = 1;
-    __this->recv_buf = zalloc(RECV_BUFFER_SIZE);
-    __this->resp_buf = zalloc(RESP_BUFFER_SIZE);
-    ASSERT(__this->recv_buf && __this->recv_buf, "product tool zalloc buffer err");
+    __THIS->enter_flag = 1;
+    __THIS->recv_buf = zalloc(RECV_BUFFER_SIZE);
+    __THIS->resp_buf = zalloc(RESP_BUFFER_SIZE);
+    ASSERT(__THIS->recv_buf && __THIS->recv_buf, "product tool zalloc buffer err");
 
-    INIT_LIST_HEAD(&__this->msg_list);
+    INIT_LIST_HEAD(&__THIS->msg_list);
 
     comm_ops()->init();
     devices_module_init();
 
-    os_mutex_create(&rsp_mutex);
+    os_mutex_create(&__THIS->rsp_mutex);
     thread_fork("msg_handle_task", 10, 1024, 0, NULL, msg_handle_task, NULL);
     thread_fork("data_handle_task", 30, 1024, 0, NULL, data_handle_task, NULL);
 

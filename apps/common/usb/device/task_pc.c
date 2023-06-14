@@ -195,7 +195,8 @@ static void usb_cdc_wakeup(struct usb_device_t *usb_device)
 
     //先post到任务，由任务调用cdc_read_data()读取再执行后续工作
     struct device_event e = {0};
-    e.arg = usb_device;
+    const usb_dev usb_id = usb_device2id(usb_device);
+    e.value = usb_id;
     device_event_notify(DEVICE_EVENT_FROM_CFG_TOOL, &e);
 }
 #endif

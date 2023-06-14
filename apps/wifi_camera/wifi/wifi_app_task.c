@@ -675,12 +675,6 @@ static void wifi_app_task(void *priv)
         //进入产测模式后，将直接退出
         return;
     }
-
-#ifdef PRODUCT_NET_CLIENT_ENABLE
-    void product_wifi_rx_frame_cb(void *rxwi, void *header, void *data, u32 len, void *reserve);
-    wifi_set_frame_cb(product_wifi_rx_frame_cb, NULL);
-#endif
-
 #endif
 
     wifi_set_event_callback(wifi_event_callback);

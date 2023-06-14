@@ -1,6 +1,7 @@
 #ifndef _PRODUCT_PORT_H_
 #define _PRODUCT_PORT_H_
 
+void product_port_init(void);
 u8 product_uuid_wr(u8 *uuid, u8 is_write);
 u8 product_sn_wr(u8 *sn, u8 is_write);
 u8 product_rf_mac_wr(u8 *type, u8 *mac, u8 is_write);

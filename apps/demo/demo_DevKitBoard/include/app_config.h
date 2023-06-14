@@ -55,7 +55,8 @@
 #define CONFIG_UART0_ENABLE                	      0   //模块没有使用时IO不会被占用
 #define CONFIG_UART2_ENABLE                	      0
 #define CONFIG_DEBUG_ENABLE                	      1
-#ifdef CONFIG_RELEASE_ENABLE
+
+#if !defined CONFIG_DEBUG_ENABLE || defined CONFIG_LIB_DEBUG_DISABLE
 #define LIB_DEBUG    0
 #else
 #define LIB_DEBUG    1

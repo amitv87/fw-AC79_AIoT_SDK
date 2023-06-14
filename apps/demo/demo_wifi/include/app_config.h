@@ -47,14 +47,12 @@
 
 //#define SDTAP_DEBUG
 
-#ifdef CONFIG_RELEASE_ENABLE
+#if !defined CONFIG_DEBUG_ENABLE || defined CONFIG_LIB_DEBUG_DISABLE
 #define LIB_DEBUG    0
 #else
 #define LIB_DEBUG    1
 #endif
 #define CONFIG_DEBUG_LIB(x)         (x & LIB_DEBUG)
-
-
 
 
 #endif

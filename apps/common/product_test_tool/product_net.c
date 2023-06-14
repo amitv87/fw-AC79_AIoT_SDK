@@ -19,76 +19,76 @@
 #define WIFI_TXWI_HEAD_SIZE   20
 #define WIFI_80211_FILL_SIZE  27 //保留一些字节不填充, 为了避开duration段和上层发送1个字节也支持
 
-static u16 time_hdl = 0;
-static u8 breathe_idx = 0;
-static int camera_pid = 0;
-struct sockaddr_in remote_addr = {0};
-static struct sockaddr_in host_dest = {0};
-static conn_flag = FALSE, wifi_conn = FALSE;
-static u8 conn_ssid[33] = {0}, conn_pwd[64] = {0};
-static void *host_sock = NULL, *breathe_sock = NULL;
-static OS_SEM asem, bsem, bs_sem, br_sem, camera_sem;
 
-
-static  const  struct  {
-    const char *string;
-    u8 phy;
-    u8 mcs;
-} tx_rate_tab[] = {
-    {"1M",		0,		0},
-    {"2M",		0,		1},
-    {"5.5M",	0,		2},
-    {"11M",		0,		3},
-
-    {"6M",		1,		0},
-    {"9M",		1,		1},
-    {"12M",		1,		2},
-    {"18M",		1,		3},
-    {"24M",		1,		4},
-    {"36M",		1,		5},
-    {"48M",		1,		6},
-    {"54M",		1,		7},
-
-    {"HTMCS0",	2,		0},
-    {"HTMCS1",	2,		1},
-    {"HTMCS2",	2,		2},
-    {"HTMCS3",	2,		3},
-    {"HTMCS4",	2,		4},
-    {"HTMCS5",	2,		5},
-    {"HTMCS6",	2,		6},
-    {"HTMCS7",	2,		7},
-};
-
-
-__attribute__((aligned(4))) static u8 wifi_send_pkg[1564] = {
-    0xc6, 0x00, 0x00, 0x04, 0xB0, 0x00, 0x04, 0x80, 0x35, 0x01, 0xB6, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x08, 0x00, 0x88, 0x88, /*dst*/ 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6,/*src*/0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6,/*BSSID*/ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, /*Seq,Frag num*/0x88, 0x88,
-};
+static struct product_net_type {
+    u16 time_hdl;
+    u8 breathe_idx;
+    int camera_pid;
+    void *camera_sock;
+    struct sockaddr_in remote_addr;
+    struct sockaddr_in host_dest;
+    u8 conn_flag, wifi_conn;
+    u8 conn_ssid[33], conn_pwd[64];
+    void *host_sock, *breathe_sock;
+    OS_SEM asem, bsem, bs_sem, br_sem, camera_sem;
+    enum WIFI_MODE server_mode;
+    __attribute__((aligned(4))) u8 *wifi_send_pkg;
+} *__THIS = NULL;
 
 
 static u8 breathe_ctl(u8 on);
+static void build_dev_conn(void);
 static void delete_dev_conn(void);
 static void build_data_conn(void);
+static void delete_data_conn(void);
 
 
 static void wifi_tx_data(u8 *pkg, int len, u32 rate, u8 bw, u8 short_gi)// 最大包1513
 {
-    u16 *PktLen = &wifi_send_pkg[0];
-    u16 *MPDUtotalByteCount = &wifi_send_pkg[10];
+    u16 *PktLen = &__THIS->wifi_send_pkg[0];
+    u16 *MPDUtotalByteCount = &__THIS->wifi_send_pkg[10];
     *PktLen = WIFI_80211_FILL_SIZE + len + WIFI_TXWI_HEAD_SIZE + 4 - 8;
     *MPDUtotalByteCount = WIFI_80211_FILL_SIZE + len;
+    const  struct  {
+        const char *string;
+        u8 phy;
+        u8 mcs;
+    } tx_rate_tab[] = {
+        {"1M",		0,		0},
+        {"2M",		0,		1},
+        {"5.5M",	0,		2},
+        {"11M",		0,		3},
+
+        {"6M",		1,		0},
+        {"9M",		1,		1},
+        {"12M",		1,		2},
+        {"18M",		1,		3},
+        {"24M",		1,		4},
+        {"36M",		1,		5},
+        {"48M",		1,		6},
+        {"54M",		1,		7},
+
+        {"HTMCS0",	2,		0},
+        {"HTMCS1",	2,		1},
+        {"HTMCS2",	2,		2},
+        {"HTMCS3",	2,		3},
+        {"HTMCS4",	2,		4},
+        {"HTMCS5",	2,		5},
+        {"HTMCS6",	2,		6},
+        {"HTMCS7",	2,		7},
+    };
 
     if (pkg) {
         //put_buf(pkg, len);
-        memcpy(&wifi_send_pkg[WIFI_TXWI_HEAD_SIZE + WIFI_80211_FILL_SIZE], pkg, len);
+        memcpy(&__THIS->wifi_send_pkg[WIFI_TXWI_HEAD_SIZE + WIFI_80211_FILL_SIZE], pkg, len);
     } else {
-        memset(&wifi_send_pkg[WIFI_TXWI_HEAD_SIZE + WIFI_80211_FILL_SIZE], 0xaa, len);
+        memset(&__THIS->wifi_send_pkg[WIFI_TXWI_HEAD_SIZE + WIFI_80211_FILL_SIZE], 0xaa, len);
     }
 
     struct urb urb;
     urb.pipe = USB_DIR_OUT;
     urb.complete = NULL;
-    urb.transfer_buffer = wifi_send_pkg;
+    urb.transfer_buffer = __THIS->wifi_send_pkg;
     urb.transfer_buffer_length = len + WIFI_TXWI_HEAD_SIZE + WIFI_80211_FILL_SIZE + 4;
 
     PTXWI_STRUC pTxWI = TXINFO_SIZE + (u8 *)urb.transfer_buffer;
@@ -122,8 +122,13 @@ static void broadcast_task(void *priv)
         wifi_set_channel(ch[(++idx) % ARRAY_SIZE(ch)]);
         for (u8 i = 0; i < 5; i++) {
             wifi_tx_data(&conn, sizeof(struct product_conn), 0, 0, 0);
-            if (!os_sem_accept(&asem)) {
-                os_sem_post(&bsem);
+            if (!os_sem_accept(&__THIS->asem)) {
+                os_sem_post(&__THIS->bsem);
+                if (__THIS->server_mode == AP_MODE) {
+                    wifi_set_channel(PRODUCT_SER_AP_CH);
+                } else {
+                    build_dev_conn();
+                }
                 return;
             }
         }
@@ -135,15 +140,15 @@ static u8 broadcast_ctl(u8 ctl)
 {
     static int pid = 0;
     if (ctl & !pid) {
-        conn_flag = FALSE;
+        __THIS->conn_flag = FALSE;
         thread_fork("broadcast_task", 30, 256, 0, &pid, broadcast_task, NULL);
         return TRUE;
     }
 
     if (!ctl && pid) {
-        os_sem_post(&asem);
+        os_sem_post(&__THIS->asem);
         pid = 0;
-        //os_sem_pend(&bsem, 0);
+        //os_sem_pend(&__THIS->bsem, 0);
         return TRUE;
     }
 
@@ -153,14 +158,15 @@ static u8 broadcast_ctl(u8 ctl)
 
 static void breathe_timeout_hdl(void *priv)
 {
-    breathe_idx ++;
-    product_info("%s, breathe_idx = %d\n", __FUNCTION__, breathe_idx);
-    if (breathe_idx < 3) {
-        time_hdl = sys_timeout_add(NULL, breathe_timeout_hdl, BREATHE_TIMEOUT);
+    __THIS->breathe_idx ++;
+    product_info("%s, __THIS->breathe_idx = %d\n", __FUNCTION__, __THIS->breathe_idx);
+    if (__THIS->breathe_idx < 3) {
+        __THIS->time_hdl = sys_timeout_add(NULL, breathe_timeout_hdl, BREATHE_TIMEOUT);
     } else {
-        breathe_idx = 0;
+        __THIS->breathe_idx = 0;
         breathe_ctl(FALSE);
         delete_camera_data_conn();
+        delete_data_conn();
         delete_dev_conn();
     }
 }
@@ -172,21 +178,21 @@ static void breathe_recv_task(void)
     socklen_t len = sizeof(struct sockaddr_in);
 
     for (;;) {
-        if (breathe_sock) {
-            recv_len = sock_recvfrom(breathe_sock, recv_buf, sizeof(recv_buf), 0, (struct sockaddr *)&remote_addr, &len);
+        if (__THIS->breathe_sock) {
+            recv_len = sock_recvfrom(__THIS->breathe_sock, recv_buf, sizeof(recv_buf), 0, (struct sockaddr *)&__THIS->remote_addr, &len);
             //product_info("\n recv_len is %d, %s\n", recv_len, recv_buf);
             if (recv_len > 0 && !strcmp(BREATHE_STR, recv_buf)) {
-                breathe_idx = 0;
-                sys_timer_modify(time_hdl, BREATHE_TIMEOUT);
-                if (!host_sock) {
-                    product_info("Received data from (ip : %s, port : %d)\r\n", inet_ntoa(remote_addr.sin_addr), remote_addr.sin_port);
+                __THIS->breathe_idx = 0;
+                sys_timer_modify(__THIS->time_hdl, BREATHE_TIMEOUT);
+                if (!__THIS->host_sock) {
+                    product_info("Received data from (ip : %s, port : %d)\r\n", inet_ntoa(__THIS->remote_addr.sin_addr), __THIS->remote_addr.sin_port);
                     build_data_conn();
                 }
             }
         }
 
-        if (!os_sem_accept(&br_sem)) {
-            os_sem_del(&br_sem, 0);
+        if (!os_sem_accept(&__THIS->br_sem)) {
+            os_sem_del(&__THIS->br_sem, 0);
             return;
         }
     }
@@ -201,15 +207,15 @@ static void breathe_send_task(void *priv)
     dest.sin_addr.s_addr = inet_addr("255.255.255.255");
     dest.sin_port = htons(BREATHE_PORT);
 
-    time_hdl = sys_timeout_add(NULL, breathe_timeout_hdl, BREATHE_TIMEOUT);
+    __THIS->time_hdl = sys_timeout_add(NULL, breathe_timeout_hdl, BREATHE_TIMEOUT);
     for (;;) {
-        if (breathe_sock) {
-            sock_sendto(breathe_sock, BREATHE_STR, strlen(BREATHE_STR), 0, (struct sockaddr *)&dest, sizeof(struct sockaddr_in));
+        if (__THIS->breathe_sock) {
+            sock_sendto(__THIS->breathe_sock, BREATHE_STR, strlen(BREATHE_STR), 0, (struct sockaddr *)&dest, sizeof(struct sockaddr_in));
         }
         os_time_dly(20);
 
-        if (!os_sem_accept(&bs_sem)) {
-            os_sem_del(&bs_sem, 0);
+        if (!os_sem_accept(&__THIS->bs_sem)) {
+            os_sem_del(&__THIS->bs_sem, 0);
             return;
         }
     }
@@ -221,30 +227,30 @@ static u8 breathe_ctl(u8 on)
     u32 opt = 1;
 
     if (on) {
-        if (breathe_sock) {
+        if (__THIS->breathe_sock) {
             return TRUE;
         }
 
-        breathe_sock = sock_reg(AF_INET, SOCK_DGRAM, 0, NULL, NULL);
-        if (breathe_sock == NULL) {
+        __THIS->breathe_sock = sock_reg(AF_INET, SOCK_DGRAM, 0, NULL, NULL);
+        if (__THIS->breathe_sock == NULL) {
             product_err("udp sock_reg fail.\n");
             return FALSE;
         }
-        sock_setsockopt(breathe_sock, SOL_SOCKET, SO_BROADCAST, &opt, sizeof(opt));
+        sock_setsockopt(__THIS->breathe_sock, SOL_SOCKET, SO_BROADCAST, &opt, sizeof(opt));
 
-        os_sem_create(&bs_sem, 0);
-        os_sem_create(&br_sem, 0);
+        os_sem_create(&__THIS->bs_sem, 0);
+        os_sem_create(&__THIS->br_sem, 0);
         thread_fork("breathe_send_task", 29, 256, 0, NULL, breathe_send_task, NULL);
         thread_fork("breathe_recv_task", 30, 256, 0, NULL, breathe_recv_task, NULL);
         return TRUE;
     } else {
-        if (breathe_sock) {
-            sys_timer_del(time_hdl);
-            os_sem_post(&bs_sem);
-            os_sem_post(&br_sem);
-            sock_unreg(breathe_sock);
-            breathe_sock = NULL;
-            time_hdl = 0;
+        if (__THIS->breathe_sock) {
+            sys_timer_del(__THIS->time_hdl);
+            os_sem_post(&__THIS->bs_sem);
+            os_sem_post(&__THIS->br_sem);
+            sock_unreg(__THIS->breathe_sock);
+            __THIS->breathe_sock = NULL;
+            __THIS->time_hdl = 0;
             return TRUE;
         }
     }
@@ -256,7 +262,7 @@ static u8 breathe_ctl(u8 on)
 static void dev_conn_task(void *priv)
 {
     wifi_set_connect_sta_block(0);
-    wifi_enter_sta_mode(conn_ssid, conn_pwd);
+    wifi_enter_sta_mode(__THIS->conn_ssid, __THIS->conn_pwd);
 }
 
 
@@ -268,7 +274,18 @@ static void build_dev_conn(void)
 
 static void delete_dev_conn(void)
 {
-    wifi_enter_sta_mode("jijij", "jlkhk");
+    u8 mac[6];
+    static u8 ssid[33] = {0}, pwd[64] = {0};
+
+    if (__THIS->server_mode == AP_MODE) {
+        wifi_get_mac(mac);
+        sprintf((char *)ssid, PRODUCT_SER_AP_PREFIX"%02x%02x%02x%02x%02x%02x", \
+                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        sprintf((char *)pwd, PRODUCT_SER_AP_PWD);
+        wifi_enter_ap_mode(ssid, pwd);
+    } else {
+        wifi_enter_sta_mode("jijij", "jlkhk");
+    }
 }
 
 
@@ -323,7 +340,7 @@ static void host_data_handle_task(void *priv)
             continue;
         }
 
-        if (!host_sock) {
+        if (!__THIS->host_sock) {
             msg = zalloc(head->len);
             memcpy(msg, data, head->len);
             new_obj = json_tokener_parse(msg);
@@ -335,7 +352,7 @@ static void host_data_handle_task(void *priv)
             data_respond(0, DATA_TYPE_OPCODE, str, strlen(str));
             json_object_put(new_obj);
         } else {
-            sock_sendto(host_sock, recv_buf, total_size, 0, (struct sockaddr *)&host_dest, sizeof(struct sockaddr_in));
+            sock_sendto(__THIS->host_sock, recv_buf, total_size, 0, (struct sockaddr *)&__THIS->host_dest, sizeof(struct sockaddr_in));
         }
     }
 }
@@ -346,19 +363,19 @@ static void client_data_handle_task(void *priv)
     int err, recv_len;
     char recv_buf[1024];
 
-    if (!(host_sock = sock_reg(AF_INET, SOCK_STREAM, 0, NULL, NULL))) {
+    if (!(__THIS->host_sock = sock_reg(AF_INET, SOCK_STREAM, 0, NULL, NULL))) {
         product_err("sock_reg fail.\n");
         return;
     }
 
-    host_dest.sin_family = AF_INET;
-    host_dest.sin_addr.s_addr = inet_addr(inet_ntoa(remote_addr.sin_addr));
-    host_dest.sin_port = htons(HOST_PORT);
+    __THIS->host_dest.sin_family = AF_INET;
+    __THIS->host_dest.sin_addr.s_addr = inet_addr(inet_ntoa(__THIS->remote_addr.sin_addr));
+    __THIS->host_dest.sin_port = htons(HOST_PORT);
 
-    if (sock_connect(host_sock, (struct sockaddr *)&host_dest, sizeof(struct sockaddr_in))) {
+    if (sock_connect(__THIS->host_sock, (struct sockaddr *)&__THIS->host_dest, sizeof(struct sockaddr_in))) {
         product_err("sock_connect fail.\n");
-        sock_unreg(host_sock);
-        host_sock = NULL;
+        sock_unreg(__THIS->host_sock);
+        __THIS->host_sock = NULL;
         delete_dev_conn();
         return;
     } else {
@@ -367,18 +384,13 @@ static void client_data_handle_task(void *priv)
     }
 
     for (;;) {
-        if ((recv_len = sock_recvfrom(host_sock, recv_buf, sizeof(recv_buf), 0, NULL, NULL)) > 0) {
+        if ((recv_len = sock_recvfrom(__THIS->host_sock, recv_buf, sizeof(recv_buf), 0, NULL, NULL)) > 0) {
             //put_buf(recv_buf, recv_len);
             host_data_write(recv_buf, recv_len);
         } else {
             product_err("sock_recvfrom err!");
             break;
         }
-    }
-
-    if (host_sock) {
-        sock_unreg(host_sock);
-        host_sock = NULL;
     }
 }
 
@@ -391,9 +403,15 @@ static void build_data_conn(void)
 }
 
 
+static void delete_data_conn(void)
+{
+    sock_unreg(__THIS->host_sock);
+    __THIS->host_sock = NULL;
+}
+
+
 static void camera_data_handle_task(void *priv)
 {
-    void *c_sock;
     int recv_len;
     char recv_buf[1024];
     struct sockaddr_in dest = {0};
@@ -426,19 +444,19 @@ static void camera_data_handle_task(void *priv)
     char *camera_data = malloc(50 * 1024);
     u32 read_size, recv_size, total_size, remain_size;
 
-    if (!(c_sock = sock_reg(AF_INET, SOCK_STREAM, 0, NULL, NULL))) {
+    if (!(__THIS->camera_sock = sock_reg(AF_INET, SOCK_STREAM, 0, NULL, NULL))) {
         product_err("sock_reg fail.\n");
         return;
     }
 
     dest.sin_family = AF_INET;
-    dest.sin_addr.s_addr = inet_addr(inet_ntoa(remote_addr.sin_addr));
+    dest.sin_addr.s_addr = inet_addr(inet_ntoa(__THIS->remote_addr.sin_addr));
     dest.sin_port = htons(CAMERA_PORT);
 
-    if (sock_connect(c_sock, (struct sockaddr *)&dest, sizeof(struct sockaddr_in))) {
+    if (sock_connect(__THIS->camera_sock, (struct sockaddr *)&dest, sizeof(struct sockaddr_in))) {
         product_err("camera sock_connect fail.\n");
-        sock_unreg(c_sock);
-        c_sock = NULL;
+        sock_unreg(__THIS->camera_sock);
+        __THIS->camera_sock = NULL;
         return;
     } else {
         product_info("camera_sock_connect succ.\n");
@@ -449,13 +467,13 @@ static void camera_data_handle_task(void *priv)
     params[1] = info->height;
     params[2] = PRODUCT_UVC_FPS;//info->cur_fps;
 
-    if (sock_send(c_sock, &cmd, sizeof(struct net_cmd_type), 0) != sizeof(struct net_cmd_type)) {
+    if (sock_send(__THIS->camera_sock, &cmd, sizeof(struct net_cmd_type), 0) != sizeof(struct net_cmd_type)) {
         product_err("net camera open err\n");
         return;
     }
 
     for (;;) {
-        if (sock_recvfrom(c_sock, &cmd, sizeof(struct net_cmd_type), 0, NULL, NULL) == sizeof(struct net_cmd_type)) {
+        if (sock_recvfrom(__THIS->camera_sock, &cmd, sizeof(struct net_cmd_type), 0, NULL, NULL) == sizeof(struct net_cmd_type)) {
             if (strcmp(cmd.cmd, NET_CAMERA_FRAME)) {
                 continue;
             }
@@ -464,7 +482,7 @@ static void camera_data_handle_task(void *priv)
             remain_size = total_size;
             while (remain_size) {
                 read_size = remain_size > 1024 ? 1024 : remain_size;
-                if ((recv_len = sock_recvfrom(c_sock, camera_data + recv_size, read_size, 0, NULL, NULL)) > 0) {
+                if ((recv_len = sock_recvfrom(__THIS->camera_sock, camera_data + recv_size, read_size, 0, NULL, NULL)) > 0) {
                     recv_size += recv_len;
                     remain_size = total_size - recv_size;
                 } else {
@@ -490,14 +508,10 @@ static void camera_data_handle_task(void *priv)
             }
         }
 
-        if (!os_sem_accept(&camera_sem)) {
-            strcpy(cmd.cmd, NET_CAMERA_CLOSE);
-            sock_send(c_sock, &cmd, sizeof(struct net_cmd_type), 0);
-            sock_unreg(c_sock);
-            c_sock = NULL;
-            os_sem_del(&camera_sem, 0);
+        if (!os_sem_accept(&__THIS->camera_sem)) {
+            os_sem_del(&__THIS->camera_sem, 0);
             free(camera_data);
-            camera_pid = 0;
+            __THIS->camera_pid = 0;
             return;
         }
     }
@@ -510,16 +524,16 @@ u8 build_camera_data_conn(void *func, void *priv)
     msg[0] = (u32)priv;
     msg[1] = (u32)func;
 
-    if (camera_pid) {
+    if (__THIS->camera_pid) {
         return FALSE;
     }
 
-    if (wifi_conn == FALSE) {
+    if (__THIS->wifi_conn == FALSE) {
         return FALSE;
     }
 
-    os_sem_create(&camera_sem, 0);
-    if (thread_fork("camera_data_handle_task", 10, 1024, 0, &camera_pid, camera_data_handle_task, msg) != OS_NO_ERR) {
+    os_sem_create(&__THIS->camera_sem, 0);
+    if (thread_fork("camera_data_handle_task", 10, 1024, 0, &__THIS->camera_pid, camera_data_handle_task, msg) != OS_NO_ERR) {
         product_err("thread fork fail\n");
         return FALSE;
     }
@@ -529,8 +543,13 @@ u8 build_camera_data_conn(void *func, void *priv)
 
 void delete_camera_data_conn(void)
 {
-    if (camera_pid) {
-        os_sem_post(&camera_sem);
+    struct net_cmd_type cmd;
+    if (__THIS->camera_pid) {
+        strcpy(cmd.cmd, NET_CAMERA_CLOSE);
+        sock_send(__THIS->camera_sock, &cmd, sizeof(struct net_cmd_type), 0);
+        sock_unreg(__THIS->camera_sock);
+        __THIS->camera_sock = NULL;
+        os_sem_post(&__THIS->camera_sem);
     }
 }
 
@@ -548,27 +567,33 @@ static void wifi_rx_frame_cb(void *rxwi, void *header, void *data, u32 len, void
     buf = ((u8 *)data) + offset;
     conn = buf;
 
-    if (!strcmp(conn->str, "product_resp") && conn_flag == FALSE) {
-        conn_flag = TRUE;
+    if (!strcmp(conn->str, "product_resp") && __THIS->conn_flag == FALSE) {
+        __THIS->conn_flag = TRUE;
         product_info("str = %s, mode = %d, ssid = %s, pwd = %s\n", conn->str, conn->mode, conn->ssid, conn->pwd);
-        strcpy(conn_ssid, conn->ssid);
-        strcpy(conn_pwd, conn->pwd);
+        strcpy(__THIS->conn_ssid, conn->ssid);
+        strcpy(__THIS->conn_pwd, conn->pwd);
         broadcast_ctl(FALSE);
-        build_dev_conn();
     }
 }
 
 
 static int wifi_event_callback(void *network_ctx, enum WIFI_EVENT event)
 {
+    u8 mac[6];
     struct wifi_store_info wifi_default_mode_parm = {0};
-    static u8 ssid[33] = "ijjijijijiiii", pwd[65] = "iiiijijijikkkkki";
+    static u8 ssid[33] = {0}, pwd[64] = {0};
 
     switch (event) {
     case WIFI_EVENT_MODULE_INIT:
         puts("|network_user_callback->WIFI_EVENT_MODULE_INIT\n");
-
-        wifi_default_mode_parm.mode = STA_MODE;
+        wifi_default_mode_parm.mode = __THIS->server_mode;
+        if (__THIS->server_mode == AP_MODE) {
+            wl_set_wifi_channel(PRODUCT_SER_AP_CH);
+            init_net_device_mac_addr((char *)mac, 1);
+            sprintf((char *)ssid, PRODUCT_SER_AP_PREFIX"%02x%02x%02x%02x%02x%02x", \
+                    mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+            sprintf((char *)pwd, PRODUCT_SER_AP_PWD);
+        }
 
         if (wifi_default_mode_parm.mode <= AP_MODE) {
             strncpy((char *)wifi_default_mode_parm.ssid[wifi_default_mode_parm.mode - STA_MODE], ssid, sizeof(wifi_default_mode_parm.ssid[wifi_default_mode_parm.mode - STA_MODE]) - 1);
@@ -588,6 +613,8 @@ static int wifi_event_callback(void *network_ctx, enum WIFI_EVENT event)
         break;
     case WIFI_EVENT_AP_STOP:
         puts("|network_user_callback->WIFI_EVENT_AP_STOP\n");
+        __THIS->wifi_conn = FALSE;
+        broadcast_ctl(TRUE);
         break;
     case WIFI_EVENT_STA_START:
         puts("|network_user_callback->WIFI_EVENT_STA_START\n");
@@ -601,14 +628,14 @@ static int wifi_event_callback(void *network_ctx, enum WIFI_EVENT event)
     case WIFI_EVENT_STA_DISCONNECT:
         puts("|network_user_callback->WIFI_STA_DISCONNECT\n");
         broadcast_ctl(TRUE);
-        wifi_conn = FALSE;
+        __THIS->wifi_conn = FALSE;
         break;
     case WIFI_EVENT_STA_SCAN_COMPLETED:
         puts("|network_user_callback->WIFI_STA_SCAN_COMPLETED\n");
         break;
     case WIFI_EVENT_STA_CONNECT_SUCC:
         printf("|network_user_callback->WIFI_STA_CONNECT_SUCC,CH=%d\r\n", wifi_get_channel());
-        wifi_conn = TRUE;
+        __THIS->wifi_conn = TRUE;
         break;
     case WIFI_EVENT_MP_TEST_START:
         puts("|network_user_callback->WIFI_EVENT_MP_TEST_START\n");
@@ -662,10 +689,14 @@ static int wifi_event_callback(void *network_ctx, enum WIFI_EVENT event)
         puts("|network_user_callback->WIFI_EVENT_PM_RESUME\n");
         break;
     case WIFI_EVENT_AP_ON_ASSOC:
-        puts("WIFI_EVENT_AP_ON_ASSOC\n");
+        puts("|network_user_callback->WIFI_EVENT_AP_ON_ASSOC\n");
+        __THIS->wifi_conn = TRUE;
+        breathe_ctl(TRUE);
         break;
     case WIFI_EVENT_AP_ON_DISCONNECTED:
-        puts("WIFI_EVENT_AP_ON_DISCONNECTED\n");
+        puts("|network_user_callback->WIFI_EVENT_AP_ON_DISCONNECTED\n");
+        __THIS->wifi_conn = FALSE;
+        broadcast_ctl(TRUE);
         break;
     default:
         break;
@@ -677,18 +708,35 @@ static int wifi_event_callback(void *network_ctx, enum WIFI_EVENT event)
 
 u8 product_net_main(void)
 {
+    u8 head[] = {
+        0xc6, 0x00, 0x00, 0x04, 0xB0, 0x00, 0x04, 0x80, 0x35, 0x01, 0xB6, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x08, 0x00, 0x88, 0x88, /*dst*/ 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6,/*src*/0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6,/*BSSID*/ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, /*Seq,Frag num*/0x88, 0x88,
+    };
     product_info("\r\n================ENTER PRODUCT BOX MODE================\r\n");
     while (!(comm_ops()->online())) {
         os_time_dly(10);
     }
 
+    if (!__THIS) {
+        __THIS = zalloc(sizeof(struct product_net_type));
+        ASSERT(__THIS);
+
+        __THIS->wifi_send_pkg = zalloc(1564);
+        ASSERT(__THIS->wifi_send_pkg);
+
+        memcpy(__THIS->wifi_send_pkg, head, sizeof(head));
+        __THIS->server_mode = STA_MODE;
+    }
+
     comm_ops()->init();
     thread_fork("host_data_handle_task", 10, 1024, 0, NULL, host_data_handle_task, NULL);
 
-    os_sem_create(&asem, 0);
-    os_sem_create(&bsem, 0);
+    os_sem_create(&__THIS->asem, 0);
+    os_sem_create(&__THIS->bsem, 0);
     wifi_set_frame_cb(wifi_rx_frame_cb, NULL);
-    wifi_set_sta_connect_timeout(20);
+    if (__THIS->server_mode == STA_MODE) {
+        wifi_set_sta_connect_timeout(20);
+    }
     wifi_set_event_callback(wifi_event_callback);
     wifi_on();
 
@@ -699,21 +747,24 @@ u8 product_net_main(void)
 #else
 
 
-static u8 uvc_id = 0;
-static void *camera_sock = NULL;
-static u32 camera_width, camera_height, camera_fps;
+static struct product_net_type {
+    u8 uvc_id;
+    void *camera_sock;
+    u32 camera_width, camera_height, camera_fps;
+} *__THIS = NULL;
+
 
 void uvc_set_id(u8 id)
 {
-    uvc_id = id;
+    __THIS->uvc_id = id;
 }
 
 
 void product_net_camera_info(u32 *width, u32 *height, u32 *fps)
 {
-    *width  = camera_width;
-    *height = camera_height;
-    *fps    = camera_fps;
+    *width  = __THIS->camera_width;
+    *height = __THIS->camera_height;
+    *fps    = __THIS->camera_fps;
 }
 
 
@@ -725,7 +776,7 @@ static int camera_transmit(void *hdr, u8 *data, u32 size)
     struct net_cmd_type cmd = {0};
     u32 *params = (u32 *)cmd.params;
 
-    if (!camera_sock) {
+    if (!__THIS->camera_sock) {
         return 0;
     }
 
@@ -734,8 +785,8 @@ static int camera_transmit(void *hdr, u8 *data, u32 size)
 
     if (*type == JPEG_HEAD || *type == JPEG_HEAD1) {
         //video
-        sock_send(camera_sock, &cmd, sizeof(struct net_cmd_type), 0);
-        sock_send(camera_sock, data, size, 0);
+        sock_send(__THIS->camera_sock, &cmd, sizeof(struct net_cmd_type), 0);
+        sock_send(__THIS->camera_sock, data, size, 0);
         putchar('V');
     } else {
         //audio
@@ -781,24 +832,24 @@ static void camera_conn_task(void *priv)
     }
 
     for (;;) {
-        if (!(camera_sock = sock_accept(s_sock, (struct sockaddr *)&remote_addr, &len, NULL, NULL))) {
+        if (!(__THIS->camera_sock = sock_accept(s_sock, (struct sockaddr *)&remote_addr, &len, NULL, NULL))) {
             product_err("%s socket_accept fail\n",  __FILE__);
         } else {
             product_info("host socket conn succ\n");
             for (;;) {
-                if (sock_recvfrom(camera_sock, &cmd, sizeof(struct net_cmd_type), 0, NULL, NULL) == sizeof(struct net_cmd_type)) {
+                if (sock_recvfrom(__THIS->camera_sock, &cmd, sizeof(struct net_cmd_type), 0, NULL, NULL) == sizeof(struct net_cmd_type)) {
                     if (!strcmp(cmd.cmd, NET_CAMERA_OPEN)) {
-                        camera_width  = params[0];
-                        camera_height = params[1];
-                        camera_fps    = params[2];
+                        __THIS->camera_width  = params[0];
+                        __THIS->camera_height = params[1];
+                        __THIS->camera_fps    = params[2];
                         product_info("net camera : w = %d, h = %d, fps = %d\n", params[0], params[1], params[2]);
                         set_video_rt_cb(camera_transmit, NULL);
-                        user_video_rec0_open(uvc_id);
+                        user_video_rec0_open(__THIS->uvc_id);
                     } else if (!strcmp(cmd.cmd, NET_CAMERA_CLOSE)) {
                         set_video_rt_cb(NULL, NULL);
                         user_video_rec0_close();
-                        sock_unreg(camera_sock);
-                        camera_sock = NULL;
+                        sock_unreg(__THIS->camera_sock);
+                        __THIS->camera_sock = NULL;
                         break;
                     }
                 }
@@ -810,6 +861,11 @@ static void camera_conn_task(void *priv)
 
 void camera_conn_init(void)
 {
+    if (!__THIS) {
+        __THIS = zalloc(sizeof(struct product_net_type));
+        ASSERT(__THIS);
+    }
+
     thread_fork("camera_conn_task", 10, 512, 0, NULL, camera_conn_task, NULL);
 }
 

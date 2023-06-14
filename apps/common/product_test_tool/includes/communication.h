@@ -14,6 +14,8 @@ prod_comm_type *comm_ops(void);
 int host_data_read(u8 *data, u32 len);
 int host_data_write(u8 *data, u32 len);
 u8 product_info_check(void);
+void product_net_client_init(void);
+
 
 #endif
 

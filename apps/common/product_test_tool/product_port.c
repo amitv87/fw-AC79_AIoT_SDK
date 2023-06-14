@@ -3,13 +3,25 @@
 #ifdef PRODUCT_TEST_ENABLE
 
 
-static OS_SEM lcd_sem;
-static OS_SEM pir_sem;
-static OS_SEM gsensor_sem;
-static OS_SEM touchpanel_sem;
-static u8 touchpanel_mflag = 0;
+static struct product_port_type {
+    OS_SEM lcd_sem;
+    OS_SEM pir_sem;
+    OS_SEM gsensor_sem;
+    OS_SEM touchpanel_sem;
+    u8 touchpanel_mflag;
+} *__THIS = NULL;
+
 
 void defualt_time_get(struct sys_time *time);
+
+
+void product_port_init(void)
+{
+    if (!__THIS) {
+        __THIS = zalloc(sizeof(struct product_port_type));
+        ASSERT(__THIS);
+    }
+}
 
 
 u8 product_uuid_wr(u8 *uuid, u8 is_write)
@@ -535,7 +547,7 @@ static void lcd_color_switch(void *priv)
     struct lcd_info info = {0};
     u16 color[] = {0xFFFF, 0xF800, 0x07E0, 0x001F, 0xFFE0};
 
-    os_sem_set(&lcd_sem, 0);
+    os_sem_set(&__THIS->lcd_sem, 0);
 
     if (!(lcd_get_hdl()) || \
         !(lcd_get_hdl()->backlight_ctrl) || \
@@ -559,7 +571,7 @@ static void lcd_color_switch(void *priv)
                 buf[2 * j + 1] = color[i] & 0xff;
             }
             lcd_show_frame_to_dev(buf, info.width * info.height * 2);
-            if (!os_sem_accept(&lcd_sem)) {
+            if (!os_sem_accept(&__THIS->lcd_sem)) {
                 free(buf);
                 return;
             }
@@ -591,7 +603,7 @@ u8 product_lcd_color_test(u8 on)
         }
         thread_fork("lcd_color_switch", 6, 512, 0, &pid, lcd_color_switch, (void *)buf);
     } else {
-        os_sem_post(&lcd_sem);
+        os_sem_post(&__THIS->lcd_sem);
         pid = 0;
     }
     return ERR_NULL;
@@ -619,7 +631,7 @@ u8 product_lcd_init(void)
         return ERR_DEV_FAULT;
     }
 
-    os_sem_create(&lcd_sem, 0);
+    os_sem_create(&__THIS->lcd_sem, 0);
     return ERR_NULL;
 }
 
@@ -702,7 +714,7 @@ u8 product_camera_light_ctl(u8 on)
 
 u8 product_pir_init(void)
 {
-    os_sem_create(&pir_sem, 0);
+    os_sem_create(&__THIS->pir_sem, 0);
 
     //添加PIR初始化
     //
@@ -741,7 +753,7 @@ static void pir_monitor_task(void *priv)
             }
         }
 
-        if (!os_sem_accept(&pir_sem)) {
+        if (!os_sem_accept(&__THIS->pir_sem)) {
             return;
         }
 
@@ -754,10 +766,10 @@ u8 product_pir_monitor_ctl(u8 on)
 {
     static int pid = 0;
     if (on && !pid) {
-        os_sem_set(&pir_sem, 0);
+        os_sem_set(&__THIS->pir_sem, 0);
         thread_fork("pir_monitor_task", 6, 512, 0, &pid, pir_monitor_task, NULL);
     } else {
-        os_sem_post(&pir_sem);
+        os_sem_post(&__THIS->pir_sem);
         pid = 0;
     }
     return ERR_NULL;
@@ -801,7 +813,7 @@ u8 product_motor_ctl(u8 cmd, int flag, int step)
 
 u8 product_gsensor_init(void)
 {
-    os_sem_create(&gsensor_sem, 0);
+    os_sem_create(&__THIS->gsensor_sem, 0);
 
     //添加Gsensor初始化
     //
@@ -840,7 +852,7 @@ static void gsensor_monitor_task(void *priv)
             }
         }
 
-        if (!os_sem_accept(&gsensor_sem)) {
+        if (!os_sem_accept(&__THIS->gsensor_sem)) {
             return;
         }
 
@@ -853,10 +865,10 @@ u8 product_gesnsor_monitor_ctl(u8 on)
 {
     static int pid = 0;
     if (on && !pid) {
-        os_sem_set(&gsensor_sem, 0);
+        os_sem_set(&__THIS->gsensor_sem, 0);
         thread_fork("gsensor_monitor_task", 6, 512, 0, &pid, gsensor_monitor_task, NULL);
     } else {
-        os_sem_post(&gsensor_sem);
+        os_sem_post(&__THIS->gsensor_sem);
         pid = 0;
     }
     return ERR_NULL;
@@ -875,7 +887,7 @@ static void product_touchpanel_test(void *priv)
 
 u8 product_touchpanel_init(void)
 {
-    os_sem_create(&touchpanel_sem, 0);
+    os_sem_create(&__THIS->touchpanel_sem, 0);
     //添加Gsensor初始化
     //
     //for test, delete
@@ -886,7 +898,7 @@ u8 product_touchpanel_init(void)
 
 void product_touchpanel_coord_post(int x, int y)
 {
-    if (!touchpanel_mflag) {
+    if (!__THIS->touchpanel_mflag) {
         return;
     }
 
@@ -917,7 +929,7 @@ static void touchpanel_monitor_task(void *priv)
             free(str);
         }
 
-        if (!os_sem_accept(&touchpanel_sem)) {
+        if (!os_sem_accept(&__THIS->touchpanel_sem)) {
             return;
         }
 
@@ -931,12 +943,12 @@ u8 product_touchpanel_monitor_ctl(u8 on)
     int msg[2] = {0};
     static int pid = 0;
     if (on && !pid) {
-        os_sem_set(&touchpanel_sem, 0);
+        os_sem_set(&__THIS->touchpanel_sem, 0);
         thread_fork("touchpanel_monitor_task", 6, 512, 512, &pid, touchpanel_monitor_task, NULL);
-        touchpanel_mflag = 1;
+        __THIS->touchpanel_mflag = 1;
     } else {
-        touchpanel_mflag = 0;
-        os_sem_post(&touchpanel_sem);
+        __THIS->touchpanel_mflag = 0;
+        os_sem_post(&__THIS->touchpanel_sem);
         os_taskq_post_type("touchpanel_monitor_task", 0, ARRAY_SIZE(msg), msg);
         pid = 0;
     }
@@ -944,61 +956,59 @@ u8 product_touchpanel_monitor_ctl(u8 on)
 }
 
 
-static const struct {
-    u8 key_value;
-    char value_str[16];
-} product_keyvalue_str[] = {
-    {
-        .key_value = 13,
-        .value_str = "K1",
-    },
-    {
-        .key_value = 6,
-        .value_str = "K2",
-    },
-    {
-        .key_value = 4,
-        .value_str = "K3",
-    },
-    {
-        .key_value = 5,
-        .value_str = "K4",
-    },
-    {
-        .key_value = 12,
-        .value_str = "K5",
-    },
-    {
-        .key_value = 10,
-        .value_str = "K6",
-    },
-    {
-        .key_value = 8,
-        .value_str = "K7",
-    },
-    {
-        .key_value = 0,
-        .value_str = "K8",
-    }
-};
-
-
-static const char *product_keyaction_str[] = {
-    "KEY_CLICK",
-    "KEY_LONG_PRESS",
-    "KEY_HOLD_PRESS",
-    "KEY_UP",
-    "KEY_DOUBLE_CLICK",
-    "KEY_TRIPLE_CLICK",
-    "KEY_FOURTH_CLICK",
-    "KEY_FIRTH_CLICK",
-};
-
-
 int product_key_event_handler(struct sys_event *event)
 {
     char *str, *value_str = NULL;
     struct key_event *key = (struct key_event *)event->payload;
+    const struct {
+        u8 key_value;
+        char value_str[16];
+    } product_keyvalue_str[] = {
+        {
+            .key_value = 13,
+            .value_str = "K1",
+        },
+        {
+            .key_value = 6,
+            .value_str = "K2",
+        },
+        {
+            .key_value = 4,
+            .value_str = "K3",
+        },
+        {
+            .key_value = 5,
+            .value_str = "K4",
+        },
+        {
+            .key_value = 12,
+            .value_str = "K5",
+        },
+        {
+            .key_value = 10,
+            .value_str = "K6",
+        },
+        {
+            .key_value = 8,
+            .value_str = "K7",
+        },
+        {
+            .key_value = 0,
+            .value_str = "K8",
+        }
+    };
+
+    const char *product_keyaction_str[] = {
+        "KEY_CLICK",
+        "KEY_LONG_PRESS",
+        "KEY_HOLD_PRESS",
+        "KEY_UP",
+        "KEY_DOUBLE_CLICK",
+        "KEY_TRIPLE_CLICK",
+        "KEY_FOURTH_CLICK",
+        "KEY_FIRTH_CLICK",
+    };
+
     if (event->type == SYS_KEY_EVENT) {
         for (u8 idx = 0; idx < ARRAY_SIZE(product_keyvalue_str); idx++) {
             if (product_keyvalue_str[idx].key_value == key->value) {
@@ -1017,7 +1027,6 @@ int product_key_event_handler(struct sys_event *event)
         }
     }
 }
-
 
 
 u8 product_led_ctl(u8 cmd)
