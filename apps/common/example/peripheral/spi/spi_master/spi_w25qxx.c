@@ -10,7 +10,7 @@
  *  注意板级配置这个位置的配置 如下即可
  * 	SPI2_PLATFORM_DATA_BEGIN(spi2_data)
  *  .clk    = 200000,
- *  .mode   = SPI_STD_MODE,
+ *  .mode   = SPI_STD_MODE,   //双线模式 SPI_DUAL_MODE
  *  .port   = 'C',
  *  .attr   = SPI_SCLK_L_UPL_SMPH | SPI_BIDIR_MODE ,
  *  SPI2_PLATFORM_DATA_END()
@@ -42,6 +42,8 @@ static struct _25Q64_ hdl;
 
 
 #define WINBOND_READ_DATA	        0x03
+#define WINBOND_DUAL_READ_DATA	    0x3b
+#define WINBOND_DUAL_READ	        0xbb
 #define WINBOND_READ_SR1            0x05
 #define DUMMY_BYTE                  0xff
 #define WINBOND_CHIP_ERASE          0xC7
@@ -198,9 +200,22 @@ static int spiflash_read(u8 *buf, u32 addr, u16 len)
         spiflash_send_addr(addr);
         dev_bulk_read(hdl.spi, buf, addr, len);
     }
-
     cs_gpio(1);
+    return err ? -EFAULT : len;
+}
 
+//spi双线使用这个接口读
+static int spiflash_dual_read(u8 *buf, u32 addr, u16 len)
+{
+    int err = 0;
+    cs_gpio(0);
+    err = dev_ioctl(hdl.spi, IOCTL_SPI_SEND_BYTE, WINBOND_DUAL_READ_DATA);
+    if (err == 0) {
+        spiflash_send_addr(addr);
+        dev_ioctl(hdl.spi, IOCTL_SPI_SEND_BYTE, WINBOND_DUAL_READ);
+        dev_bulk_read(hdl.spi, buf, addr, len);
+    }
+    cs_gpio(1);
     return err ? -EFAULT : len;
 }
 static void spi_open(void)

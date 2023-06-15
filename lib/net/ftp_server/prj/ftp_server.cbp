@@ -46,7 +46,6 @@
 					<Add directory="../../../../include_lib/system/os/FreeRTOS" />
 					<Add directory="../../../../include_lib/system/os/FreeRTOS/pi32v2" />
 					<Add directory="../src" />
-					<Add directory="../../../../include_lib/newlib/include" />
 				</Compiler>
 				<Linker>
 					<Add option="-flto" />

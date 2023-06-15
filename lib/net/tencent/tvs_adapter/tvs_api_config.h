@@ -32,7 +32,8 @@
 #define FW_RUNNING_VERSION "1.0.0"	//固件版本号
 
 //腾讯云flash索引地址
-#define TENCENT_PATH "mnt/sdfile/app/tencent"
+// #define TENCENT_PATH "mnt/sdfile/app/tencent"
+#define TENCENT_PATH "mnt/sdfile/EXT_RESERVED/tencent"
 
 #if ARREARS_ENABLE
 

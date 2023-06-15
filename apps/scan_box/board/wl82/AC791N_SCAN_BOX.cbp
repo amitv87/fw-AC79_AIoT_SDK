@@ -238,6 +238,8 @@
 <Unit filename="../../../../apps/common/camera/gc0329_dvp/gc0329.h" />
 <Unit filename="../../../../apps/common/camera/gc032a_dvp/gc032a.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/camera/gc032a_dvp/gc032a.h" />
+<Unit filename="../../../../apps/common/camera/gc2035_dvp/gc2035.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/common/camera/gc2035_dvp/gc2035.h" />
 <Unit filename="../../../../apps/common/camera/gc2145_dvp/gc2145.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/camera/gc2145_dvp/gc2145.h" />
 <Unit filename="../../../../apps/common/camera/h7375s/h7375s.c"><Option compilerVer="CC"/></Unit>
