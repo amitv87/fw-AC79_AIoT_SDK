@@ -8,5 +8,5 @@ lib_mongoose_version:
 
 #else
 
-.asciz "MONGOOSE-*modified*--@20230515-$de4db24"
+.asciz "MONGOOSE-*modified*--@20230614-$4ee734f"
 #endif

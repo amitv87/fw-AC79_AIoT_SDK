@@ -520,7 +520,11 @@
 #define TCFG_LOWPOWER_LOWPOWER_SEL			0
 #endif
 #ifdef CONFIG_INTERNAL_VDDIO_POWER_SUPPLY_ENABLE
-#define TCFG_LOWPOWER_VDDIOM_LEVEL			(VDDIOM_VOL_MAX - 1) //强VDDIO电压档位，采用内部VDDIO供电，带sdram的封装实际工作电压至少要满足3.3V
+#ifdef CONFIG_NO_SDRAM_ENABLE
+#define TCFG_LOWPOWER_VDDIOM_LEVEL			VDDIOM_VOL_33V       //强VDDIO电压档位
+#else
+#define TCFG_LOWPOWER_VDDIOM_LEVEL			VDDIOM_VOL_35V       //强VDDIO电压档位，采用内部VDDIO供电，带sdram的封装实际工作电压至少要满足3.3V
+#endif
 #else
 #define TCFG_LOWPOWER_VDDIOM_LEVEL			VDDIOM_VOL_32V       //强VDDIO电压档位，不要高于外部DCDC的电压
 #endif

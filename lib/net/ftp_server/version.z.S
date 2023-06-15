@@ -8,5 +8,5 @@ lib_ftpserver_version:
 
 #else
 
-.asciz "FTPSERVER-*modified*--@20230515-$de4db24"
+.asciz "FTPSERVER-*modified*--@20230614-$4ee734f"
 #endif

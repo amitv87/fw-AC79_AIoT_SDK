@@ -8,5 +8,5 @@ lib_device_vad_version:
 
 #else
 
-.asciz "LIBVAD-*modified*--@20230515-$de4db24"
+.asciz "LIBVAD-*modified*--@20230614-$4ee734f"
 #endif

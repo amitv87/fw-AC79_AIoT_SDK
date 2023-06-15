@@ -8,5 +8,5 @@ lib_wt_version:
 
 #else
 
-.asciz "WT-*modified*--@20230515-$de4db24"
+.asciz "WT-*modified*--@20230614-$4ee734f"
 #endif

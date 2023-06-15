@@ -134,17 +134,12 @@ rm isd_config.ini
 #else
 
 
-REM master分支只用于测试/研发/尝试最新特性,量产用途务必使用release分支,如果你明白自己在干什么,请删除 cpu/wl82/tools/download.c 的本行和下一行
-exit /b -1
-REM  再次声明 master分支只用于测试/研发/尝试最新特性,量产用途务必使用release分支,如果你明白自己在干什么,请删除 cpu/wl82/tools/download.c 的本行和下一行
-exit /b -1
-
-
 #if defined CONFIG_RELEASE_ENABLE && (defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_ZONE || defined CONFIG_UI_FILE_SAVE_IN_RESERVED_ZONE \
 	|| defined CONFIG_VOICE_PROMPT_FILE_SAVE_IN_RESERVED_EXPAND_ZONE || defined CONFIG_UI_FILE_SAVE_IN_RESERVED_EXPAND_ZONE)
 
 REM 目前检测到SDK使用了资源文件打包放到预留区的功能，详细请浏览开源文档7.19资源区配置（RES和预留区），此功能可以节省flash空间，但操作比较繁琐
 REM 若flash容量充足不需要此功能，可屏蔽对应的宏定义
+REM 特别注意特别注意！！！如果跨版本升级固件，比如从1.0.3和1.1.x版本升级到1.2.x版本，必现保证生成的isd_config.ini升级前后的配置一样，请阅读tools/note.txt，必要时请向FAE确认
 REM 开发过程中可先设置isd_config_rule.c的配置项CALC_RES_CFG=YES，工具会自动适配填写对应资源文件的起始地址和长度，量产版本严禁打开该配置项，必须关闭！！！
 REM 量产版本必须先设置isd_config_rule.c的配置项CALC_RES_CFG=NO，然后根据资源文件大小填写AUPACKRES_LEN和UIPACKRES_LEN，请预留好后续资源升级的空间余量，该大小一经烧录之后是严禁更改的，升级固件生成时此大小必须保持一样！！！
 REM 量产版本填写AUPACKRES_LEN和UIPACKRES_LEN后点击第一次下载时工具还会出现警告，需要自行把脚本打印出来的flash info的AUPACKRES_ADR和UIPACKRES_ADR同步覆盖到isd_config_rule.c对应的AUPACKRES_ADR和UIPACKRES_ADR，该值一经烧录之后是严禁更改的，升级固件生成时此值必须保持一样！！！

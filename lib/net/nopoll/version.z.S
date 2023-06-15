@@ -9,5 +9,5 @@ lib_nopoll_version:
 
 #else
 
-.asciz "LIBNOPOLL-*modified*--@20230515-$de4db24"
+.asciz "LIBNOPOLL-*modified*--@20230614-$4ee734f"
 #endif

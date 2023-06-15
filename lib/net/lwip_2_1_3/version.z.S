@@ -8,5 +8,5 @@ lib_lwip_2_1_3_version:
 
 #else
 
-.asciz "LWIP_2_1_3-*modified*--@20230515-$de4db24"
+.asciz "LWIP_2_1_3-*modified*--@20230614-$4ee734f"
 #endif

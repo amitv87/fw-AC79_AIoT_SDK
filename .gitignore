@@ -70,4 +70,7 @@ cpu/wl82/tools/isd_config_loader.ini
 cpu/wl82/tools/sdk.elf.objs.txt
 cpu/wl82/tools/sdk.elf.resolution.txt
 apps/common/movable/section.txt
-
+apps/wifi_tuya_iot/readme.txt
+apps/wifi_tuya_iot/tuya/.vscode/settings.json
+apps/wifi_tuya_iot/tuya/sdk/include/lwip/apps/FILES
+include_lib/driver/format.sh

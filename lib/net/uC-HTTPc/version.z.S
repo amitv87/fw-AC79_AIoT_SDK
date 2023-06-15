@@ -8,5 +8,5 @@ lib_uc_httpc_version:
 
 #else
 
-.asciz "UC_HTTPC-*modified*--@20230515-$de4db24"
+.asciz "UC_HTTPC-*modified*--@20230614-$4ee734f"
 #endif

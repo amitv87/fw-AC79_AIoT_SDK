@@ -8,5 +8,5 @@ lib_cjson_version:
 
 #else
 
-.asciz "CJSON-*modified*--@20230515-$de4db24"
+.asciz "CJSON-*modified*--@20230614-$4ee734f"
 #endif

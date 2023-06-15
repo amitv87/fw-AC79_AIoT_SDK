@@ -8,5 +8,5 @@ lib_wolfmqtt_version:
 
 #else
 
-.asciz "WOLFMQTT-*modified*--@20230515-$de4db24"
+.asciz "WOLFMQTT-*modified*--@20230614-$4ee734f"
 #endif

@@ -8,5 +8,5 @@ lib_zliblite_version:
 
 #else
 
-.asciz "ZLIBLITE-*modified*--@20230515-$de4db24"
+.asciz "ZLIBLITE-*modified*--@20230614-$4ee734f"
 #endif
