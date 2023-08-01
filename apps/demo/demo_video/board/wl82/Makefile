@@ -127,7 +127,6 @@ DEFINES := \
 	-DCONFIG_UPDATA_ENABLE \
 	-DCONFIG_OTA_UPDATA_ENABLE \
 	-DCONFIG_ITEM_FORMAT_VM \
-	-D__LD__ \
 
 
 DEFINES += $(EXT_CFLAGS) # 额外的一些定义
@@ -340,12 +339,12 @@ all: pre_build $(OUT_ELF)
 
 pre_build:
 	$(info +PRE-BUILD)
-	$(QUITE) $(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -E -P ../../../../../cpu/wl82/sdk_used_list.c -o ../../../../../cpu/wl82/sdk_used_list.used
-	$(QUITE) $(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -E -P ../../../../../apps/common/movable/section.c -o ../../../../../apps/common/movable/section.txt
-	$(QUITE) $(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -E -P ../../../../../cpu/wl82/sdk_ld.c -o ../../../../../cpu/wl82/sdk.ld
-	$(QUITE) $(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -E -P ../../../../../cpu/wl82/tools/download.c -o $(POST_SCRIPT)
+	$(QUITE) $(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -D__LD__ -E -P ../../../../../cpu/wl82/sdk_used_list.c -o ../../../../../cpu/wl82/sdk_used_list.used
+	$(QUITE) $(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -D__LD__ -E -P ../../../../../apps/common/movable/section.c -o ../../../../../apps/common/movable/section.txt
+	$(QUITE) $(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -D__LD__ -E -P ../../../../../cpu/wl82/sdk_ld.c -o ../../../../../cpu/wl82/sdk.ld
+	$(QUITE) $(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -D__LD__ -E -P ../../../../../cpu/wl82/tools/download.c -o $(POST_SCRIPT)
 	$(QUITE) $(FIXBAT) $(POST_SCRIPT)
-	$(QUITE) $(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -E -P ../../../../../cpu/wl82/tools/isd_config_rule.c -o ../../../../../cpu/wl82/tools/isd_config.ini
+	$(QUITE) $(CC) $(CFLAGS) $(DEFINES) $(INCLUDES) -D__LD__ -E -P ../../../../../cpu/wl82/tools/isd_config_rule.c -o ../../../../../cpu/wl82/tools/isd_config.ini
 
 clean:
 	$(QUITE) $(RM) $(OUT_ELF)

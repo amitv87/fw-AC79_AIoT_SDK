@@ -54,7 +54,6 @@
 <Add option="-DVM_MAX_SECTOR_ALIGN_SIZE_CONFIG=64*1024" />
 <Add option="-DVM_ITEM_MAX_NUM=256" />
 <Add option="-DCONFIG_ITEM_FORMAT_VM" />
-<Add option="-D__LD__" />
 <Add directory="../../../../../include_lib" />
 <Add directory="../../../../../include_lib/driver" />
 <Add directory="../../../../../include_lib/driver/device" />
@@ -190,12 +189,12 @@
 <Add library="C:\JL\pi32\pi32v2-lib\r3\libm.a" />
 </Linker>
 <ExtraCommands>
-<Add before="$compiler $options $includes -E -P ..\..\..\..\..\cpu\wl82\sdk_used_list.c -o ..\..\..\..\..\cpu\wl82\sdk_used_list.used" />
-<Add before="$compiler $options $includes -E -P ..\..\..\..\..\apps\common\movable\section.c -o ..\..\..\..\..\apps\common\movable\section.txt" />
-<Add before="$compiler $options $includes -E -P ..\..\..\..\..\cpu\wl82\sdk_ld.c -o ..\..\..\..\..\cpu\wl82\sdk.ld" />
-<Add before="$compiler $options $includes -E -P ..\..\..\..\..\cpu\wl82\tools\download.c -o ..\..\..\..\..\cpu\wl82\tools\download.bat" />
+<Add before="$compiler $options $includes -D__LD__ -E -P ..\..\..\..\..\cpu\wl82\sdk_used_list.c -o ..\..\..\..\..\cpu\wl82\sdk_used_list.used" />
+<Add before="$compiler $options $includes -D__LD__ -E -P ..\..\..\..\..\apps\common\movable\section.c -o ..\..\..\..\..\apps\common\movable\section.txt" />
+<Add before="$compiler $options $includes -D__LD__ -E -P ..\..\..\..\..\cpu\wl82\sdk_ld.c -o ..\..\..\..\..\cpu\wl82\sdk.ld" />
+<Add before="$compiler $options $includes -D__LD__ -E -P ..\..\..\..\..\cpu\wl82\tools\download.c -o ..\..\..\..\..\cpu\wl82\tools\download.bat" />
 <Add before="..\..\..\..\..\tools\utils\fixbat.exe ..\..\..\..\..\cpu\wl82\tools\download.bat" />
-<Add before="$compiler $options $includes -E -P ..\..\..\..\..\cpu\wl82\tools\isd_config_rule.c -o ..\..\..\..\..\cpu\wl82\tools\isd_config.ini" />
+<Add before="$compiler $options $includes -D__LD__ -E -P ..\..\..\..\..\cpu\wl82\tools\isd_config_rule.c -o ..\..\..\..\..\cpu\wl82\tools\isd_config.ini" />
 <Mode before="always" />
 <Add after="..\..\..\..\..\cpu\wl82\tools\download.bat sdk" />
 <Mode after="always" />

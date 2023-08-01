@@ -3,14 +3,21 @@
 
 #include "generic/typedef.h"
 #include "asm/system_reset_reason.h"
+#include "app_config.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#ifdef CONFIG_INTERNAL_VDDIO_POWER_SUPPLY_ENABLE
+#define LOW_POWER_SHUTDOWN      350  //低电直接关机电压, 如果VDDIO使用内部LDO供电, 建议低于3.6V关机
+#define LOW_POWER_OFF_VAL   	360  //低电关机电压
+#define LOW_POWER_WARN_VAL   	370  //低电提醒电压
+#else
 #define LOW_POWER_SHUTDOWN      320  //低电直接关机电压, 如果VDDIO使用内部LDO供电, 建议低于3.6V关机
 #define LOW_POWER_OFF_VAL   	330  //低电关机电压
 #define LOW_POWER_WARN_VAL   	340  //低电提醒电压
+#endif
 #define LOW_POWER_WARN_TIME   	(60 * 1000)  //低电提醒时间
 
 enum {

@@ -61,7 +61,8 @@
 // #define CONFIG_AUTO_SHUTDOWN_ENABLE          //自动倒数关机
 #define CONFIG_RTC_ENABLE                       //RTC开关
 // #define CONFIG_SYS_VDD_CLOCK_ENABLE          //系统可使用动态电源、时钟配置
-//#define CONFIG_IPMASK_ENABLE				//系统使用不可屏蔽中断
+// #define CONFIG_IPMASK_ENABLE                 //系统使用不可屏蔽中断
+// #define CONFIG_INTERNAL_VDDIO_POWER_SUPPLY_ENABLE        //实际PCB设计如果采用内部VDDIO供电，必须定义该宏
 
 //*********************************************************************************//
 //                                  FCC测试相关配置                                //
@@ -175,6 +176,10 @@
 #if __FLASH_SIZE__ > (1 * 1024 * 1024)
 #define CONFIG_MP3_DEC_ENABLE
 #define CONFIG_M4A_DEC_ENABLE
+// #define CONFIG_NEW_M4A_DEC_ENABLE	//需要把lib_m4a_dec.a替换成lib_m4a_dec_seek.a
+#ifdef CONFIG_NEW_M4A_DEC_ENABLE
+#define CONFIG_AAC_DEC_ENABLE
+#endif
 #define CONFIG_VIRTUAL_DEV_ENC_ENABLE
 #define CONFIG_SPEEX_ENC_ENABLE
 #define CONFIG_OPUS_ENC_ENABLE
@@ -197,7 +202,7 @@
 #define CONFIG_OGG_VORBIS_DEC_ENABLE
 
 // #define CONFIG_SPECTRUM_FFT_EFFECT_ENABLE    //频谱运算
-#define CONFIG_REVERB_MODE_ENABLE            //打开混响功能
+// #define CONFIG_REVERB_MODE_ENABLE            //打开混响功能
 #define CONFIG_AUDIO_MIX_ENABLE              //打开叠音功能
 #define CONFIG_AUDIO_PS_ENABLE               //打开变调变速功能
 #endif
@@ -431,7 +436,15 @@
 #else
 #define TCFG_LOWPOWER_LOWPOWER_SEL			0
 #endif
+#ifdef CONFIG_INTERNAL_VDDIO_POWER_SUPPLY_ENABLE
+#ifdef CONFIG_NO_SDRAM_ENABLE
+#define TCFG_LOWPOWER_VDDIOM_LEVEL			VDDIOM_VOL_33V       //强VDDIO电压档位
+#else
+#define TCFG_LOWPOWER_VDDIOM_LEVEL			VDDIOM_VOL_35V       //强VDDIO电压档位，采用内部VDDIO供电，带sdram的封装实际工作电压至少要满足3.3V
+#endif
+#else
 #define TCFG_LOWPOWER_VDDIOM_LEVEL			VDDIOM_VOL_32V       //强VDDIO电压档位，不要高于外部DCDC的电压
+#endif
 #define TCFG_LOWPOWER_VDDIOW_LEVEL			VDDIOW_VOL_21V       //弱VDDIO电压档位
 #define VDC14_VOL_SEL_LEVEL			        VDC14_VOL_SEL_140V   //RF1.4V电压档位
 #define SYSVDD_VOL_SEL_LEVEL				SYSVDD_VOL_SEL_126V  //内核电压档位值

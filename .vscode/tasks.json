@@ -85,16 +85,6 @@
             "group": "build"
         }
         ,{
-            "label": "ac791n_wifi_tuya_iot",
-            "type": "shell",
-            "windows": {
-                "command": ".vscode/winmk.bat ac791n_wifi_tuya_iot"
-            },
-            "command": "make ac791n_wifi_tuya_iot -j`nproc`",
-            "problemMatcher": [],
-            "group": "build"
-        }
-        ,{
             "label": "ac790n_scan_box",
             "type": "shell",
             "windows": {
@@ -321,16 +311,6 @@
                 "command": ".vscode/winmk.bat clean_ac791n_wifi_camera"
             },
             "command": "make clean_ac791n_wifi_camera -j`nproc`",
-            "problemMatcher": [],
-            "group": "build"
-        }
-        ,{
-            "label": "clean_ac791n_wifi_tuya_iot",
-            "type": "shell",
-            "windows": {
-                "command": ".vscode/winmk.bat clean_ac791n_wifi_tuya_iot"
-            },
-            "command": "make clean_ac791n_wifi_tuya_iot -j`nproc`",
             "problemMatcher": [],
             "group": "build"
         }

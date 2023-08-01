@@ -5,7 +5,7 @@
 #if TCFG_CTMU_TOUCH_KEY_ENABLE
 #include "asm/ctmu.h"
 
-static const struct ctmu_touch_key_platform_data *__this = NULL;
+static const struct touch_key_platform_data *__this = NULL;
 
 //按键驱动扫描参数列表
 struct key_driver_para ctmu_touch_key_scan_para = {
@@ -30,7 +30,7 @@ u8 ctmu_touch_key_get_value(void)
     return NO_KEY;
 }
 
-int ctmu_touch_key_init(const struct ctmu_touch_key_platform_data *ctmu_touch_key_data)
+int ctmu_touch_key_init(const struct touch_key_platform_data *ctmu_touch_key_data)
 {
     __this = ctmu_touch_key_data;
     if (!__this) {

@@ -203,8 +203,8 @@ struct aec_s_attr {
     float AEC_DT_AggressiveFactor;
     //float AES_AggressFactor;
     //float AES_RefEngThr;
-    float DNS_gain_floor;
-    float DNS_over_drive;
+    float DNS_gain_floor;	//增益的最小值控制,范围0~1,建议值(0~0.2)之间, default:双麦 0.05f ,单麦 0.1f
+    float DNS_over_drive;	//控制降噪强度: 0 < over_drive < 1，越小降噪强度越轻，太小噪声会很大；over_drive = 1,正常降噪; over_drive > 1,降噪强度加强，越大降噪强度越强，太大会吃音. 建议调节范围0.3~3之间来控制降噪强度的强弱, default: 1.0f
     float DNS_loudness;
 };
 

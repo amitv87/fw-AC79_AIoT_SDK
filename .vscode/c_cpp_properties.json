@@ -41,7 +41,6 @@
                 "CONFIG_UPDATA_ENABLE",
                 "CONFIG_OTA_UPDATA_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -146,7 +145,6 @@
                 "CONFIG_UPDATA_ENABLE",
                 "CONFIG_OTA_UPDATA_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -250,7 +248,6 @@
                 "CONFIG_LMP_CONN_SUSPEND_ENABLE",
                 "CONFIG_LMP_REFRESH_ENCRYPTION_KEY_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -354,7 +351,6 @@
                 "CONFIG_LMP_CONN_SUSPEND_ENABLE",
                 "CONFIG_LMP_REFRESH_ENCRYPTION_KEY_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -458,7 +454,6 @@
                 "CONFIG_UPDATA_ENABLE",
                 "CONFIG_OTA_UPDATA_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -562,7 +557,6 @@
                 "CONFIG_UPDATA_ENABLE",
                 "CONFIG_OTA_UPDATA_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -631,94 +625,6 @@
             "defines": [
                 "SUPPORT_MS_EXTENSIONS",
                 "CONFIG_RELEASE_ENABLE",
-                "CONFIG_CPU_WL82",
-                "CONFIG_JLFAT_ENABLE",
-                "CONFIG_FREE_RTOS_ENABLE",
-                "CONFIG_THREAD_ENABLE",
-                "CONFIG_AUDIO_ONCHIP",
-                "__GCC_PI32V2__",
-                "CONFIG_NEW_ECC_ENABLE",
-                "CONFIG_EQ_SUPPORT_ASYNC",
-                "EQ_CORE_V1",
-                "CONFIG_SFC_ENABLE",
-                "CONFIG_NO_SDRAM_ENABLE",
-                "CONFIG_NET_ENABLE=1",
-                "CONFIG_BT_ENABLE=1",
-                "EVENT_HANDLER_NUM_CONFIG=2",
-                "EVENT_TOUCH_ENABLE_CONFIG=0",
-                "EVENT_POOL_SIZE_CONFIG=256",
-                "CONFIG_EVENT_KEY_MAP_ENABLE=0",
-                "TIMER_POOL_NUM_CONFIG=15",
-                "APP_ASYNC_POOL_NUM_CONFIG=0",
-                "VFS_ENABLE=1",
-                "USE_SDFILE_NEW=1",
-                "SDFILE_STORAGE=1",
-                "VFS_FILE_POOL_NUM_CONFIG=8",
-                "VM_MAX_PAGE_ALIGN_SIZE_CONFIG=64*1024",
-                "VM_MAX_SECTOR_ALIGN_SIZE_CONFIG=64*1024",
-                "VM_ITEM_MAX_NUM=256",
-                "CONFIG_TWS_ENABLE",
-                "CONFIG_BTCTRLER_TASK_DEL_ENABLE",
-                "CONFIG_LMP_CONN_SUSPEND_ENABLE",
-                "CONFIG_LMP_REFRESH_ENCRYPTION_KEY_ENABLE",
-                "CONFIG_UPDATA_ENABLE",
-                "CONFIG_OTA_UPDATA_ENABLE",
-                "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
-                "__PI32V2__"
-            ],
-            "includePath": [
-                "${workspaceFolder}/include_lib",
-                "${workspaceFolder}/include_lib/driver",
-                "${workspaceFolder}/include_lib/driver/device",
-                "${workspaceFolder}/include_lib/driver/cpu/wl82",
-                "${workspaceFolder}/include_lib/system",
-                "${workspaceFolder}/include_lib/system/generic",
-                "${workspaceFolder}/include_lib/btctrler",
-                "${workspaceFolder}/include_lib/btctrler/port/wl82",
-                "${workspaceFolder}/include_lib/update",
-                "${workspaceFolder}/include_lib/btstack/third_party/common",
-                "${workspaceFolder}/include_lib/btstack/third_party/rcsp",
-                "${workspaceFolder}/include_lib/utils",
-                "${workspaceFolder}/include_lib/utils/syscfg",
-                "${workspaceFolder}/include_lib/utils/event",
-                "${workspaceFolder}/include_lib/media",
-                "${workspaceFolder}/include_lib/media/cpu/wl82",
-                "${workspaceFolder}/include_lib/btstack",
-                "${workspaceFolder}/apps",
-                "${workspaceFolder}/apps/wifi_tuya_iot/include",
-                "${workspaceFolder}/apps/common",
-                "${workspaceFolder}/apps/common/include",
-                "${workspaceFolder}/apps/wifi_tuya_iot",
-                "${workspaceFolder}/include_lib/net",
-                "${workspaceFolder}/include_lib/net/mbedtls_2_2_1",
-                "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/src/include",
-                "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/src/include/lwip",
-                "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/port",
-                "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/app",
-                "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/app/ctp",
-                "${workspaceFolder}/include_lib/net/lwip_2_1_3/lwip/app/cdp",
-                "${workspaceFolder}/include_lib/system/os",
-                "${workspaceFolder}/apps/common/config/include",
-                "${workspaceFolder}/apps/common/ble/include",
-                "${workspaceFolder}/apps/wifi_tuya_iot/tuya/platforms/tuya_os_adapter/include",
-                "${workspaceFolder}/apps/wifi_tuya_iot/tuya/platforms/tuya_os_adapter/include/driver",
-                "${workspaceFolder}/apps/wifi_tuya_iot/tuya/platforms/tuya_os_adapter/include/system",
-                "${workspaceFolder}/apps/wifi_tuya_iot/tuya/sdk/include",
-                "${workspaceFolder}/apps/wifi_tuya_iot/tuya/apps/template_demo",
-                "${workspaceFolder}/apps/wifi_tuya_iot/tuya/apps/template_demo/include",
-                "C:/JL/pi32/pi32v2-include"
-            ],
-            "intelliSenseMode": "clang-x86",
-            "name": "AC791N_WIFI_TUYA_IOT"
-        },
-        {
-            "cStandard": "c99",
-            "compilerPath": "C:/JL/pi32/bin/clang.exe",
-            "cppStandard": "c++11",
-            "defines": [
-                "SUPPORT_MS_EXTENSIONS",
-                "CONFIG_RELEASE_ENABLE",
                 "CONFIG_CPU_WL80",
                 "CONFIG_JLFAT_ENABLE",
                 "CONFIG_FREE_RTOS_ENABLE",
@@ -750,7 +656,6 @@
                 "CONFIG_LMP_CONN_SUSPEND_ENABLE",
                 "CONFIG_LMP_REFRESH_ENCRYPTION_KEY_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -838,7 +743,6 @@
                 "CONFIG_LMP_CONN_SUSPEND_ENABLE",
                 "CONFIG_LMP_REFRESH_ENCRYPTION_KEY_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -937,7 +841,6 @@
                 "FINSH_USING_HISTORY",
                 "FINSH_USING_MSH",
                 "FINSH_USING_MSH_DEFAULT",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -1038,7 +941,6 @@
                 "CONFIG_UPDATA_ENABLE",
                 "CONFIG_OTA_UPDATA_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -1112,7 +1014,6 @@
                 "CONFIG_UPDATA_ENABLE",
                 "CONFIG_OTA_UPDATA_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -1186,7 +1087,6 @@
                 "CONFIG_LMP_CONN_SUSPEND_ENABLE",
                 "CONFIG_LMP_REFRESH_ENCRYPTION_KEY_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -1260,7 +1160,6 @@
                 "CONFIG_LMP_CONN_SUSPEND_ENABLE",
                 "CONFIG_LMP_REFRESH_ENCRYPTION_KEY_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -1335,7 +1234,6 @@
                 "CONFIG_LMP_CONN_SUSPEND_ENABLE",
                 "CONFIG_LMP_REFRESH_ENCRYPTION_KEY_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -1407,7 +1305,6 @@
                 "CONFIG_LMP_CONN_SUSPEND_ENABLE",
                 "CONFIG_LMP_REFRESH_ENCRYPTION_KEY_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -1477,7 +1374,6 @@
                 "CONFIG_UPDATA_ENABLE",
                 "CONFIG_OTA_UPDATA_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -1546,7 +1442,6 @@
                 "CONFIG_UPDATA_ENABLE",
                 "CONFIG_OTA_UPDATA_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -1613,7 +1508,6 @@
                 "VM_MAX_SECTOR_ALIGN_SIZE_CONFIG=64*1024",
                 "VM_ITEM_MAX_NUM=256",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -1695,7 +1589,6 @@
                 "VM_MAX_SECTOR_ALIGN_SIZE_CONFIG=64*1024",
                 "VM_ITEM_MAX_NUM=256",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -1783,7 +1676,6 @@
                 "_GNU_SOURCE",
                 "_LIBCPP_HAS_NO_ALIGNED_ALLOCATION",
                 "__ELF__",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -1849,7 +1741,6 @@
                 "_GNU_SOURCE",
                 "_LIBCPP_HAS_NO_ALIGNED_ALLOCATION",
                 "__ELF__",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -1910,7 +1801,6 @@
                 "CONFIG_UPDATA_ENABLE",
                 "CONFIG_OTA_UPDATA_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [
@@ -1980,7 +1870,6 @@
                 "CONFIG_UPDATA_ENABLE",
                 "CONFIG_OTA_UPDATA_ENABLE",
                 "CONFIG_ITEM_FORMAT_VM",
-                "__LD__",
                 "__PI32V2__"
             ],
             "includePath": [

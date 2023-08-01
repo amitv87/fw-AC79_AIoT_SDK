@@ -272,9 +272,9 @@ int key_driver_init(void)
 #endif
 
 #if TCFG_CTMU_TOUCH_KEY_ENABLE
-    extern const struct ctmu_touch_key_platform_data ctmu_touch_key_data;
+    extern const struct touch_key_platform_data ctmkey_data;
     extern struct key_driver_para ctmu_touch_key_scan_para;
-    err = ctmu_touch_key_init(&ctmu_touch_key_data);
+    err = ctmu_touch_key_init(&ctmkey_data);
     if (err == 0) {
         sys_s_hi_timer_add((void *)&ctmu_touch_key_scan_para, key_driver_scan, ctmu_touch_key_scan_para.scan_time); //注册按键扫描定时器
     }

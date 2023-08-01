@@ -187,6 +187,7 @@ subdev_jlvad_enc
 
 #ifdef CONFIG_DNS_ENC_ENABLE
 subdev_dns_enc
+subdev_dns_dual_enc
 #endif
 
 #ifdef CONFIG_AEC_ENC_ENABLE

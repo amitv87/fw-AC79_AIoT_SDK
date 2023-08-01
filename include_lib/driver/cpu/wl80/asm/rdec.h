@@ -3,6 +3,8 @@
 
 #include "generic/typedef.h"
 
+#define RDEC_MODULE_NUM 		1
+
 enum rdec_index {
     RDEC0,
     RDEC1,

@@ -154,13 +154,22 @@
 //                                  低功耗配置                                     //
 //*********************************************************************************//
 #define CONFIG_LOW_POWER_ENABLE            			//低功耗睡眠使能
+//#define CONFIG_INTERNAL_VDDIO_POWER_SUPPLY_ENABLE //实际PCB设计如果采用内部VDDIO供电，必须定义该宏
 #define TCFG_LOWPOWER_BTOSC_DISABLE			0
 #ifdef CONFIG_LOW_POWER_ENABLE
 #define TCFG_LOWPOWER_LOWPOWER_SEL			0
 #else
 #define TCFG_LOWPOWER_LOWPOWER_SEL			0
 #endif
-#define TCFG_LOWPOWER_VDDIOM_LEVEL			VDDIOM_VOL_32V
+#ifdef CONFIG_INTERNAL_VDDIO_POWER_SUPPLY_ENABLE
+#ifdef CONFIG_NO_SDRAM_ENABLE
+#define TCFG_LOWPOWER_VDDIOM_LEVEL			VDDIOM_VOL_33V       //强VDDIO电压档位
+#else
+#define TCFG_LOWPOWER_VDDIOM_LEVEL			VDDIOM_VOL_35V       //强VDDIO电压档位，采用内部VDDIO供电，带sdram的封装实际工作电压至少要满足3.3V
+#endif
+#else
+#define TCFG_LOWPOWER_VDDIOM_LEVEL			VDDIOM_VOL_32V       //强VDDIO电压档位，不要高于外部DCDC的电压
+#endif
 #define TCFG_LOWPOWER_VDDIOW_LEVEL			VDDIOW_VOL_21V
 #define VDC14_VOL_SEL_LEVEL					VDC14_VOL_SEL_140V
 #define SYSVDD_VOL_SEL_LEVEL				SYSVDD_VOL_SEL_126V

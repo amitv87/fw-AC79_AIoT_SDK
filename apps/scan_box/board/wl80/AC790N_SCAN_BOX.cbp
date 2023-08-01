@@ -58,7 +58,6 @@
 <Add option="-DCONFIG_LMP_CONN_SUSPEND_ENABLE" />
 <Add option="-DCONFIG_LMP_REFRESH_ENCRYPTION_KEY_ENABLE" />
 <Add option="-DCONFIG_ITEM_FORMAT_VM" />
-<Add option="-D__LD__" />
 <Add directory="../../../../include_lib" />
 <Add directory="../../../../include_lib/driver" />
 <Add directory="../../../../include_lib/driver/device" />
@@ -138,11 +137,11 @@
 <Add library="C:\JL\pi32\pi32v2-lib\r3\libm.a" />
 </Linker>
 <ExtraCommands>
-<Add before="$compiler $options $includes -E -P ..\..\..\..\cpu\wl80\sdk_used_list.c -o ..\..\..\..\cpu\wl80\sdk_used_list.used" />
-<Add before="$compiler $options $includes -E -P ..\..\..\..\cpu\wl80\sdk_ld.c -o ..\..\..\..\cpu\wl80\sdk.ld" />
-<Add before="$compiler $options $includes -E -P ..\..\..\..\cpu\wl80\tools\download.c -o ..\..\..\..\cpu\wl80\tools\download.bat" />
+<Add before="$compiler $options $includes -D__LD__ -E -P ..\..\..\..\cpu\wl80\sdk_used_list.c -o ..\..\..\..\cpu\wl80\sdk_used_list.used" />
+<Add before="$compiler $options $includes -D__LD__ -E -P ..\..\..\..\cpu\wl80\sdk_ld.c -o ..\..\..\..\cpu\wl80\sdk.ld" />
+<Add before="$compiler $options $includes -D__LD__ -E -P ..\..\..\..\cpu\wl80\tools\download.c -o ..\..\..\..\cpu\wl80\tools\download.bat" />
 <Add before="..\..\..\..\tools\utils\fixbat.exe ..\..\..\..\cpu\wl80\tools\download.bat" />
-<Add before="$compiler $options $includes -E -P ..\..\..\..\cpu\wl80\tools\isd_config_rule.c -o ..\..\..\..\cpu\wl80\tools\isd_config.ini" />
+<Add before="$compiler $options $includes -D__LD__ -E -P ..\..\..\..\cpu\wl80\tools\isd_config_rule.c -o ..\..\..\..\cpu\wl80\tools\isd_config.ini" />
 <Mode before="always" />
 <Add after="..\..\..\..\cpu\wl80\tools\download.bat sdk" />
 <Mode after="always" />

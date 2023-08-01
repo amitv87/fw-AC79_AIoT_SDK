@@ -28,7 +28,7 @@ u8 rdec_get_key_value(void)
         return NO_KEY;
     }
 
-    for (i = 0; i < 3; i++) {
+    for (i = 0; i < RDEC_MODULE_NUM; i++) {
         rdec_data = get_rdec_rdat(i);
         if (rdec_data < 0) {
             key_value = __this->rdec[i].key_value0;
