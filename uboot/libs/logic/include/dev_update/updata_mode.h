@@ -15,6 +15,7 @@ bool write_err_burn(u16 updata_type);
 enum EXT_ARG_TYPE {
     EXT_LDO_TRIM_RES = 0,
     EXT_JUMP_FLAG,
+    EXT_SHARE_OSC_EN,
     EXT_TYPE_MAX = 0xff,
 };
 

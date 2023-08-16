@@ -90,6 +90,19 @@ u8 jump_mode_check()
     return 0;
 }
 
+bool get_share_osc_en(void)
+{
+    UPDATA_PARM *p;
+    u8 *share_osc_en = NULL;
+    p = (u8 *)get_updata_ram_end_addr(); //定位到ram1最后地址
+    share_osc_en = update_param_ext_get(p, EXT_SHARE_OSC_EN);
+    if (share_osc_en == NULL) {
+        return FALSE;
+    }
+    printf("%s %d\n", __func__, *share_osc_en);
+    return (*share_osc_en == 1) ? TRUE : FALSE;
+}
+
 void chip_restart(void)
 {
     /* 寄存器不会复位 */
@@ -226,10 +239,14 @@ void uboot_main(void *pSDF, u32 addr, u32 prevApp)
     //put_buf((u8 *)boot_sys_cfg.reset_pin, sizeof(boot_sys_cfg.reset_pin));
     //long_press_reset_io_init(boot_sys_cfg.reset_pin[0], boot_sys_cfg.reset_pin[1] - '0');
 
+#if (defined(UPDATE_EFUSE) && (UPDATE_EFUSE == 1))
+    pll_init(0);
+    p11_clk_init();  // 初始化p11时钟
+#endif
     //<spi初始化检测，重新初始化SPI并提速
     spi_reinit();
 
-#if defined(CONFIG_CPU_BR40) || defined(CONFIG_CPU_BD19) || defined(CONFIG_CPU_BD29)
+#if defined(CONFIG_CPU_BR40)
 #else
     void spi0flash_remove_protect(void);
     spi0flash_remove_protect();
@@ -250,9 +267,9 @@ void uboot_main(void *pSDF, u32 addr, u32 prevApp)
     dynamic_mem_init(malloc_pool, malloc_pool_size);
 #if FLASH_FRAMEWORK_VERSION_V2_EN && (0 == UART_UPDATE_ONLY_TEST_MODE) && (0 == BT_UPDATE_ONLY_TEST_MODE)
 #if (defined(UPDATE_EFUSE) && (UPDATE_EFUSE == 1))
-
-    pll_init(0);
-    p11_clk_init();  // 初始化p11时钟
+    // 因为pll_init会改变系统时钟,使得SPI时钟大于24M,导致个别芯片会读写SPI出错,所以将pll_init提前
+    /* pll_init(0); */
+    /* p11_clk_init();  // 初始化p11时钟 */
 
     p33_page0 = p33_read_page0();
     p33_page0 &= 0x00ff0000;
@@ -329,7 +346,7 @@ void uboot_main(void *pSDF, u32 addr, u32 prevApp)
 #if (SD_MODULE_CONTROL || USB_HID_MODULE_CONTROL || BLE_UPDATA_SUPPORT_CONNECT || USER_NORFLASH_UPDATA_MODULE_CONTROL || USER_LC_FLASH_UPDATA_MODULE_CONTROL || DEV_NORFLASH_UPDATA_MODULE_CONTROL || USB_HOST_MODULE_CONTROL )
     update_loader_ram_record_check();
     check_res = updata_check();
-#elif (BT_UPDATA_MODULE_CONTROL && defined(CONFIG_CPU_BR23))
+#elif (BT_UPDATA_MODULE_CONTROL && (defined(CONFIG_CPU_BR23) || defined(CONFIG_CPU_BR25))) //这里23\25需要读ldo trim和share_en
     update_loader_ram_record_check();
     updata_check(); //不修改check_res返回值，不影响bt_reinit流程;
 #elif (UART_UPDATA_USER_MODULE_CONTROL)

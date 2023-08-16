@@ -13,7 +13,7 @@
 /*串口打印控制器IO口占据*/
 #define UART_ENABLE
 //br23 用dp,br30yong usbdp
-#define UART_DEBUG_IO     "USBDP"
+#define UART_DEBUG_IO     "PA00"
 #define UART_DEBUG_BAUD   1000000
 /*打印调试信息*/
 #ifdef UART_DEBUG

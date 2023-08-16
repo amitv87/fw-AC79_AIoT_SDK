@@ -30,6 +30,7 @@
 #if BLE_GATT_UPDATA_MODULE_CONTROL || BLE_UPDATA_SUPPORT_CONNECT
 
 #define TCFG_BLE_SECURITY_EN	0
+#define TCFG_BLE_RSP_ADV_SWITCH	0
 
 //#include "le_server_demo.h"
 #include "ble_rcsp_server.h"
@@ -569,14 +570,64 @@ static u8 scan_rsp_array[] = {
     sizeof(manufactureer_data) + 1,					AD_TYPE_MANUFACTURER_SPEC_DATA, JL_MANUFACTURER_DATA,
 };
 
+#if (BLE_GATT_UPDATA_MODULE_CONTROL && TCFG_BLE_RSP_ADV_SWITCH)
+static u8 g_adv_rsp_content_switch_flag = 0;
+static int adv_rsp_data_switch_handle(void)
+{
+    int ret = 0;
+    u8 i = 0;
+    u8 adv_rsp_buf[31] = {0};
+    // 检查rsp包中是否存在0xff的属性
+    if (EX_CFG_ERR_NONE == ex_cfg_get_content_api(CFG_ITEM_SCAN_RSP, adv_rsp_buf, 31)) {
+        while (i < sizeof(adv_rsp_buf)) {
+            if (0 == adv_rsp_buf[i]) {
+                break;
+            }
+            if (0xFF == adv_rsp_buf[i + 1]) {
+                // 存在置上标志位
+                g_adv_rsp_content_switch_flag = 1;
+                break;
+            }
+            i += adv_rsp_buf[i] + 1;
+        }
+    }
+    if (g_adv_rsp_content_switch_flag) {
+        // 存在把包rsp包中的内容放入adv_data中，把adv包中的内容放入scan_rsp_data包中
+        if (EX_CFG_ERR_NONE == ex_cfg_get_content_api(CFG_ITEM_ADV_IND, scan_rsp_data, 31)) {
+            memcpy(adv_data, adv_rsp_buf, 31);
+            ret = 31;
+        } else {
+            g_adv_rsp_content_switch_flag = 0;
+        }
+    }
+    // 如果不存在，走原来流程
+    return ret;
+}
+#endif
+
 //------------------------------------------------------
 static int make_set_adv_data(void)
 {
     u8 offset = 0;
     u8 *buf = adv_data;
 
-    memset(buf, 0, ADV_RSP_PACKET_MAX);
+#if (TCFG_BLE_RSP_ADV_SWITCH && BLE_GATT_UPDATA_MODULE_CONTROL)
+    if (0 == g_adv_rsp_content_switch_flag)
+#endif
+    {
+        memset(buf, 0, ADV_RSP_PACKET_MAX);
+    }
 #if BLE_GATT_UPDATA_MODULE_CONTROL
+#if TCFG_BLE_RSP_ADV_SWITCH
+    if (0 == g_adv_rsp_content_switch_flag) {
+        offset = adv_rsp_data_switch_handle();
+    } else if (g_adv_rsp_content_switch_flag) {
+        offset = 31;
+    }
+    if (offset) {
+        goto _MAKE_SET_ADV_DATA_END;
+    }
+#endif
     if (EX_CFG_ERR_NONE == ex_cfg_get_content_api(CFG_ITEM_ADV_IND, buf, 31)) {
         offset = 31;
     } else
@@ -585,6 +636,7 @@ static int make_set_adv_data(void)
         memcpy(buf, adv_ind_data, sizeof(adv_ind_data));
         offset  = sizeof(adv_ind_data);
     }
+_MAKE_SET_ADV_DATA_END:
     log_info("adv_data(%d):", offset);
     log_info_hexdump(buf, offset);
     ble_user_cmd_prepare(BLE_CMD_ADV_DATA, 2, offset, buf);
@@ -598,12 +650,26 @@ static int make_set_adv_data(void)
 
 static int make_set_rsp_data(void)
 {
-
     u8 offset = 0;
     u8 *buf = scan_rsp_data;
-    memset(buf, 0, ADV_RSP_PACKET_MAX);
+#if (TCFG_BLE_RSP_ADV_SWITCH && BLE_GATT_UPDATA_MODULE_CONTROL)
+    if (0 == g_adv_rsp_content_switch_flag)
+#endif
+    {
+        memset(buf, 0, ADV_RSP_PACKET_MAX);
+    }
 #if BLE_GATT_UPDATA_MODULE_CONTROL
-    if (EX_CFG_ERR_NONE == ex_cfg_get_content_api(CFG_ITEM_SCAN_RSP, buf, 31)) {
+#if TCFG_BLE_RSP_ADV_SWITCH
+    if (0 == g_adv_rsp_content_switch_flag) {
+        offset = adv_rsp_data_switch_handle();
+    } else if (g_adv_rsp_content_switch_flag) {
+        offset = 31;
+    }
+    if (offset) {
+        goto _MAKE_SET_RSP_DATA_END;
+    }
+#endif
+    if (0 == offset && EX_CFG_ERR_NONE == ex_cfg_get_content_api(CFG_ITEM_SCAN_RSP, buf, 31)) {
         offset = 31;
     } else
 #endif
@@ -611,6 +677,7 @@ static int make_set_rsp_data(void)
         memcpy(buf, scan_rsp_array, sizeof(scan_rsp_array));
         offset = sizeof(scan_rsp_array);
     }
+_MAKE_SET_RSP_DATA_END:
     log_info("rsp_data(%d):", offset);
     log_info_hexdump(buf, offset);
     ble_user_cmd_prepare(BLE_CMD_RSP_DATA, 2, offset, buf);
