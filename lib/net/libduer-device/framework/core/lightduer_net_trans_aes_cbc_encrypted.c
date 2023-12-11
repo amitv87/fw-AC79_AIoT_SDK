@@ -17,7 +17,6 @@
 //
 // Description: The encrypted network I/O.
 //
-#include "duerapp_config.h"
 #ifdef NET_TRANS_ENCRYPTED_BY_AES_CBC
 
 #include "lightduer_net_trans_aes_cbc_encrypted.h"
@@ -79,10 +78,20 @@ static void convert_bindtoken_to_key(char bind_token[32], unsigned char key[16])
 duer_status_t duer_trans_aes_cbc_encrypted_connect(duer_trans_ptr trans,
         const duer_addr_t *addr)
 {
+    return duer_trans_aes_cbc_encrypted_connect_timeout(trans, addr, 0);
+}
+
+duer_status_t duer_trans_aes_cbc_encrypted_connect_timeout(duer_trans_ptr trans,
+        const duer_addr_t *addr, duer_u32_t timeout)
+{
     duer_status_t rs = DUER_ERR_FAILED;
     DUER_LOGV("==> duer_trans_encrypted_do_connect: trans = %p", trans);
 
-    rs = duer_trans_wrapper_connect(trans, addr);
+    if (timeout == 0) {
+        rs = duer_trans_wrapper_connect(trans, addr);
+    } else {
+        rs = duer_trans_wrapper_connect_timeout(trans, addr, timeout);
+    }
 
     if (rs == DUER_OK) {
         duer_aes_context ptr = (duer_aes_context)trans->secure;
@@ -158,7 +167,7 @@ duer_status_t duer_trans_aes_cbc_encrypted_send(duer_trans_ptr trans,
         input = DUER_MALLOC(size + padding_len);
         if (input == NULL) {
             DUER_LOGE("malloc input failed!");
-            rs = DUER_ERR_MEMORY_OVERLOW;
+            rs = DUER_ERR_MEMORY_OVERFLOW;
             goto exit;
         }
         DUER_MEMSET(input, 0, size + padding_len);
@@ -171,7 +180,7 @@ duer_status_t duer_trans_aes_cbc_encrypted_send(duer_trans_ptr trans,
     output = DUER_MALLOC(output_len);
     if (output == NULL) {
         DUER_LOGE("malloc output failed!");
-        rs = DUER_ERR_MEMORY_OVERLOW;
+        rs = DUER_ERR_MEMORY_OVERFLOW;
         goto exit;
     }
 

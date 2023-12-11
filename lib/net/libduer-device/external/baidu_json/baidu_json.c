@@ -24,7 +24,7 @@
 /* JSON parser in C. */
 
 #include <string.h>
-//#include <stdio.h>
+/* #include <stdio.h> */
 #include "printf.h"
 #include <math.h>
 #include <stdlib.h>
@@ -32,6 +32,8 @@
 #include <limits.h>
 #include <ctype.h>
 #include "baidu_json.h"
+
+// #define USE_IS_ROOT
 
 static const char *global_ep;
 
@@ -87,7 +89,8 @@ static char *baidu_json_strdup(const char *str, size_t len)
     if (!(copy = (char *)baidu_json_malloc(len))) {
         return 0;
     }
-    memcpy(copy, str, len);
+    memcpy(copy, str, len - 1);
+    copy[len - 1] = '\0';
 
     return copy;
 }
@@ -95,7 +98,9 @@ static char *baidu_json_strdup(const char *str, size_t len)
 #ifdef DUER_BJSON_PREALLOC_ITEM
 #include "lightduer_bitmap.h"
 
-#define PREALLOC_ITEM_NUM 103
+#ifndef JSON_PREALLOC_ITEM_NUM
+#define JSON_PREALLOC_ITEM_NUM 103
+#endif
 static bitmap_objects_t s_bitmap_objects;
 
 #endif // DUER_BJSON_PREALLOC_ITEM
@@ -113,7 +118,7 @@ void baidu_json_InitHooks(baidu_json_Hooks *hooks)
     baidu_json_free = (hooks->free_fn) ? hooks->free_fn : baidu_json_free_dummy;
 
 #ifdef DUER_BJSON_PREALLOC_ITEM
-    int r = init_bitmap(PREALLOC_ITEM_NUM, &s_bitmap_objects, sizeof(baidu_json));
+    int r = init_bitmap(JSON_PREALLOC_ITEM_NUM, &s_bitmap_objects, sizeof(baidu_json));
 #endif // DUER_BJSON_PREALLOC_ITEM
 
 }
@@ -141,6 +146,7 @@ static baidu_json *baidu_json_New_Item(void)
     baidu_json *node = (baidu_json *)baidu_json_malloc(sizeof(baidu_json));
 #endif // DUER_BJSON_PREALLOC_ITEM
     if (node) {
+
         memset(node, 0, sizeof(baidu_json));
     }
 
@@ -745,6 +751,10 @@ baidu_json *baidu_json_ParseWithOpts(const char *value, const char **return_pars
     if (return_parse_end) {
         *return_parse_end = end;
     }
+
+#ifdef USE_IS_ROOT
+    c->type |= baidu_json_IsRoot;
+#endif
 
     return c;
 }
@@ -1470,6 +1480,9 @@ void   baidu_json_AddItemToArray(baidu_json *array, baidu_json *item)
         }
         suffix_object(c, item);
     }
+#ifdef USE_IS_ROOT
+    item->type &= ~baidu_json_IsRoot;
+#endif
 }
 
 void   baidu_json_AddItemToObject(baidu_json *object, const char *string, baidu_json *item)
@@ -1534,6 +1547,9 @@ baidu_json *baidu_json_DetachItemFromArray(baidu_json *array, int which)
     }
     /* make sure the detached item doesn't point anywhere anymore */
     c->prev = c->next = 0;
+#ifdef USE_IS_ROOT
+    c->type |= baidu_json_IsRoot;
+#endif
 
     return c;
 }
@@ -1583,6 +1599,9 @@ void baidu_json_InsertItemInArray(baidu_json *array, int which, baidu_json *newi
     } else {
         newitem->prev->next = newitem;
     }
+#ifdef USE_IS_ROOT
+    newitem->type &= ~baidu_json_IsRoot;
+#endif
 }
 
 void baidu_json_ReplaceItemInArray(baidu_json *array, int which, baidu_json *newitem)
@@ -1605,6 +1624,9 @@ void baidu_json_ReplaceItemInArray(baidu_json *array, int which, baidu_json *new
     } else {
         newitem->prev->next = newitem;
     }
+#ifdef USE_IS_ROOT
+    newitem->type &= ~baidu_json_IsRoot;
+#endif
     c->next = c->prev = 0;
     baidu_json_Delete(c);
 }
@@ -1629,6 +1651,9 @@ baidu_json *baidu_json_CreateNull(void)
     baidu_json *item = baidu_json_New_Item();
     if (item) {
         item->type = baidu_json_NULL;
+#ifdef USE_IS_ROOT
+        item->type |= baidu_json_IsRoot;
+#endif
     }
 
     return item;
@@ -1639,6 +1664,9 @@ baidu_json *baidu_json_CreateTrue(void)
     baidu_json *item = baidu_json_New_Item();
     if (item) {
         item->type = baidu_json_True;
+#ifdef USE_IS_ROOT
+        item->type |= baidu_json_IsRoot;
+#endif
     }
 
     return item;
@@ -1649,6 +1677,9 @@ baidu_json *baidu_json_CreateFalse(void)
     baidu_json *item = baidu_json_New_Item();
     if (item) {
         item->type = baidu_json_False;
+#ifdef USE_IS_ROOT
+        item->type |= baidu_json_IsRoot;
+#endif
     }
 
     return item;
@@ -1659,6 +1690,9 @@ baidu_json *baidu_json_CreateBool(int b)
     baidu_json *item = baidu_json_New_Item();
     if (item) {
         item->type = b ? baidu_json_True : baidu_json_False;
+#ifdef USE_IS_ROOT
+        item->type |= baidu_json_IsRoot;
+#endif
     }
 
     return item;
@@ -1669,6 +1703,9 @@ baidu_json *baidu_json_CreateNumber(double num)
     baidu_json *item = baidu_json_New_Item();
     if (item) {
         item->type = baidu_json_Number;
+#ifdef USE_IS_ROOT
+        item->type |= baidu_json_IsRoot;
+#endif
         item->valuedouble = num;
         item->valueint = (int)num;
     }
@@ -1681,6 +1718,9 @@ baidu_json *baidu_json_CreateString(const char *string, size_t s_len)
     baidu_json *item = baidu_json_New_Item();
     if (item) {
         item->type = baidu_json_String;
+#ifdef USE_IS_ROOT
+        item->type |= baidu_json_IsRoot;
+#endif
         item->valuestring = baidu_json_strdup(string, s_len);
         if (!item->valuestring) {
             baidu_json_Delete(item);
@@ -1696,6 +1736,9 @@ baidu_json *baidu_json_CreateArray(void)
     baidu_json *item = baidu_json_New_Item();
     if (item) {
         item->type = baidu_json_Array;
+#ifdef USE_IS_ROOT
+        item->type |= baidu_json_IsRoot;
+#endif
     }
 
     return item;
@@ -1706,6 +1749,9 @@ baidu_json *baidu_json_CreateObject(void)
     baidu_json *item = baidu_json_New_Item();
     if (item) {
         item->type = baidu_json_Object;
+#ifdef USE_IS_ROOT
+        item->type |= baidu_json_IsRoot;
+#endif
     }
 
     return item;
@@ -1724,6 +1770,9 @@ baidu_json *baidu_json_CreateIntArray(const int *numbers, int count)
             baidu_json_Delete(a);
             return 0;
         }
+#ifdef USE_IS_ROOT
+        n->type &= ~baidu_json_IsRoot;
+#endif
         if (!i) {
             a->child = n;
         } else {
@@ -1747,6 +1796,9 @@ baidu_json *baidu_json_CreateFloatArray(const float *numbers, int count)
             baidu_json_Delete(a);
             return 0;
         }
+#ifdef USE_IS_ROOT
+        n->type &= ~baidu_json_IsRoot;
+#endif
         if (!i) {
             a->child = n;
         } else {
@@ -1770,6 +1822,9 @@ baidu_json *baidu_json_CreateDoubleArray(const double *numbers, int count)
             baidu_json_Delete(a);
             return 0;
         }
+#ifdef USE_IS_ROOT
+        n->type &= ~baidu_json_IsRoot;
+#endif
         if (!i) {
             a->child = n;
         } else {
@@ -1793,6 +1848,9 @@ baidu_json *baidu_json_CreateStringArray(const char **strings, int count)
             baidu_json_Delete(a);
             return 0;
         }
+#ifdef USE_IS_ROOT
+        n->type &= ~baidu_json_IsRoot;
+#endif
         if (!i) {
             a->child = n;
         } else {
@@ -1823,6 +1881,10 @@ baidu_json *baidu_json_Duplicate(const baidu_json *item, int recurse)
     }
     /* Copy over all vars */
     newitem->type = item->type & (~baidu_json_IsReference);
+    newitem->type &= ~baidu_json_StringIsConst; // Fix the memory leap when duplicate it.
+#ifdef USE_IS_ROOT
+    newitem->type |= baidu_json_IsRoot;
+#endif
     newitem->valueint = item->valueint;
     newitem->valuedouble = item->valuedouble;
     if (item->valuestring) {
@@ -1855,6 +1917,9 @@ baidu_json *baidu_json_Duplicate(const baidu_json *item, int recurse)
             baidu_json_Delete(newitem);
             return 0;
         }
+#ifdef USE_IS_ROOT
+        newchild->type &= ~baidu_json_IsRoot;
+#endif
         if (nptr) {
             /* If newitem->child already set, then crosswire ->prev and ->next and move on */
             nptr->next = newchild;
@@ -1918,4 +1983,66 @@ void baidu_json_Minify(char *json)
 void baidu_json_release(void *ptr)
 {
     baidu_json_free(ptr);
+}
+
+static void baidu_json_dump_root_item(baidu_json *obj)
+{
+    if (obj == NULL) {
+        return;
+    }
+
+#ifdef USE_IS_ROOT
+    if (obj->type & baidu_json_IsRoot) {
+        char *str = baidu_json_PrintBuffered(obj, JSON_PREBUFF_SIZE_1024, 0);
+        if (str) {
+            printf("=============[%p]================\n", obj);
+            printf("%s\n", str);
+            baidu_json_release(str);
+        }
+    }
+#else
+    printf("[%p]name:%s", obj, obj->string ? obj->string : "NULL");
+    if (obj->valuestring) {
+        printf(", value:%s\n", obj->valuestring);
+    } else {
+        printf(", type:0x%x\n", obj->type);
+    }
+#endif
+}
+
+int baidu_json_dump_prealloc_items(int detail)
+{
+    int count = 0;
+#ifdef DUER_BJSON_PREALLOC_ITEM
+
+    if (s_bitmap_objects.bitmaps == NULL || s_bitmap_objects.objects == NULL) {
+        return 0;
+    }
+
+    lock_bitmap(&s_bitmap_objects);
+    printf("=========prealloc json items========\n");
+    for (int i = 0; i < s_bitmap_objects.num_of_bitmaps; ++i) {
+        unsigned char b = s_bitmap_objects.bitmaps[i];
+        for (int j = 0; j < 8; j++, b >>= 1) {
+            if (!(b & 0x1)) {
+                continue;
+            }
+
+            if (detail) {
+                int index = i * 8 + j;
+                if (index < s_bitmap_objects.num_of_objs) {
+                    baidu_json *obj = (baidu_json *)(s_bitmap_objects.objects + index * sizeof(baidu_json));
+                    baidu_json_dump_root_item(obj);
+                }
+            }
+            count++;
+        }
+    }
+    printf("current used count %d\n", count);
+    printf("===================================\n");
+    unlock_bitmap(&s_bitmap_objects);
+#else
+    printf("unsupport prealloc item\n");
+#endif
+    return count;
 }

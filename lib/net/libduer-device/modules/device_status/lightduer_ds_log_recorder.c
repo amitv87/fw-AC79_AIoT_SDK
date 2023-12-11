@@ -132,7 +132,7 @@ duer_status_t duer_ds_log_rec_stop(duer_u32_t id)
         message = baidu_json_CreateObject();
         if (message == NULL) {
             DUER_LOGE("message json create fail");
-            result = DUER_ERR_MEMORY_OVERLOW;
+            result = DUER_ERR_MEMORY_OVERFLOW;
             break;
         }
 
@@ -181,4 +181,3 @@ duer_status_t duer_ds_log_rec_stop(duer_u32_t id)
 
     return result;
 }
-

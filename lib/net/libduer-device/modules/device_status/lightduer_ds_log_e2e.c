@@ -17,7 +17,7 @@
  * Auth: Su Hao(suhao@baidu.com)
  * Desc: Record the end to end delay
  */
-#include "duerapp_config.h"
+
 #include "lightduer_ds_log_e2e.h"
 #include "lightduer_log.h"
 #include "lightduer_timestamp.h"
@@ -28,7 +28,8 @@
 #ifdef DUER_STATISTICS_E2E
 
 enum {
-    DUER_DS_LOG_END2END_DELAY = 0x101
+    DUER_DS_LOG_END2END_DELAY = 0x101,
+    DUER_DS_LOG_WAKEUP_END2END_DELAY = 0x102,
 };
 
 typedef struct _duer_ds_e2e_struct {
@@ -46,14 +47,65 @@ static const char *const g_tags[DUER_E2E_EVENT_TOTAL - 1] = {
     "sendDelay",
     "response",
     "play",
-    "codec"
+    "codec",
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+    "wakeupEnqueue",
+    "wakeupSend",
+    "wakeupResponse",
+#endif
 };
 
-static void duer_ds_e2e_result(void)
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+static void duer_ds_wakeup_e2e_result()
+{
+    baidu_json *msg = NULL;
+    const char *dialog_id = NULL;
+    duer_u32_t wakeup_enqueue_time = 0;
+    duer_u32_t wakeup_send_time = 0;
+    duer_u32_t wakeup_response_time = 0;
+    duer_u32_t total_spend = 0;
+
+    msg = baidu_json_CreateObject();
+    if (msg == NULL) {
+        DUER_LOGE("Memory overflow!");
+        return;
+    }
+
+    wakeup_enqueue_time = g_ds_e2e._timestamp[DUER_E2E_WAKEUP_SEND_ENQUEUE]
+                          - g_ds_e2e._timestamp[DUER_E2E_1ST_WAKEUP];
+    wakeup_send_time = g_ds_e2e._timestamp[DUER_E2E_WAKEUP_SEND]
+                       - g_ds_e2e._timestamp[DUER_E2E_WAKEUP_SEND_ENQUEUE];;
+    wakeup_response_time = g_ds_e2e._timestamp[DUER_E2E_2ND_WAKEUP]
+                           - g_ds_e2e._timestamp[DUER_E2E_WAKEUP_SEND];;
+    total_spend = g_ds_e2e._timestamp[DUER_E2E_2ND_WAKEUP]
+                  - g_ds_e2e._timestamp[DUER_E2E_1ST_WAKEUP];
+
+    baidu_json_AddNumberToObject(msg, g_tags[DUER_E2E_WAKEUP_SEND_ENQUEUE - 1], wakeup_enqueue_time);
+    baidu_json_AddNumberToObject(msg, g_tags[DUER_E2E_WAKEUP_SEND - 1], wakeup_send_time);
+    baidu_json_AddNumberToObject(msg, g_tags[DUER_E2E_2ND_WAKEUP - 1], wakeup_response_time);
+    baidu_json_AddNumberToObject(msg, "secondWakeup-total", total_spend);
+
+    DUER_LOGI("[XiaoduXiaodu] sendEnqueueDelay:%d, sendDelay:%d, respSpend:%d, total:%d",
+              wakeup_enqueue_time,
+              wakeup_send_time,
+              wakeup_response_time,
+              total_spend);
+
+    if (s_dialog_id_cb) {
+        dialog_id = s_dialog_id_cb();
+        baidu_json_AddStringToObject(msg, "dialogRequestId", dialog_id ? dialog_id : "");
+    }
+
+    duer_ds_log(DUER_DS_LOG_LEVEL_INFO, DUER_DS_LOG_MODULE_ANALYSIS,
+                DUER_DS_LOG_WAKEUP_END2END_DELAY, msg);
+}
+#endif // DUER_SECOND_WAKEUP_ENABLE
+
+static void duer_ds_e2e_result(int end_index)
 {
     baidu_json *msg = NULL;
     int i = 0;
-    char *dialog_id = NULL;
+    const char *dialog_id = NULL;
 
     msg = baidu_json_CreateObject();
     if (msg == NULL) {
@@ -77,7 +129,8 @@ static void duer_ds_e2e_result(void)
                       + s_local_vad_silence_time;
 
         DUER_LOGI("recSpend:%d,sendDelay:%d,respSpend:%d,handleDelay:%d,codecDelay:%d,total:%d",
-                  g_ds_e2e._timestamp[DUER_E2E_RECORD_FINISH] - g_ds_e2e._timestamp[DUER_E2E_REQUEST],
+                  g_ds_e2e._timestamp[DUER_E2E_RECORD_FINISH]
+                  - g_ds_e2e._timestamp[DUER_E2E_1ST_WAKEUP],
                   g_ds_e2e._timestamp[DUER_E2E_SEND] - g_ds_e2e._timestamp[DUER_E2E_RECORD_FINISH],
                   g_ds_e2e._timestamp[DUER_E2E_RESPONSE] - g_ds_e2e._timestamp[DUER_E2E_SEND],
                   g_ds_e2e._timestamp[DUER_E2E_PLAY] - g_ds_e2e._timestamp[DUER_E2E_RESPONSE],
@@ -98,7 +151,8 @@ static void duer_ds_e2e_result(void)
                       + s_local_vad_silence_time;
 
         DUER_LOGI("recSpend:%d,sendDelay:%d,respSpend:%d,handleDelay:%d,total:%d",
-                  g_ds_e2e._timestamp[DUER_E2E_RECORD_FINISH] - g_ds_e2e._timestamp[DUER_E2E_REQUEST],
+                  g_ds_e2e._timestamp[DUER_E2E_RECORD_FINISH]
+                  - g_ds_e2e._timestamp[DUER_E2E_1ST_WAKEUP],
                   g_ds_e2e._timestamp[DUER_E2E_SEND] - g_ds_e2e._timestamp[DUER_E2E_RECORD_FINISH],
                   g_ds_e2e._timestamp[DUER_E2E_RESPONSE] - g_ds_e2e._timestamp[DUER_E2E_SEND],
                   g_ds_e2e._timestamp[DUER_E2E_PLAY] - g_ds_e2e._timestamp[DUER_E2E_RESPONSE],
@@ -146,6 +200,8 @@ duer_bool duer_ds_e2e_wait_response(void)
 
 void duer_ds_e2e_event(duer_ds_e2e_event_t evt)
 {
+    duer_u32_t current_time = 0;
+
     if (evt >= DUER_E2E_EVENT_TOTAL || evt < 0) {
         DUER_LOGE("error event!!!");
         return;
@@ -153,28 +209,55 @@ void duer_ds_e2e_event(duer_ds_e2e_event_t evt)
 
     DUER_LOGD("event %d -> %d", g_ds_e2e._event, evt);
 
-    if (evt > DUER_E2E_REQUEST && evt != g_ds_e2e._event + 1
+    if (evt > DUER_E2E_1ST_WAKEUP && (evt != g_ds_e2e._event + 1)
         && (evt != DUER_E2E_SEND || g_ds_e2e._event != DUER_E2E_SEND)) {
-        DUER_LOGD("event %d -> %d, invalid in e2e statistic!!!", g_ds_e2e._event, evt);
-        return;
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+        if (evt < DUER_E2E_WAKEUP_SEND_ENQUEUE) {
+#endif
+            DUER_LOGD("event %d -> %d, invalid in e2e statistic!!!", g_ds_e2e._event, evt);
+            return;
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+        }
+#endif
     }
 
-    if (evt == DUER_E2E_REQUEST) {
+    current_time = duer_timestamp();
+
+    if (evt == DUER_E2E_1ST_WAKEUP) {
         DUER_MEMSET(&g_ds_e2e, 0, sizeof(g_ds_e2e));
+    } else {
+        if (current_time < g_ds_e2e._timestamp[g_ds_e2e._event]) {
+            DUER_LOGE("Wrong timestamp: %u -> %u",
+                      g_ds_e2e._timestamp[g_ds_e2e._event],
+                      current_time);
+            return;
+        }
     }
 
-    g_ds_e2e._event = evt;
-    g_ds_e2e._timestamp[evt] = duer_timestamp();
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+    if (evt < DUER_E2E_WAKEUP_SEND_ENQUEUE) {
+#endif
+        g_ds_e2e._event = evt;
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+    }
+#endif
+    g_ds_e2e._timestamp[evt] = current_time;
 
     if (!s_if_record_codec_timestamp) {
         if (evt == DUER_E2E_PLAY) {
-            duer_ds_e2e_result();
+            duer_ds_e2e_result(evt);
         }
     } else {
         if (evt == DUER_E2E_CODEC) {
-            duer_ds_e2e_result();
+            duer_ds_e2e_result(evt);
         }
     }
+
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+    if (evt == DUER_E2E_2ND_WAKEUP) {
+        duer_ds_wakeup_e2e_result();
+    }
+#endif//DUER_SECOND_WAKEUP_ENABLE
 }
 
 #endif

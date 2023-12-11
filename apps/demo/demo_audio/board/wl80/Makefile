@@ -22,8 +22,14 @@ AR    := llvm-ar.exe
 MKDIR := mkdir_win -p
 RM    := rm -rf
 
-SYS_LIB_DIR := C:/JL/pi32/pi32v2-lib/r3
-SYS_INC_DIR := C:/JL/pi32/pi32v2-include
+SYS_LIB_DIR := \
+	C:/JL/pi32/pi32v2-lib/r3 \
+
+
+SYS_INC_DIR := \
+	C:/JL/pi32/pi32v2-include \
+
+
 EXT_CFLAGS  := # Windows 下不需要 -D__SHELL__
 export PATH:=$(TOOL_DIR);$(PATH)
 

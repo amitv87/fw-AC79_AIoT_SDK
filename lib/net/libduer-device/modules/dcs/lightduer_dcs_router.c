@@ -66,7 +66,6 @@ static volatile size_t s_client_context_cb_count;
 static volatile dcs_client_context_handler *s_dcs_client_context_cb;
 static duer_qcache_handler s_directive_queue;
 static duer_mutex_t s_directive_queue_lock;
-static const char *PRIVATE_NAMESPACE = "ai.dueros.private.protocol";
 static volatile duer_bool s_wait_dialog_finish;
 static volatile duer_bool s_is_initialized;
 static volatile duer_bool s_is_speak_pending;
@@ -74,13 +73,21 @@ static volatile int s_speaking_index;
 static const char *IOT_CLOUD_EXTRA_KEY = "iot_cloud_extra";
 static const char *INDEX_KEY = "index";
 static const int DUMMY_INDEX = 0;
+static dcs_directive_hook_handler s_dcs_directive_hook_cb = NULL;
+static dcs_event_hook_handler s_dcs_hook_event_handler    = NULL;
+static const char *NAMESPACE_DLP = "ai.dueros.device_interface.dlp";
 #define DUER_PRINT_BJSON_ESTIMATED_SIZE_FOR_REPORT_EXCEPTION (1024)
+
+static duer_status_t duer_handle_directive(baidu_json *directive,
+        int index,
+        directive_source_t source);
 
 duer_status_t duer_reg_client_context_cb_internal(dcs_client_context_handler cb)
 {
     size_t size = 0;
     duer_status_t ret = DUER_OK;
     dcs_client_context_handler *list = NULL;
+    int i = 0;
 
     if (!cb) {
         DUER_LOGE("Failed to add client context handler: param error\n");
@@ -89,12 +96,22 @@ duer_status_t duer_reg_client_context_cb_internal(dcs_client_context_handler cb)
         return ret;
     }
 
+    if (s_dcs_client_context_cb) {
+        while (i < s_client_context_cb_count) {
+            if (s_dcs_client_context_cb[i] == cb) {
+                DUER_LOGD("client context cb had been registered");
+                return ret;
+            }
+            i++;
+        }
+    }
+
     if (!s_dcs_client_context_cb) {
         s_dcs_client_context_cb = DUER_MALLOC(sizeof(dcs_client_context_handler));
         if (!s_dcs_client_context_cb) {
             DUER_LOGE("Failed to add dcs client context cb: no memory\n");
             DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-            ret = DUER_ERR_MEMORY_OVERLOW;
+            ret = DUER_ERR_MEMORY_OVERFLOW;
             return ret;
         }
     } else {
@@ -105,7 +122,7 @@ duer_status_t duer_reg_client_context_cb_internal(dcs_client_context_handler cb)
         } else {
             DUER_LOGE("Failed to add dcs client context cb: no memory\n");
             DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-            ret = DUER_ERR_MEMORY_OVERLOW;
+            ret = DUER_ERR_MEMORY_OVERFLOW;
             return ret;
         }
     }
@@ -114,6 +131,30 @@ duer_status_t duer_reg_client_context_cb_internal(dcs_client_context_handler cb)
     s_client_context_cb_count++;
 
     return ret;
+}
+
+void duer_reg_dcs_hook_directive_hdl(dcs_directive_hook_handler cb)
+{
+    if (!s_dcs_directive_hook_cb) {
+        s_dcs_directive_hook_cb = cb;
+    } else {
+        DUER_LOGI("dlp directive has been initialed");
+    }
+}
+
+void duer_reg_dcs_hook_event_hdl(dcs_event_hook_handler cb)
+{
+    if (cb) {
+        duer_reg_dcs_event_hook_hdl_internal(cb);
+        s_dcs_hook_event_handler = cb;
+    }
+}
+
+void duer_dcs_hook_event_status_report(baidu_json *status)
+{
+    if (s_dcs_hook_event_handler) {
+        s_dcs_hook_event_handler(status);
+    }
 }
 
 duer_status_t duer_reg_client_context_cb(dcs_client_context_handler cb)
@@ -262,17 +303,19 @@ static duer_status_t duer_directive_duplicate(directive_namespace_list_t *node,
     char *name = NULL;
     duer_directive_list *list = NULL;
 
-    for (i = 0; i < node->count; i++) {
-        if (DUER_STRCMP(node->list[i].directive_name, directive->directive_name) == 0) {
-            node->list[i].cb = directive->cb;
-            return DUER_OK;
+    if (node->list) {
+        for (i = 0; i < node->count; i++) {
+            if (DUER_STRCMP(node->list[i].directive_name, directive->directive_name) == 0
+                && node->list[i].cb == directive->cb) {
+                return DUER_OK;
+            }
         }
     }
 
     name = duer_strdup_internal(directive->directive_name);
     if (!name) {
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     if (node->list) {
@@ -285,7 +328,7 @@ static duer_status_t duer_directive_duplicate(directive_namespace_list_t *node,
     if (!list) {
         DUER_FREE(name);
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     list[node->count].cb = directive->cb;
@@ -314,7 +357,7 @@ duer_status_t duer_add_dcs_directive_internal(const duer_directive_list *directi
 
     node = duer_get_namespace_node(name_space);
     if (!node) {
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
         DUER_LOGE("Failed to add dcs directive: no memory");
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
         goto exit;
@@ -353,13 +396,13 @@ static duer_status_t duer_directive_enqueue(baidu_json *directive,
     node = (directive_node_t *)DUER_MALLOC(sizeof(directive_node_t));
     if (!node) {
         DUER_LOGE("Failed to cache directive: memory overlow");
-        rs = DUER_ERR_MEMORY_OVERLOW;
+        rs = DUER_ERR_MEMORY_OVERFLOW;
         goto RET;
     }
 
     node->directive = baidu_json_Duplicate(directive, 0);
     if (!node->directive) {
-        rs = DUER_ERR_MEMORY_OVERLOW;
+        rs = DUER_ERR_MEMORY_OVERFLOW;
         goto RET;
     }
     node->index = index;
@@ -419,6 +462,7 @@ duer_status_t duer_add_dcs_directive(const duer_directive_list *directive,
 static duer_status_t duer_dialog_finish_cb(const baidu_json *directive)
 {
     DUER_DCS_CRITICAL_ENTER();
+    duer_listen_stop_internal();
     s_wait_dialog_finish = DUER_FALSE;
     duer_play_channel_control_internal(DCS_DIALOG_FINISHED);
     DUER_DCS_CRITICAL_EXIT();
@@ -426,15 +470,134 @@ static duer_status_t duer_dialog_finish_cb(const baidu_json *directive)
     return DUER_OK;
 }
 
-static duer_status_t duer_execute_directive(baidu_json *directive)
+void duer_dialog_started(void)
+{
+    s_wait_dialog_finish = DUER_TRUE;
+}
+
+static baidu_json *duer_create_directive(const char *namespace,
+        const char *name,
+        const char *dialog_id)
+{
+    baidu_json *directive = NULL;
+    baidu_json *header = NULL;
+    baidu_json *payload = NULL;
+    const char *msg_id = NULL;
+
+    directive = baidu_json_CreateObject();
+    if (directive == NULL) {
+        goto error_out;
+    }
+
+    header = baidu_json_CreateObject();
+    if (header == NULL) {
+        goto error_out;
+    }
+
+    baidu_json_AddItemToObjectCS(directive, DCS_HEADER_KEY, header);
+    baidu_json_AddStringToObjectCS(header, DCS_NAMESPACE_KEY, namespace);
+    baidu_json_AddStringToObjectCS(header, DCS_NAME_KEY, name);
+    baidu_json_AddStringToObject(header, DCS_DIALOG_REQUEST_ID_KEY, dialog_id);
+
+    msg_id = duer_generate_msg_id_internal();
+    if (msg_id) {
+        baidu_json_AddStringToObject(header, DCS_MESSAGE_ID_KEY, msg_id);
+        DUER_LOGD("msg_id: %s", msg_id);
+    }
+
+    payload = baidu_json_CreateObject();
+    if (payload == NULL) {
+        goto error_out;
+    }
+
+    baidu_json_AddItemToObjectCS(directive, DCS_PAYLOAD_KEY, payload);
+
+    return directive;
+
+error_out:
+    DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
+    if (directive) {
+        baidu_json_Delete(directive);
+    }
+    return NULL;
+}
+
+static duer_status_t duer_session_finish_callback(void *data)
+{
+    baidu_json *directive = (baidu_json *)data;
+
+    if (directive == NULL) {
+        directive = duer_create_directive(DCS_PRIVATE_NAMESPACE,
+                                          DCS_DIALOGUE_FINISHED_NAME,
+                                          duer_get_request_id_internal());
+    }
+
+    if (directive) {
+        duer_handle_directive(directive, 1024, PRIVATE_PROTOCAL_DIRECTIVE);
+    }
+
+    baidu_json_Delete(directive);
+
+    return DUER_OK;
+}
+
+static dcs_directive_handler *duer_dcs_get_handlers(const char *name_space,
+        const char *name,
+        int *count)
+{
+    directive_namespace_list_t *node = NULL;
+    dcs_directive_handler *ret = NULL;
+    dcs_directive_handler *buf = NULL;
+    int i = 0;
+
+    *count = 0;
+
+    if (!s_is_initialized) {
+        return NULL;
+    }
+
+    for (i = 0; i < s_namespace_count; i++) {
+        if (DUER_STRCMP(s_directive_namespace_list[i].name_space,
+                        name_space) == 0) {
+            node = (directive_namespace_list_t *)&s_directive_namespace_list[i];
+        }
+    }
+
+    if (!node) {
+        return NULL;
+    }
+
+    for (i = 0; i < node->count; i++) {
+        if (DUER_STRCMP(node->list[i].directive_name, name) == 0) {
+            if (!ret) {
+                buf = DUER_MALLOC((*count + 1) * sizeof(*ret));
+            } else {
+                buf = DUER_REALLOC(ret, (*count + 1) * sizeof(*ret));
+            }
+
+            if (!buf) {
+                DUER_LOGE("Failed to get all handlers");
+                break;
+            }
+
+            ret = buf;
+            ret[*count] = node->list[i].cb;
+            *count = *count + 1;
+        }
+    }
+
+    return ret;
+}
+
+duer_status_t duer_execute_directive(baidu_json *directive)
 {
     int i = 0;
+    int hdlr_count = 0;
     duer_status_t rs = DUER_OK;
     baidu_json *name = NULL;
     baidu_json *name_space = NULL;
     baidu_json *header = NULL;
-    dcs_directive_handler handler = NULL;
-    directive_namespace_list_t *node = NULL;
+    dcs_directive_handler *handler = NULL;
 
     header = baidu_json_GetObjectItem(directive, DCS_HEADER_KEY);
     if (!header) {
@@ -444,42 +607,44 @@ static duer_status_t duer_execute_directive(baidu_json *directive)
     }
 
     name_space = baidu_json_GetObjectItem(header, DCS_NAMESPACE_KEY);
-    if (!name_space) {
+    if (!name_space || !name_space->valuestring) {
         DUER_LOGE("Failed to parse directive namespace");
         rs = DUER_MSG_RSP_BAD_REQUEST;
         goto RET;
     }
 
     name = baidu_json_GetObjectItem(header, DCS_NAME_KEY);
-    if (!name) {
+    if (!name || !name->valuestring) {
         DUER_LOGE("Failed to parse directive name");
         rs = DUER_MSG_RSP_BAD_REQUEST;
         goto RET;
     }
 
+    DUER_LOGI("Directive namespace: %s", name_space->valuestring);
     DUER_LOGI("Directive name: %s", name->valuestring);
 
-    DUER_DCS_CRITICAL_ENTER();
-    if (s_is_initialized) {
-        for (i = 0; i < s_namespace_count; i++) {
-            if (DUER_STRCMP(s_directive_namespace_list[i].name_space,
-                            name_space->valuestring) == 0) {
-                node = (directive_namespace_list_t *)&s_directive_namespace_list[i];
-            }
+    if (!DUER_MEMCMP(name_space->valuestring, NAMESPACE_DLP, DUER_STRLEN(NAMESPACE_DLP))) {
+        if (s_dcs_directive_hook_cb) {
+            s_dcs_directive_hook_cb(directive);
         }
-
-        if (node) {
-            for (i = 0; i < node->count; i++) {
-                if (DUER_STRCMP(node->list[i].directive_name, name->valuestring) == 0) {
-                    handler = node->list[i].cb;
-                }
-            }
-        }
+        goto RET;
     }
+
+#ifdef DUER_MONITOR_TEST_ENABLE
+    duer_dcs_monitor_test_add_result(name_space->valuestring, name->valuestring);
+#endif
+
+    DUER_DCS_CRITICAL_ENTER();
+    handler = duer_dcs_get_handlers(name_space->valuestring, name->valuestring, &hdlr_count);
     DUER_DCS_CRITICAL_EXIT();
 
     if (handler) {
-        rs = handler(directive);
+        for (i = 0; i < hdlr_count; i++) {
+            rs = handler[i](directive);
+            if (rs != DUER_OK) {
+                goto RET;
+            }
+        }
     } else {
         DUER_LOGE("unrecognized directive: %s, namespace: %s\n",
                   name->valuestring,
@@ -488,6 +653,10 @@ static duer_status_t duer_execute_directive(baidu_json *directive)
     }
 
 RET:
+    if (handler) {
+        DUER_FREE(handler);
+    }
+
     return rs;
 }
 
@@ -516,7 +685,7 @@ static duer_bool duer_is_speak_directive(baidu_json *directive)
     if (header) {
         name = baidu_json_GetObjectItem(header, DCS_NAME_KEY);
         name_space = baidu_json_GetObjectItem(header, DCS_NAMESPACE_KEY);
-        if (name && name_space) {
+        if (name && name_space && name->valuestring && name_space->valuestring) {
             is_speak_directive = duer_is_directive_equal(name_space->valuestring,
                                  name->valuestring,
                                  DCS_VOICE_OUTPUT_NAMESPACE,
@@ -640,6 +809,11 @@ static void duer_execute_caching_directive(int what, void *data)
     } while (0);
 
     duer_mutex_unlock(s_directive_queue_lock);
+}
+
+const char *duer_create_request_id(void)
+{
+    return duer_create_request_id_internal(DCS_DIALOG_NONE);
 }
 
 static void duer_clear_directive_queue(int what, void *data)
@@ -904,7 +1078,7 @@ static duer_status_t duer_dcs_directive_parse(duer_msg_t *msg,
 
         if (name_space) {
             *name_space = baidu_json_GetObjectItem(directive_header, DCS_NAMESPACE_KEY);
-            if (*name_space == NULL) {
+            if (*name_space == NULL || (*name_space)->valuestring == NULL) {
                 DUER_LOGE("Failed to parse directive namespace");
                 rs = DUER_MSG_RSP_BAD_REQUEST;
                 break;
@@ -913,7 +1087,7 @@ static duer_status_t duer_dcs_directive_parse(duer_msg_t *msg,
 
         if (name) {
             *name = baidu_json_GetObjectItem(directive_header, DCS_NAME_KEY);
-            if (*name == NULL) {
+            if (*name == NULL || (*name)->valuestring == NULL) {
                 DUER_LOGE("Failed to parse directive namespace");
                 rs = DUER_MSG_RSP_BAD_REQUEST;
                 break;
@@ -968,18 +1142,26 @@ static duer_status_t duer_dcs_router(duer_context ctx, duer_msg_t *msg, duer_add
 
     if (rs != DUER_OK) {
         if (rs == DUER_MSG_RSP_NOT_FOUND) {
-            duer_report_exception_internal((const char *)msg->payload, msg->payload_len,
+            duer_report_exception_internal((const char *)msg->payload,
+                                           msg->payload_len,
                                            DCS_UNSUPPORTED_OPERATION_TYPE,
                                            "Unknow directive");
             msg_code = DUER_MSG_RSP_NOT_FOUND;
         } else if (rs == DUER_MSG_RSP_BAD_REQUEST) {
-            duer_report_exception_internal((const char *)msg->payload, msg->payload_len,
+            duer_report_exception_internal((const char *)msg->payload,
+                                           msg->payload_len,
                                            DCS_UNEXPECTED_INFORMATION_RECEIVED_TYPE,
                                            "Bad directive");
             msg_code = DUER_MSG_RSP_BAD_REQUEST;
+        } else if (msg->payload_len == 2
+                   && DUER_STRNCMP((const char *)msg->payload, "\r\n", 2) == 0) {
+            DUER_LOGW("Receive an empty message");
+            msg_code = DUER_MSG_RSP_INTERNAL_SERVER_ERROR;
         } else {
-            duer_report_exception_internal((const char *)msg->payload, msg->payload_len,
-                                           DCS_INTERNAL_ERROR_TYPE, "Internal error");
+            duer_report_exception_internal((const char *)msg->payload,
+                                           msg->payload_len,
+                                           DCS_INTERNAL_ERROR_TYPE,
+                                           "Internal error");
             msg_code = DUER_MSG_RSP_INTERNAL_SERVER_ERROR;
         }
     }
@@ -1021,7 +1203,7 @@ static duer_status_t duer_private_protocal_cb(duer_context ctx, duer_msg_t *msg,
     }
 
     if (DUER_STRCMP(DCS_GET_STATUS_NAME, name->valuestring) == 0
-        && DUER_STRCMP(PRIVATE_NAMESPACE, name_space->valuestring)) {
+        && DUER_STRCMP(DCS_PRIVATE_NAMESPACE, name_space->valuestring) == 0) {
         if (msg->token_len > 0) {
             DUER_LOGI("response, mid:%d", msg->msg_id);
             duer_response(msg, DUER_MSG_EMPTY_MESSAGE, NULL, 0);// ack in empty message first!
@@ -1039,7 +1221,7 @@ static duer_status_t duer_private_protocal_cb(duer_context ctx, duer_msg_t *msg,
             } else {
                 DUER_LOGE("Failed to create response msg: memory too low");
                 baidu_json_Delete(client_context);
-                rs = DUER_ERR_MEMORY_OVERLOW;
+                rs = DUER_ERR_MEMORY_OVERFLOW;
             }
         }
     }  else {
@@ -1116,7 +1298,7 @@ void duer_dcs_dialog_cancel(void)
 {
     DUER_DCS_CRITICAL_ENTER();
     if (s_is_initialized) {
-        duer_create_request_id_internal();
+        duer_create_request_id_internal(DCS_DIALOG_NONE);
     } else {
         DUER_LOGW("DCS has not been initialized");
     }
@@ -1126,6 +1308,49 @@ void duer_dcs_dialog_cancel(void)
 static duer_status_t dummy_directive_cb(const baidu_json *directive)
 {
     return DUER_OK;
+}
+
+int duer_dcs_data_send(baidu_json *data)
+{
+    return duer_data_report(data);
+}
+
+int duer_dcs_data_report(baidu_json *data)
+{
+    return duer_dcs_data_report_internal(data, DUER_TRUE);
+}
+
+static duer_status_t duer_dlp_cb(duer_context ctx, duer_msg_t *msg, duer_addr_t *addr)
+{
+    duer_status_t rs = DUER_OK;
+    baidu_json *value = NULL;
+    baidu_json *directive = NULL;
+    duer_msg_code_e msg_code = DUER_MSG_RSP_CHANGED;
+
+    DUER_LOGV("Enter");
+
+    rs = duer_dcs_directive_parse(msg, &value, &directive, NULL, NULL, NULL, NULL);
+    if (rs == DUER_OK) {
+        rs = duer_execute_directive(directive);
+    }
+
+    if (rs != DUER_OK) {
+        if (rs == DUER_MSG_RSP_NOT_FOUND) {
+            msg_code = DUER_MSG_RSP_NOT_FOUND;
+        } else if (rs == DUER_MSG_RSP_BAD_REQUEST) {
+            msg_code = DUER_MSG_RSP_BAD_REQUEST;
+        } else {
+            msg_code = DUER_MSG_RSP_INTERNAL_SERVER_ERROR;
+        }
+    }
+
+    duer_response(msg, msg_code, NULL, 0);
+
+    if (value) {
+        baidu_json_Delete(value);
+    }
+
+    return rs;
 }
 
 void duer_dcs_framework_init()
@@ -1153,6 +1378,14 @@ void duer_dcs_framework_init()
             (char *)DCS_IOTCLOUD_DIRECTIVE_PATH,
             {
                 duer_iot_cloud_cb
+            }
+        },
+        {
+            DUER_RES_MODE_DYNAMIC,
+            DUER_RES_OP_PUT,
+            (char *)DCS_DUER_DLP_PATH,
+            {
+                duer_dlp_cb
             }
         },
     };
@@ -1187,7 +1420,7 @@ void duer_dcs_framework_init()
     }
 
     duer_directive_list directive = {DCS_DIALOGUE_FINISHED_NAME, duer_dialog_finish_cb};
-    duer_add_dcs_directive_internal(&directive, 1, PRIVATE_NAMESPACE);
+    duer_add_dcs_directive_internal(&directive, 1, DCS_PRIVATE_NAMESPACE);
 
     // Unnecessary directives might be received for some special reason, exception event will be
     // reported to cloud if these directives have no handler. Hence we register default callbacks
@@ -1272,13 +1505,24 @@ void duer_dcs_uninitialize(void)
     duer_sys_interface_uninitialize_internal();
     duer_dcs_alert_uninitialize_internal();
     duer_dcs_audio_player_uninitialize_internal();
-    duer_dcs_speaker_control_uninitialize_internal();
     duer_dcs_device_control_uninitialize_internal();
     duer_dcs_play_control_uninitialize_internal();
+    duer_dcs_infrared_control_uninitialize_internal();
     duer_dcs_voice_output_uninitialize_internal();
     duer_dcs_voice_input_uninitialize_internal();
     duer_dcs_screen_uninitialize_internal();
     duer_dcs_local_uninitialize_internal();
 
     DUER_DCS_CRITICAL_EXIT();
+}
+
+baidu_json *duer_dcs_get_client_context(void)
+{
+    baidu_json *client_context = NULL;
+
+    DUER_DCS_CRITICAL_ENTER();
+    client_context = duer_get_client_context_internal();
+    DUER_DCS_CRITICAL_EXIT();
+
+    return client_context;
 }

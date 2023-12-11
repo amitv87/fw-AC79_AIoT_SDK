@@ -86,7 +86,7 @@ duer_status_t duer_ds_log_audio_buffer_info(duer_u32_t size, duer_u32_t type)
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
 
@@ -130,7 +130,7 @@ duer_status_t duer_ds_log_audio_play_start(const char *url, duer_u32_t type)
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddStringToObject(message, "url", url);
@@ -151,14 +151,14 @@ duer_status_t duer_ds_log_audio_play_stop(duer_u32_t duration, duer_u32_t block_
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     code_bitrate = baidu_json_CreateObject();
     if (code_bitrate == NULL) {
         DUER_LOGE("code_bitrate json create fail");
         baidu_json_Delete(message);
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddNumberToObjectCS(message, "duration", duration);
@@ -185,14 +185,14 @@ duer_status_t duer_ds_log_audio_play_finish(duer_u32_t duration, duer_u32_t bloc
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     code_bitrate = baidu_json_CreateObject();
     if (code_bitrate == NULL) {
         DUER_LOGE("code_bitrate json create fail");
         baidu_json_Delete(message);
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddNumberToObjectCS(message, "duration", duration);
@@ -217,7 +217,7 @@ duer_status_t duer_ds_log_audio_codec_version(const char *version)
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddStringToObjectCS(message, "codec_version", version);
@@ -236,7 +236,7 @@ duer_status_t duer_ds_log_audio_info(duer_u32_t bitrate,
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddNumberToObjectCS(message, "bitrate", bitrate);
@@ -257,7 +257,7 @@ duer_status_t duer_ds_log_audio_m4a_head_size(duer_u32_t size)
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddNumberToObjectCS(message, "head_size", size);
@@ -275,7 +275,7 @@ duer_status_t duer_ds_log_audio_content_type(const char *type)
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddStringToObjectCS(message, "content_type", type);
@@ -295,7 +295,7 @@ duer_status_t duer_ds_log_audio_download_delay()
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     delay = now > g_audio_infos.request_download_ts
@@ -319,7 +319,7 @@ duer_status_t duer_ds_log_audio_play_delay()
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     now = duer_timestamp();
@@ -341,7 +341,7 @@ duer_status_t duer_ds_log_audio_memory_overflow(const char *file, duer_u32_t lin
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddStringToObjectCS(message, "file", file);
@@ -360,7 +360,7 @@ duer_status_t duer_ds_log_audio_null_pointer(const char *file, duer_u32_t line)
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddStringToObjectCS(message, "file", file);
@@ -379,7 +379,7 @@ duer_status_t duer_ds_log_audio_invalid_context(const char *file, duer_u32_t lin
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddStringToObjectCS(message, "file", file);
@@ -398,7 +398,7 @@ duer_status_t duer_ds_log_audio_hls_parse_m3u8_error(duer_u32_t line)
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddNumberToObject(message, "line", line);
@@ -416,7 +416,7 @@ duer_status_t duer_ds_log_audio_framework_error(int error_code)
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddNumberToObjectCS(message, "error_code", error_code);
@@ -434,7 +434,7 @@ duer_status_t duer_ds_log_audio_player_error(int error_code)
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddNumberToObjectCS(message, "error_code", error_code);
@@ -452,7 +452,7 @@ duer_status_t duer_ds_log_audio_play_failed(const char *url)
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddStringToObjectCS(message, "url", url);
@@ -470,7 +470,7 @@ duer_status_t duer_ds_log_audio_user_defined_error(int error_code)
     message = baidu_json_CreateObject();
     if (message == NULL) {
         DUER_LOGE("message json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddNumberToObjectCS(message, "error_code", error_code);

@@ -27,18 +27,21 @@
 #include <stdint.h>
 #include <unistd.h>
 #else
-#include <lwip/sockets.h>
+/* #include <sockets.h> */
+#include "lwip/sockets.h"
 #endif
-/* #include <stdbool.h> */
+#include <stdbool.h>
 #include "baidu_json.h"
 #include "mbedtls/base64.h"
-#include "lightduer_engine.h"
 #include "lightduer_events.h"
+#include "lightduer_lib.h"
 #include "lightduer_log.h"
 #include "lightduer_memory.h"
 #include "lightduer_timers.h"
 #include "lightduer_aes.h"
 #include "lightduer_sleep.h"
+#include "lightduer_ds_log_bind.h"
+#include "lightduer_connagent.h"
 
 /*
  * airkiss package format
@@ -64,6 +67,13 @@ static volatile bool s_stop_send = false;
 static duer_aes_context s_aes_ctx;
 static const char *DUER_AES_KEY = "e1c361cc29e43fb8"; // 16bytes
 static const char *DEVICE_ID_PREFIX = "duer_";
+static char *s_device_uuid = NULL;
+static char *s_bind_token = NULL;
+static duer_ds_log_bind_code_t s_log_code;
+
+static const char *DUER_BIND_UTOKEN = "duer_bind_utoken";
+static const char *BIND_NAMESPACE = "ai.dueros.device_interface.iot_cloud.bind";
+static const char *BIND_SPEAK = "Speak";
 
 typedef enum {
     /* error message */
@@ -250,12 +260,14 @@ static int duer_airkiss_pack_device_info(uint32_t cmdid, uint8_t **outbuf, uint1
         msg = baidu_json_CreateObject();
         if (msg == NULL) {
             DUER_LOGE("create msg failed");
+            s_log_code = DUER_DS_LOG_BIND_NO_MEMORY;
             break;
         }
 
         dev_info = baidu_json_CreateObject();
         if (dev_info == NULL) {
             DUER_LOGE("create dev_info failed");
+            s_log_code = DUER_DS_LOG_BIND_NO_MEMORY;
             break;
         }
         baidu_json_AddItemToObjectCS(msg, "deviceInfo", dev_info);
@@ -278,6 +290,7 @@ static int duer_airkiss_pack_device_info(uint32_t cmdid, uint8_t **outbuf, uint1
         id_len = DUER_STRLEN(DEVICE_ID_PREFIX) + DUER_STRLEN(uuid) + 1;
         device_id = (char *)DUER_MALLOC(id_len);
         if (device_id == NULL) {
+            s_log_code = DUER_DS_LOG_BIND_NO_MEMORY;
             DUER_LOGE("no free memory");
             break;
         }
@@ -290,6 +303,7 @@ static int duer_airkiss_pack_device_info(uint32_t cmdid, uint8_t **outbuf, uint1
 
         enc_token = (char *)duer_aes_cbc_encrypte_bind_token(bind_token);
         if (enc_token == NULL) {
+            s_log_code = DUER_DS_LOG_BIND_ENCRYPT_FAILED;
             break;
         }
         baidu_json_AddStringToObjectCS(msg, "manufacturerData", enc_token);
@@ -300,6 +314,7 @@ static int duer_airkiss_pack_device_info(uint32_t cmdid, uint8_t **outbuf, uint1
         body = baidu_json_PrintUnformatted(msg);
         if (body == NULL) {
             DUER_LOGE("get string of msg failed");
+            s_log_code = DUER_DS_LOG_BIND_NO_MEMORY;
             break;
         }
         DUER_LOGD("body = %s", body);
@@ -311,6 +326,7 @@ static int duer_airkiss_pack_device_info(uint32_t cmdid, uint8_t **outbuf, uint1
         buf = (uint8_t *)DUER_MALLOC(*len);
         if (buf == NULL) {
             DUER_LOGE("No free memory");
+            s_log_code = DUER_DS_LOG_BIND_NO_MEMORY;
             break;
         }
         *outbuf = buf;
@@ -367,17 +383,25 @@ static void duer_bind_device(int what, void *object)
     int err = 0;
     int fd = -1;
     int optval = 1;
+    int req_port = 0;
+    int resp_success_count = 0;
+    int resp_fail_count = 0;
 
-    buf = (uint8_t *)DUER_MALLOC(BUF_LEN);
-    if (buf == NULL) {
-        DUER_LOGE("buf allocate fail");
-        return;
-    }
+    duer_ds_log_bind(DUER_DS_LOG_BIND_TASK_START);
+    s_log_code = DUER_DS_LOG_BIND_TASK_END;
 
     do {
+        buf = (uint8_t *)DUER_MALLOC(BUF_LEN);
+        if (buf == NULL) {
+            DUER_LOGE("buf allocate fail");
+            s_log_code = DUER_DS_LOG_BIND_NO_MEMORY;
+            break;
+        }
+
         s_aes_ctx = duer_aes_context_init();
         if (s_aes_ctx == NULL) {
             DUER_LOGE("init aes context failed");
+            s_log_code = DUER_DS_LOG_BIND_INIT_AES_FAILED;
             break;
         }
         duer_aes_setkey(s_aes_ctx, (unsigned char *)DUER_AES_KEY, 128);
@@ -385,12 +409,14 @@ static void duer_bind_device(int what, void *object)
         fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP); //IPPROTO_UDP
         if (fd < 0) {
             DUER_LOGE("failed to create socket!");
+            s_log_code = DUER_DS_LOG_BIND_INIT_SOCKET_FAILED;
             break;
         }
 
         ret = setsockopt(fd, SOL_SOCKET, SO_BROADCAST, (void *)&optval, sizeof(optval));
         if (ret < 0) {
             DUER_LOGE("setsockopt failed");
+            s_log_code = DUER_DS_LOG_BIND_INIT_SOCKET_FAILED;
             break;
         }
 
@@ -403,6 +429,7 @@ static void duer_bind_device(int what, void *object)
         if (ret < 0) {
             err = duer_get_socket_errno(fd);
             DUER_LOGE("airkiss bind local port ERROR! errno %d", err);
+            s_log_code = DUER_DS_LOG_BIND_BIND_SOCKET_FAILED;
             break;
         }
 
@@ -434,17 +461,19 @@ static void duer_bind_device(int what, void *object)
                 switch (lan_ret) {
                 case DUER_AIRKISS_SSDP_REQ:
                     DUER_LOGD("DUER_AIRKISS_SSDP_REQ");
-                    remote_addr.sin_port = htons(AIRKISS_DEFAULT_LAN_PORT);
+                    req_port = ntohs(remote_addr.sin_port);
                     ret = sendto(fd, resp_buf, resp_len, 0,
                                  (struct sockaddr *)&remote_addr, addr_len);
                     if (ret < 0) {
                         err = duer_get_socket_errno(fd);
-                        if (err != ENOMEM && err != EAGAIN) {
-                            DUER_LOGE("send notify msg ERROR! errno %d", err);
-                            s_stop_send = true;
-                        }
+                        DUER_LOGE("send notify msg ERROR! errno %d", err);
+                        s_log_code = DUER_DS_LOG_BIND_SOCKET_ERROR;
+                        resp_fail_count++;
                     } else {
-                        DUER_LOGD("send notify msg OK!");
+                        DUER_LOGI("send notify msg OK!");
+                        if (resp_success_count++ == 0) {
+                            duer_ds_log_bind(DUER_DS_LOG_BIND_SEND_RESP);
+                        }
                     }
                     break;
                 default:
@@ -456,6 +485,8 @@ static void duer_bind_device(int what, void *object)
             }
         }
     } while (0);
+
+    duer_ds_log_report_bind_result(req_port, resp_success_count, resp_fail_count);
 
     if (fd > -1) {
         close(fd);
@@ -476,12 +507,113 @@ static void duer_bind_device(int what, void *object)
         duer_aes_context_destroy(s_aes_ctx);
         s_aes_ctx = NULL;
     }
+
+    if (s_device_uuid != NULL) {
+        DUER_FREE(s_device_uuid);
+        s_device_uuid = NULL;
+    }
+
+    if (s_bind_token != NULL) {
+        DUER_FREE(s_bind_token);
+        s_bind_token = NULL;
+    }
+
+    duer_ds_log_bind(s_log_code);
 }
 
 static void duer_stop_timer_callback(void *param)
 {
     duer_stop_bind_device_task();
 }
+
+#if 0
+duer_status_t duer_start_bind_device_task(const char *uuid,
+        const char *bind_token, size_t lifecycle)
+{
+    int ret = DUER_ERR_FAILED;
+    int len = 0;
+    if (uuid == NULL || uuid[0] == 0 || bind_token == NULL || bind_token[0] == 0) {
+        DUER_LOGE("invalid uuid or bind_token");
+        duer_ds_log_bind(DUER_DS_LOG_BIND_INVALID_PARAMS);
+        return DUER_ERR_FAILED;
+    }
+
+    if (lifecycle < 60) {
+        DUER_LOGE("the lifecycle is too short");
+        duer_ds_log_bind(DUER_DS_LOG_BIND_INVALID_PARAMS);
+        return DUER_ERR_FAILED;
+    }
+
+    if (s_events != NULL) {
+        DUER_LOGE("a task has been started!");
+        duer_ds_log_bind(DUER_DS_LOG_BIND_START_TASK_FAILED);
+        return DUER_ERR_FAILED;
+    }
+
+    do {
+        len = DUER_STRLEN(uuid) + 1;
+        s_device_uuid = (char *)DUER_MALLOC(len);
+        if (s_device_uuid == NULL) {
+            DUER_LOGE("no free memory");
+            s_log_code = DUER_DS_LOG_BIND_NO_MEMORY;
+            break;
+        }
+        DUER_MEMCPY(s_device_uuid, uuid, len);
+
+        len = DUER_STRLEN(bind_token) + 1;
+        s_bind_token = (char *)DUER_MALLOC(len);
+        if (s_bind_token == NULL) {
+            DUER_LOGE("no free memory");
+            s_log_code = DUER_DS_LOG_BIND_NO_MEMORY;
+            break;
+        }
+        DUER_MEMCPY(s_bind_token, bind_token, len);
+
+        s_stop_timer = duer_timer_acquire(duer_stop_timer_callback, NULL, DUER_TIMER_ONCE);
+        if (s_stop_timer == NULL) {
+            DUER_LOGE("create timer failed");
+            s_log_code = DUER_DS_LOG_BIND_START_TASK_FAILED;
+            break;
+        }
+
+        s_events = duer_events_create("bind_device", STACK_SIZE, 1);
+        if (s_events == NULL) {
+            DUER_LOGE("create events failed");
+            s_log_code = DUER_DS_LOG_BIND_START_TASK_FAILED;
+            break;
+        }
+
+        s_stop_send = false;
+        duer_events_call(s_events, duer_bind_device, 0, NULL);
+
+        duer_timer_start(s_stop_timer, lifecycle * 1000);
+
+        ret = DUER_OK;
+    } while (0);
+
+    if (ret != DUER_OK) {
+        if (s_device_uuid != NULL) {
+            DUER_FREE(s_device_uuid);
+            s_device_uuid = NULL;
+        }
+
+        if (s_bind_token != NULL) {
+            DUER_FREE(s_bind_token);
+            s_bind_token = NULL;
+        }
+
+        if (s_stop_timer) {
+            duer_timer_release(s_stop_timer);
+            s_stop_timer = NULL;
+        }
+
+        duer_ds_log_bind(s_log_code);
+    }
+
+    return DUER_OK;
+}
+#endif
+
 
 duer_status_t duer_start_bind_device_task(size_t lifecycle)
 {
@@ -519,10 +651,6 @@ duer_status_t duer_start_bind_device_task(size_t lifecycle)
 
 duer_status_t duer_stop_bind_device_task(void)
 {
-    if (!s_events) {
-        return DUER_OK;
-    }
-
     if (s_events != NULL) {
         s_stop_send = true;
 
@@ -537,3 +665,32 @@ duer_status_t duer_stop_bind_device_task(void)
     return DUER_OK;
 }
 
+duer_status_t duer_bind_device_use_utoken(const char *utoken, dcs_directive_handler callback)
+{
+    duer_status_t ret = DUER_OK;
+    baidu_json *msg = NULL;
+    duer_directive_list res[] = {
+        {BIND_SPEAK, callback},
+    };
+
+    if (utoken == NULL || callback == NULL) {
+        DUER_LOGE("invalid arguments");
+        return DUER_ERR_FAILED;
+    }
+
+    duer_add_dcs_directive(res, sizeof(res) / sizeof(res[0]), BIND_NAMESPACE);
+
+    msg = baidu_json_CreateObject();
+    if (msg == NULL) {
+        DUER_LOGE("msg json create fail");
+        return DUER_ERR_MEMORY_OVERFLOW;
+    }
+
+    baidu_json_AddStringToObjectCS(msg, DUER_BIND_UTOKEN, utoken);
+
+    ret = duer_data_report(msg);
+
+    baidu_json_Delete(msg);
+
+    return ret;
+}

@@ -26,7 +26,7 @@
 #include "lightduer_log.h"
 #include "lightduer_ds_log_dcs.h"
 
-static const char *s_dcs_recommend_time[DCS_RECOMMEND_TIME_NUMBER] = {"POWER_ON"};
+static const char *s_dcs_recommend_time[DCS_RECOMMEND_TIME_NUMBER] = {"POWER_ON", "OUT_OF_BOX"};
 
 int duer_dcs_recommend_request(duer_dcs_recommend_time_t time)
 {
@@ -49,7 +49,7 @@ int duer_dcs_recommend_request(duer_dcs_recommend_time_t time)
     if (!data) {
         DUER_LOGE("Memory not enough");
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-        rs = DUER_ERR_MEMORY_OVERLOW;
+        rs = DUER_ERR_MEMORY_OVERFLOW;
         goto RET;
     }
 
@@ -85,7 +85,7 @@ int duer_dcs_recommend_request(duer_dcs_recommend_time_t time)
     }
     baidu_json_AddStringToObjectCS(header, DCS_DIALOG_REQUEST_ID_KEY, dialog_id);
     DUER_DCS_CRITICAL_EXIT();
-    duer_dcs_data_report_internal(data, DUER_TRUE);
+    rs = duer_dcs_data_report_internal(data, DUER_TRUE);
 
 RET:
     if (rs != DUER_OK) {
@@ -99,4 +99,78 @@ RET:
     return rs;
 }
 
+static duer_status_t duer_require_push_ack_cb(const baidu_json *directive)
+{
+    baidu_json *payload = NULL;
+    baidu_json *token = NULL;
+    baidu_json *data = NULL;
+    baidu_json *client_context = NULL;
+    baidu_json *event = NULL;
+    duer_status_t rs = DUER_OK;
+
+    DUER_LOGV("Entry");
+
+    payload = baidu_json_GetObjectItem(directive, DCS_PAYLOAD_KEY);
+    if (!payload) {
+        rs = DUER_MSG_RSP_BAD_REQUEST;
+        goto RET;
+    }
+
+    token = baidu_json_GetObjectItem(payload, DCS_TOKEN_KEY);
+
+    if (!token || !token->valuestring) {
+        rs = DUER_MSG_RSP_BAD_REQUEST;
+        goto RET;
+    }
+
+    data = baidu_json_CreateObject();
+    if (data == NULL) {
+        DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
+        rs = DUER_ERR_FAILED;
+        goto RET;
+    }
+
+    client_context = duer_get_client_context_internal();
+    if (client_context) {
+        baidu_json_AddItemToObjectCS(data, DCS_CLIENT_CONTEXT_KEY, client_context);
+    }
+
+    event = duer_create_dcs_event(DCS_PUSH_SERVICE_NAMESPACE,
+                                  DCS_PUSH_ACK_NAME,
+                                  DUER_TRUE);
+    if (event == NULL) {
+        rs = DUER_ERR_FAILED;
+        goto RET;
+    }
+
+    baidu_json_AddItemToObjectCS(data, DCS_EVENT_KEY, event);
+    payload = baidu_json_GetObjectItem(event, DCS_PAYLOAD_KEY);
+    if (!payload) {
+        rs = DUER_ERR_FAILED;
+        goto RET;
+    }
+
+    baidu_json_AddStringToObjectCS(payload, DCS_TOKEN_KEY, token->valuestring);
+    duer_dcs_data_report_internal(data, DUER_TRUE);
+
+RET:
+    if (data) {
+        baidu_json_Delete(data);
+    }
+
+    return rs;
+}
+
+void duer_dcs_push_service_init(void)
+{
+    DUER_DCS_CRITICAL_ENTER();
+    duer_directive_list res[] = {
+        {DCS_REQUIRE_PUSH_ACK, duer_require_push_ack_cb},
+    };
+
+    duer_add_dcs_directive_internal(res,
+                                    sizeof(res) / sizeof(res[0]),
+                                    DCS_PUSH_SERVICE_NAMESPACE);
+    DUER_DCS_CRITICAL_EXIT();
+}
 

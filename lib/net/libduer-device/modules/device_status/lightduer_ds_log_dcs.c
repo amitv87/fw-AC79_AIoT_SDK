@@ -76,7 +76,7 @@ duer_status_t duer_ds_log_dcs_report_with_dir(duer_ds_log_dcs_code_t log_code,
     msg = baidu_json_CreateObject();
     if (!msg) {
         DUER_LOGE("Failed to create log message json");
-        return DUER_ERR_MEMORY_OVERLOW;;
+        return DUER_ERR_MEMORY_OVERFLOW;;
     }
 
     baidu_json_AddStringToObject(msg, "file", file);
@@ -97,7 +97,7 @@ duer_status_t duer_ds_log_dcs_directive_drop(const char *current_id,
     msg = baidu_json_CreateObject();
     if (!msg) {
         DUER_LOGE("Failed to create log message json");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddStringToObject(msg, "current_dialog_id", current_id);
@@ -120,7 +120,7 @@ duer_status_t duer_ds_log_dcs_handler_unrealize(const char *func)
     msg = baidu_json_CreateObject();
     if (!msg) {
         DUER_LOGE("Failed to create log message json");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddStringToObject(msg, "handler_name", func);
@@ -138,7 +138,7 @@ duer_status_t duer_ds_log_dcs_add_directive_fail(const char *name)
     msg = baidu_json_CreateObject();
     if (!msg) {
         DUER_LOGE("Failed to create log message json");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddStringToObject(msg, "directive", name);
@@ -155,7 +155,7 @@ duer_status_t duer_ds_log_dcs_event_report_fail(const char *name)
     msg = baidu_json_CreateObject();
     if (!msg) {
         DUER_LOGE("Failed to create log message json");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddStringToObject(msg, "event_name", name);

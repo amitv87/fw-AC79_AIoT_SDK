@@ -18,16 +18,19 @@
  * Auth: CHEN YUN (chenyun08@baidu.com)
  * Desc: HTTP DNS Client Socket OPS
  */
-#include "duerapp_config.h"
 
 #if defined(DUER_HTTP_DNS_SUPPORT)
 #include "lightduer_http_dns_client_ops.h"
+#include "mbedtls/md5.h"
 #include "lightduer_log.h"
 #include "lightduer_http_client.h"
+#include "lightduer_http_client_ops.h"
 #include "lightduer_memory.h"
 #include "lightduer_lib.h"
 #include "lightduer_events.h"
 #include "lightduer_mutex.h"
+#include "lightduer_sleep.h"
+#include "lightduer_timestamp.h"
 #include "baidu_json.h"
 
 #define HTTP_DNS_REQ_TIMEOUT    (300) //ms
@@ -46,8 +49,11 @@ static duer_http_client_t *s_http_dns_client = NULL;
 // const char *g_http_dns_host_name = "http://httpdns.baidubce.com";
 static const int HTTP_DNS_REQ_BUFFER_SIZE = 512;
 
-static const char *s_http_account_id = "151309";
-static const char *s_http_dns_secret = "XhhFg9fnvtDrFvZiWSyP";
+//Please apply for the account password on Baidu Cloud.
+//Refer to the following URL address
+//https://cloud.baidu.com/product/httpdns.html
+static const char *s_http_account_id = NULL;
+static const char *s_http_dns_secret = NULL;
 static const char *s_http_dns_protocol = "http://";
 static const char *s_http_dns_host_name = "180.76.76.200";
 static const char *s_http_dns_account_id_base = "/v3/resolve?account_id=";
@@ -253,13 +259,18 @@ static char *construct_http_dns_req_url(char *host_name)
 {
     char *url = NULL;
     char *ptr = NULL;
-    unsigned char in_buf[STRING_CONCATENATION_MAX_LENGHT];
+    char in_buf[STRING_CONCATENATION_MAX_LENGHT];
     unsigned char md5sum[MD5_SUM_MAX_LENGTH];
     unsigned char sign[SIGN_MAX_LENGTH] = {0};
     // DuerTime cur_time;
     duer_u32_t valid_timestamp = 1866666666;
     int ret = 0;
     int i = 0;
+
+    if (s_http_account_id ==  NULL || s_http_dns_secret == NULL)  {
+        DUER_LOGW("Warning, account id or http dns secret is null.");
+        return NULL;
+    }
 
     // if(duer_ntp_client(NULL, 3000, &cur_time, NULL) < 0){
     //     DUER_LOGW("Warning, get ntp time fail.");
@@ -283,8 +294,8 @@ static char *construct_http_dns_req_url(char *host_name)
         return NULL;
     }
 
-    mbedtls_md5(in_buf, DUER_STRLEN(in_buf), md5sum);
-    ptr = sign;
+    mbedtls_md5((unsigned char *)in_buf, DUER_STRLEN(in_buf), md5sum);
+    ptr = (char *)sign;
 
     for (i = 0; i < MD5_SUM_MAX_LENGTH; i++) {
         if (DUER_SNPRINTF(ptr, SIGN_MAX_LENGTH, "%02x", md5sum[i]) < 0) {
@@ -329,29 +340,6 @@ static char *construct_http_dns_req_url(char *host_name)
     return url;
 }
 
-/**
- * [duer_http_dns_check_stop description]
- * @return [1: to stop; 0: no stop]
- */
-int duer_http_dns_check_stop()
-{
-    duer_u32_t delta_time = (duer_timestamp() - s_http_dns_query_time_start);
-
-    if (delta_time > HTTP_DNS_REQ_TIMEOUT) {
-        DUER_LOGW("Warning, delta_time:%d timeout, need stop!", delta_time);
-        return 1;
-    }
-
-    if (s_http_dns_status == HTTP_DNS_QUERY_SUCC
-        || s_http_dns_status == HTTP_DNS_QUERY_FAIL) {
-        DUER_LOGI("http dns request result stop.");
-        return 1;
-    }
-
-    // DUER_LOGI("delta_time:%d , go on...", delta_time);
-    return 0;
-}
-
 static void duer_http_dns_task_run(int what, void *object)
 {
     int ret = 0;
@@ -387,7 +375,6 @@ static void duer_http_dns_task_run(int what, void *object)
             set_http_dns_query_state(HTTP_DNS_QUERY_FAIL);
         } else {
             DUER_LOGI("get url:%s", url);
-            duer_http_reg_stop_notify_cb(s_http_dns_client, duer_http_dns_check_stop);
             status = duer_http_get(s_http_dns_client, url, 0, 0);
 
             if (status != DUER_HTTP_OK) {

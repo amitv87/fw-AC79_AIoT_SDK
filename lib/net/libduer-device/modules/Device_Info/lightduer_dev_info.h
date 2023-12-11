@@ -44,6 +44,16 @@ struct DevInfoOps {
 };
 
 /*
+ * Set the firmware version of the current system
+ *
+ * @param firmware_version:
+ *
+ * @return int: Success: DUER_OK
+ *              Failed:  Other
+ */
+extern int duer_set_firmware_version(char const *firmware_version);
+
+/*
  * Get the firmware version of the current system
  *
  * @param firmware_version: size > FIRMWARE_VERSION_LEN

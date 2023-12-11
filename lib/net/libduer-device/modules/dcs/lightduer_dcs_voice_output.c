@@ -56,7 +56,7 @@ static int duer_report_speech_event(const char *name)
     data = baidu_json_CreateObject();
     if (data == NULL) {
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-        rs = DUER_ERR_MEMORY_OVERLOW;
+        rs = DUER_ERR_MEMORY_OVERFLOW;
         goto RET;
     }
 
@@ -92,18 +92,18 @@ RET:
 
 void duer_dcs_speech_on_finished()
 {
-    DUER_DCS_CRITICAL_ENTER();
     if (s_is_initialized) {
         duer_speak_directive_finished_internal();
+        DUER_DCS_CRITICAL_ENTER();
         if (s_play_state == PLAYING) {
             s_play_state = FINISHED;
             duer_report_speech_event(DCS_SPEECH_FINISHED_NAME);
         }
         duer_play_channel_control_internal(DCS_SPEECH_FINISHED);
+        DUER_DCS_CRITICAL_EXIT();
     } else {
         DUER_LOGW("DCS voice output has not been initialized");
     }
-    DUER_DCS_CRITICAL_EXIT();
 }
 
 void duer_speech_on_stop_internal()
@@ -144,7 +144,7 @@ static duer_status_t duer_speak_cb(const baidu_json *directive)
     if (!s_latest_token) {
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
         DUER_LOGE("Memory too low");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     s_play_state = PLAYING;

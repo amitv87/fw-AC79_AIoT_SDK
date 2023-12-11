@@ -21,7 +21,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-// #include <stdbool.h>
+#include <stdbool.h>
 #include "lightduer_ota_verifier.h"
 #include "lightduer_ota_installer.h"
 #include "lightduer_ota_package_info.h"
@@ -30,12 +30,13 @@
 #ifndef BAIDU_DUER_LIGHTDUER_INCLUDE_LIGHTDUER_OTA_UNPACKER_H
 #define BAIDU_DUER_LIGHTDUER_INCLUDE_LIGHTDUER_OTA_UNPACKER_H
 
+#define ERR_MSG_LEN (60)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef enum _duer_ota_unpack_mode_s {
-    NONE_MODE				= -1,
     SAVE_PACKAGE_HEADER     = 1,
     PARSE_PACKAGE_HEADER    = 2,
     SAVE_META_DATA          = 3,
@@ -54,7 +55,8 @@ typedef enum _duer_ota_unpack_mode_s {
     UPDATE_IMAGE_BEGIN      = 16,
     UPDATE_IMAGE            = 17,
     VERIFY_IMAGE            = 18,
-    CANCEL_OTA_UPDATE       = 19,
+    OTA_UPDATE_DONE         = 19,
+    CANCEL_OTA_UPDATE       = 20,
     UNPACKER_MODE_MAX       = 21,
 } duer_ota_unpacker_mode_t;
 
@@ -81,7 +83,7 @@ typedef struct _duer_ota_unpacker_s {
     void *meta_data;
     duer_ota_decompression_t *decompression;
     duer_ota_installer_t *installer;
-    char const *err_msg;
+    char err_msg[ERR_MSG_LEN];
 } duer_ota_unpacker_t;
 
 /*
@@ -103,6 +105,17 @@ extern duer_ota_unpacker_t *duer_ota_unpacker_create_unpacker(void);
  *              Failed:  Other
  */
 extern int duer_ota_unpacker_destroy_unpacker(duer_ota_unpacker_t *unpacker);
+
+
+/*
+ * Initialize a OTA unpacker
+ *
+ * @param unpacker: OTA unpacker
+ *
+ * @return int: Success: DUER_OK
+ *              Failed:  Other
+ */
+extern int duer_ota_unpacker_init_unpacker(duer_ota_unpacker_t *unpacker);
 
 /*
  * Get the basic information of the package
@@ -173,6 +186,16 @@ extern duer_ota_unpacker_mode_t duer_ota_unpacker_get_unpacker_mode(
  *                       Failed:  NULL
  */
 extern char const *duer_ota_unpacker_get_err_msg(duer_ota_unpacker_t const *unpacker);
+
+/*
+ * Check wheater the error message exists
+ *
+ * @param unpacker: unpacker object
+ *
+ * @return: Success: 1
+ *           Failed: -1
+ */
+extern int duer_ota_unpacker_check_err_msg(duer_ota_unpacker_t *unpacker);
 
 #ifdef __cplusplus
 }

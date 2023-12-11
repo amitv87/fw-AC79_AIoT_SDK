@@ -21,7 +21,11 @@
 #include "lightduer_lib.h"
 #include "lightduer_log.h"
 #include "lightduer_mutex.h"
+
+#define DUER_MODULE_CJSON_SUPPORT
+#ifdef DUER_MODULE_CJSON_SUPPORT
 #include "baidu_json.h"
+#endif
 
 typedef struct _baidu_ca_memory_s {
     duer_context     context;
@@ -52,6 +56,7 @@ static const char *const s_duer_memory_hm_name[] = {
 struct heap_info {
     duer_u32_t max_used_heap_size;
     duer_u32_t current_used_heap_size;
+    duer_u32_t alloc_counts;
 };
 
 static struct heap_info s_hm_heap_info[DUER_MEMORY_HM_MAX];
@@ -147,6 +152,7 @@ DUER_LOC_IMPL void *duer_memdbg_acquire(duer_memdbg_t *ptr,
                 s_hm_heap_info[module].max_used_heap_size
                     = s_hm_heap_info[module].current_used_heap_size;
             }
+            s_hm_heap_info[module].alloc_counts++;
         }
 
         duer_memdbg_hm_to_file();
@@ -181,6 +187,7 @@ DUER_LOC_IMPL void duer_memdbg_release(duer_memdbg_t *p)
             DUER_LOGW("wrong module:%d", module);
         } else {
             s_hm_heap_info[module].current_used_heap_size -= p->size;
+            s_hm_heap_info[module].alloc_counts--;
         }
 
         duer_memdbg_hm_to_file();
@@ -189,6 +196,7 @@ DUER_LOC_IMPL void duer_memdbg_release(duer_memdbg_t *p)
         }
 #endif // DUER_HEAP_MONITOR
     }
+
 }
 
 DUER_INT_IMPL void duer_memdbg_usage()
@@ -204,18 +212,20 @@ DUER_INT_IMPL void duer_memdbg_usage()
               s_duer_memory.alloc_counts, s_duer_memory.all_alloc_counts,
               s_duer_memory.alloc_size, s_duer_memory.max_size);
 
-#ifdef DUER_HEAP_MONITOR_DEBUG
+#ifdef DUER_HEAP_MONITOR
     int i = DUER_MEMORY_HM_MIN;
     int alloc_size = 0;
     for (i = DUER_MEMORY_HM_MIN + 1; i < DUER_MEMORY_HM_MAX; ++i) {
-        DUER_LOGI("%s: current:%d, max:%d",
-                  s_duer_memory_hm_name[i],
-                  s_hm_heap_info[i].current_used_heap_size,
-                  s_hm_heap_info[i].max_used_heap_size);
+        if (s_hm_heap_info[i].max_used_heap_size > 0) {
+            DUER_LOGI("%s: current:%d, max:%d, alloc_counts:%d",
+                      s_duer_memory_hm_name[i],
+                      s_hm_heap_info[i].current_used_heap_size,
+                      s_hm_heap_info[i].max_used_heap_size, s_hm_heap_info[i].alloc_counts);
+        }
         alloc_size += s_hm_heap_info[i].current_used_heap_size;
     }
     DUER_LOGI("=========:malloc_size:%d====s_line_num:%d======", alloc_size, s_line_num);
-#endif // DUER_HEAP_MONITOR_DEBUG
+#endif // DUER_HEAP_MONITOR
 
 #ifdef DUER_HEAP_MONITOR
     if (s_hm_mutex) {
@@ -236,16 +246,18 @@ DUER_EXT_IMPL void baidu_ca_memory_init(duer_context context,
     s_duer_memory.f_malloc = f_malloc;
     s_duer_memory.f_realloc = f_realloc;
     s_duer_memory.f_free = f_free;
+#ifdef DUER_MODULE_CJSON_SUPPORT
     baidu_json_Hooks hooks = {
         duer_malloc_bjson,
         duer_free_bjson
     };
     baidu_json_InitHooks(&hooks);
+#endif
 }
 
 DUER_EXT_IMPL void baidu_ca_memory_uninit()
 {
-#ifdef DUER_BJSON_PREALLOC_ITEM
+#if defined(DUER_BJSON_PREALLOC_ITEM) && defined(DUER_MODULE_CJSON_SUPPORT)
     baidu_json_Uninit();
 #endif // DUER_BJSON_PREALLOC_ITEM
 }
@@ -395,8 +407,47 @@ DUER_INT_IMPL void duer_free_bjson(void *ptr)
     duer_free_hm(ptr);
 }
 
-#else
+DUER_INT_IMPL void *duer_malloc_hmdbg(duer_size_t size,
+                                      duer_memory_hm_module_e module,
+                                      const char *file,
+                                      duer_u32_t line)
+{
+    void *rs = duer_malloc_hm(size, module);
+    DUER_LOGI("duer_malloc_ext: file:%s, line:%d, addr = %x, size = %d", file, line, rs, size);
 
+    return rs;
+}
+
+DUER_INT_IMPL void *duer_calloc_hmdbg(duer_size_t size,
+                                      duer_memory_hm_module_e module,
+                                      const char *file,
+                                      duer_u32_t line)
+{
+    void *rs = duer_calloc_hm(size, module);
+    DUER_LOGI("duer_calloc_ext: file:%s, line:%d, addr = %x, size = %d", file, line, rs, size);
+
+    return rs;
+}
+
+DUER_INT_IMPL void *duer_realloc_hmdbg(void *ptr,
+                                       duer_size_t size,
+                                       duer_memory_hm_module_e module,
+                                       const char *file,
+                                       duer_u32_t line)
+{
+    void *rs = duer_realloc_hm(ptr, size, module);
+    DUER_LOGI("duer_realloc_ext: file:%s, line:%d, new_addr = %x, old_addr = %x, size = %d",
+              file, line, rs, ptr, size);
+    return rs;
+}
+
+DUER_INT_IMPL void duer_free_hmdbg(void *ptr, const char *file, duer_u32_t line)
+{
+    duer_free_hm(ptr);
+    DUER_LOGI("duer_free_ext: file:%s, line:%d, addr = %x", file, line, ptr);
+}
+
+#else
 DUER_INT_IMPL void *duer_malloc_ext(duer_size_t size, const char *file,
                                     duer_u32_t line)
 {
@@ -516,17 +567,6 @@ DUER_INT_IMPL void duer_free(void *ptr)
     }
 }
 
-#ifdef DUER_MEMORY_USAGE
-DUER_INT_IMPL void *duer_malloc_bjson(duer_size_t size)
-{
-    return duer_malloc_ext(size, __FILE__, __LINE__);
-}
-
-DUER_INT_IMPL void duer_free_bjson(void *ptr)
-{
-    return duer_free_ext(ptr, __FILE__, __LINE__);
-}
-#else // DUER_MEMORY_DEBUG
 DUER_INT_IMPL void *duer_malloc_bjson(duer_size_t size)
 {
     return duer_malloc(size);
@@ -536,7 +576,6 @@ DUER_INT_IMPL void duer_free_bjson(void *ptr)
 {
     return duer_free(ptr);
 }
-#endif // DUER_MEMORY_USAGE
 
 #endif //DUER_HEAP_MONITOR
 

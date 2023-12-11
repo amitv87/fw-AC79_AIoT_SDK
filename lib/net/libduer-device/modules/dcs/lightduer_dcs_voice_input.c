@@ -30,13 +30,17 @@
 #include "lightduer_ds_log_dcs.h"
 #include "lightduer_ds_log_e2e.h"
 #include "lightduer_voice.h"
+#include "lightduer_lib.h"
 
 static int s_wait_time = 0;
 static duer_timer_handler s_listen_timer;
 static volatile duer_bool s_is_multiple_dialog = DUER_FALSE;
 
+//#define LIMIT_LISTEN_TIME
+
 #ifdef LIMIT_LISTEN_TIME
-#define MAX_LISTEN_TIME	  SET_MAX_LISTEN_TIME
+// If no listen stop directive received in 60s, close the recorder
+static const int MAX_LISTEN_TIME = 60000;
 static duer_timer_handler s_close_mic_timer;
 #endif
 static volatile duer_bool s_is_listening;
@@ -63,7 +67,7 @@ void duer_listen_stop_internal(void)
     }
 }
 
-int duer_dcs_on_listen_started(duer_u16_t sample_rate)
+static int duer_dcs_on_listen_started_internal(duer_bool is_create_dialog_id, duer_u16_t sample_rate)
 {
     baidu_json *event = NULL;
     baidu_json *header = NULL;
@@ -125,32 +129,37 @@ int duer_dcs_on_listen_started(duer_u16_t sample_rate)
     baidu_json_AddItemToObjectCS(data, DCS_EVENT_KEY, event);
 
     header = baidu_json_GetObjectItem(event, DCS_HEADER_KEY);
-    dialog_id = duer_create_request_id_internal();
-    if (!dialog_id) {
-        DUER_LOGE("Failed to create dialog id");
-        rs = DUER_ERR_FAILED;
-        goto RET;
+    if (is_create_dialog_id == DUER_TRUE) {
+        dialog_id = duer_create_request_id_internal(DCS_DIALOG_LISTEN_STARTED);
+        if (!dialog_id) {
+            DUER_LOGE("Failed to create dialog id");
+            rs = DUER_ERR_FAILED;
+            goto RET;
+        }
+    } else {
+        dialog_id = duer_get_request_id_internal();
+        if (!dialog_id) {
+            DUER_LOGE("Failed to get dialog id");
+            rs = DUER_ERR_FAILED;
+            goto RET;
+        }
     }
 
-    duer_ds_e2e_event(DUER_E2E_REQUEST);
     baidu_json_AddStringToObjectCS(header, DCS_DIALOG_REQUEST_ID_KEY, dialog_id);
 
     payload = baidu_json_GetObjectItem(event, DCS_PAYLOAD_KEY);
-
-    if (sample_rate == 8000) {
-        baidu_json_AddStringToObjectCS(payload, DCS_FORMAT_KEY, "AUDIO_L16_RATE_8000_CHANNELS_1");
-    } else {
-        baidu_json_AddStringToObjectCS(payload, DCS_FORMAT_KEY, "AUDIO_L16_RATE_16000_CHANNELS_1");
+    if (payload) {
+        if (sample_rate == 8000) {
+            baidu_json_AddStringToObjectCS(payload, DCS_FORMAT_KEY, "AUDIO_L16_RATE_8000_CHANNELS_1");
+        } else {
+            baidu_json_AddStringToObjectCS(payload, DCS_FORMAT_KEY, "AUDIO_L16_RATE_16000_CHANNELS_1");
+        }
     }
-
     if (s_initiator) {
-        baidu_json_AddItemReferenceToObject(payload, DCS_INITIATOR_KEY, s_initiator);
-    }
-    rs = duer_dcs_data_report_internal(data, DUER_FALSE);
-    if (s_initiator) {
-        baidu_json_Delete(s_initiator);
+        baidu_json_AddItemToObject(payload, DCS_INITIATOR_KEY, s_initiator);
         s_initiator = NULL;
     }
+    rs = duer_dcs_data_report_internal(data, DUER_FALSE);
 
 RET:
     DUER_DCS_CRITICAL_EXIT();
@@ -166,10 +175,22 @@ RET:
     return rs;
 }
 
+int duer_dcs_on_listen_started(duer_u16_t sample_rate)
+{
+    return duer_dcs_on_listen_started_internal(DUER_TRUE, sample_rate);
+}
+
+int duer_dcs_on_listen_started_with_current_dialogid(duer_u16_t sample_rate)
+{
+    return duer_dcs_on_listen_started_internal(DUER_FALSE, sample_rate);
+}
+
 static int duer_dcs_report_listen_timeout_event(void)
 {
     baidu_json *event = NULL;
     baidu_json *data = NULL;
+    baidu_json *client_context = NULL;
+    baidu_json *payload = NULL;
     int rs = DUER_OK;
 
     data = baidu_json_CreateObject();
@@ -179,6 +200,11 @@ static int duer_dcs_report_listen_timeout_event(void)
         goto RET;
     }
 
+    client_context = duer_get_client_context_internal();
+    if (client_context) {
+        baidu_json_AddItemToObjectCS(data, DCS_CLIENT_CONTEXT_KEY, client_context);
+    }
+
     event = duer_create_dcs_event(DCS_VOICE_INPUT_NAMESPACE,
                                   DCS_LISTEN_TIMED_OUT_NAME,
                                   DUER_TRUE);
@@ -186,8 +212,15 @@ static int duer_dcs_report_listen_timeout_event(void)
         rs = DUER_ERR_FAILED;
         goto RET;
     }
-
     baidu_json_AddItemToObjectCS(data, DCS_EVENT_KEY, event);
+
+    if (s_initiator) {
+        payload = baidu_json_GetObjectItem(event, DCS_PAYLOAD_KEY);
+        if (payload) {
+            baidu_json_AddItemReferenceToObject(payload, DCS_INITIATOR_KEY, s_initiator);
+        }
+    }
+
     rs = duer_dcs_data_report_internal(data, DUER_FALSE);
 RET:
     if (rs != DUER_OK) {
@@ -198,6 +231,10 @@ RET:
         baidu_json_Delete(data);
     }
 
+    if (s_initiator) {
+        baidu_json_Delete(s_initiator);
+        s_initiator = NULL;
+    }
     return rs;
 }
 
@@ -270,6 +307,49 @@ static duer_status_t duer_listen_stop_cb(const baidu_json *directive)
     return DUER_OK;
 }
 
+static duer_status_t duer_set_active_dialog_cb(const baidu_json *directive)
+{
+    baidu_json *payload = NULL;
+    baidu_json *previous = NULL;
+    baidu_json *active = NULL;
+    const char *current = NULL;
+
+    payload = baidu_json_GetObjectItem(directive, DCS_PAYLOAD_KEY);
+    if (!payload) {
+        return DUER_MSG_RSP_BAD_REQUEST;
+    }
+
+    previous = baidu_json_GetObjectItem(payload, DCS_PREVIOUS_DIALOG_ID_KEY);
+    active = baidu_json_GetObjectItem(payload, DCS_ACTIVE_DIALOG_ID_KEY);
+    if (!active || !active->valuestring) {
+        DUER_LOGE("No activeDialogRequestId found");
+        return DUER_MSG_RSP_BAD_REQUEST;
+    }
+
+    DUER_DCS_CRITICAL_ENTER();
+    if (previous) {
+        if (!previous->valuestring) {
+            DUER_DCS_CRITICAL_EXIT();
+            return DUER_MSG_RSP_BAD_REQUEST;
+        }
+        current = duer_get_request_id_internal();
+        if (DUER_STRCMP(current, previous->valuestring)) {
+            DUER_LOGI("Drop the directive for previous dialog_Id: %s, current dialog_Id: %s",
+                      previous->valuestring, current);
+            duer_ds_log_dcs_directive_drop(current,
+                                           previous->valuestring,
+                                           DCS_SET_ACTIVE_DIALOG);
+            DUER_DCS_CRITICAL_EXIT();
+            return DUER_OK;
+        }
+    }
+
+    duer_set_dialog_id_internal(active->valuestring);
+    DUER_DCS_CRITICAL_EXIT();
+
+    return DUER_OK;
+}
+
 int duer_dcs_on_listen_stopped(void)
 {
     DUER_DCS_CRITICAL_ENTER();
@@ -315,10 +395,6 @@ static void duer_listen_timeout_handler(int what, void *param)
 {
     DUER_DCS_CRITICAL_ENTER();
     s_is_multiple_dialog = DUER_FALSE;
-    if (s_initiator) {
-        baidu_json_Delete(s_initiator);
-        s_initiator = NULL;
-    }
     duer_dcs_report_listen_timeout_event();
     DUER_DCS_CRITICAL_EXIT();
 }
@@ -358,6 +434,7 @@ void duer_dcs_voice_input_init(void)
     duer_directive_list res[] = {
         {DCS_LISTEN_NAME, duer_listen_start_cb},
         {DCS_STOP_LISTEN_NAME, duer_listen_stop_cb},
+        {DCS_SET_ACTIVE_DIALOG, duer_set_active_dialog_cb},
     };
 
     duer_add_dcs_directive_internal(res, sizeof(res) / sizeof(res[0]), DCS_VOICE_INPUT_NAMESPACE);

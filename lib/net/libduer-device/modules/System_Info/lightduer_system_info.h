@@ -23,7 +23,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define DUER_OS_VERSION "release-v3.1.0"
+#define DUER_OS_VERSION "release-v3.1.1"
 
 #define OS_VERSION_LEN          20
 #define SW_VERSION_LEN          20
@@ -194,4 +194,3 @@ extern int duer_uninit_system_info(void);
 #endif
 
 #endif // BAIDU_DUER_LIBDUER_DEVICE_LIGHTDUER_SYSTEM_INFO_H
-

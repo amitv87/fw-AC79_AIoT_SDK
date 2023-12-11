@@ -35,7 +35,7 @@
  *  |    (opt) Auth KeyID    (32 bits)       |
  *  |    (opt) MAC           (128 bits)      |
  */
-#include "duerapp_config.h"
+
 #include "lightduer_net_ntp.h"
 #include "lightduer_lib.h"
 #include "lightduer_timestamp.h"
@@ -46,8 +46,7 @@
 #include "mbedtls/md5.h"
 
 //#define DUER_DEBUG_LEVEL 4
-
-#define NTP_SERVER "s2c.time.edu.cn"	// 202.112.10.36
+#define NTP_SERVER "s1a.time.edu.cn"	// 202.112.10.60
 #define NTP_PORT (123)
 
 #define JAN_1970    (0x83aa7e80)    // 2208988800 1970 - 1900 in seconds

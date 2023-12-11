@@ -319,7 +319,7 @@ int duer_recorder_start(u16 sample_rate, u8 voice_mode)
     os_sem_del(&mic_sem, 1);
 
     if ((voice_mode & WECHAT_MODE) == 0) {
-        u32(*read_input)(u8 *, u32) = get_asr_read_input_cb();
+        int(*read_input)(u8 *, u32) = get_asr_read_input_cb();
         if (read_input) {
             req.enc.sample_source = "virtual";
             req.enc.read_input = read_input;

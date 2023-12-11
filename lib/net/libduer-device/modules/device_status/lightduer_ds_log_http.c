@@ -76,13 +76,31 @@ duer_status_t duer_ds_log_http_report_with_dir(duer_ds_log_http_code_t log_code,
     msg = baidu_json_CreateObject();
     if (!msg) {
         DUER_LOGE("Failed to create log message json");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddStringToObject(msg, "file", file);
     baidu_json_AddNumberToObject(msg, "line", line);
 
     ret = duer_ds_log_http(log_code, msg);
+
+    return ret;
+}
+
+duer_status_t duer_ds_log_http_too_many_redirect(int count)
+{
+    duer_status_t ret = DUER_OK;
+    baidu_json *msg = NULL;
+
+    msg = baidu_json_CreateObject();
+    if (!msg) {
+        DUER_LOGE("Failed to create log message json");
+        return DUER_ERR_MEMORY_OVERFLOW;
+    }
+
+    baidu_json_AddNumberToObjectCS(msg, "redirect_count", count);
+
+    ret = duer_ds_log_http(DUER_DS_LOG_HTTP_TOO_MANY_REDIRECT, msg);
 
     return ret;
 }
@@ -95,7 +113,7 @@ duer_status_t duer_ds_log_http_redirect_fail(const char *location)
     msg = baidu_json_CreateObject();
     if (!msg) {
         DUER_LOGE("Failed to create log message json");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     if (location) {
@@ -117,7 +135,7 @@ duer_status_t duer_ds_log_http_report_err_code(duer_ds_log_http_code_t log_code,
     msg = baidu_json_CreateObject();
     if (!msg) {
         DUER_LOGE("Failed to create log message json");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddNumberToObject(msg, "error_code", err_code);
@@ -135,7 +153,7 @@ duer_status_t duer_ds_log_http_report_with_url(duer_ds_log_http_code_t log_code,
     msg = baidu_json_CreateObject();
     if (!msg) {
         DUER_LOGE("Failed to create log message json");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     if (url) {
@@ -158,7 +176,7 @@ duer_status_t duer_ds_log_http_download_exit(duer_ds_log_http_code_t log_code,
     msg = baidu_json_CreateObject();
     if (!msg) {
         DUER_LOGE("Failed to create log message json");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     if (statistic->url) {
@@ -188,7 +206,7 @@ duer_status_t duer_ds_log_http_persisten_conn_timeout(const char *host)
     msg = baidu_json_CreateObject();
     if (!msg) {
         DUER_LOGE("Failed to create log message json");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     if (host) {
@@ -201,5 +219,4 @@ duer_status_t duer_ds_log_http_persisten_conn_timeout(const char *host)
 
     return ret;
 }
-
 

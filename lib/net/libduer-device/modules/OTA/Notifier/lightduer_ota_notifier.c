@@ -23,6 +23,7 @@
 #include <string.h>
 #include <stdint.h>
 #include "baidu_json.h"
+#include "lightduer_lib.h"
 #include "lightduer_log.h"
 #include "lightduer_types.h"
 #include "lightduer_mutex.h"
@@ -54,7 +55,7 @@ int duer_ota_notify_package_info(void)
     if (package_info_json == NULL) {
         DUER_LOGE("OTA Notifier: Create json object failed");
 
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
 
         goto out;
     }
@@ -63,7 +64,7 @@ int duer_ota_notify_package_info(void)
     if (os_info_json == NULL) {
         DUER_LOGE("OTA Notifier: Create json object failed");
 
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
 
         goto delete_package_json;
     }
@@ -72,7 +73,7 @@ int duer_ota_notify_package_info(void)
     if (data_json == NULL) {
         DUER_LOGE("OTA Notifier: Create json object failed");
 
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
 
         goto delete_osinfo_json;
     }
@@ -91,6 +92,8 @@ int duer_ota_notify_package_info(void)
 
     baidu_json_AddStringToObject(package_info_json, "version", OTA_PROTOCOL_VERSION);
     baidu_json_AddStringToObject(package_info_json, "product", (char *)&package_info.product);
+    baidu_json_AddStringToObject(package_info_json, "duer_os_sdk_version", (char *)&package_info.duer_os_sdk_version);
+    baidu_json_AddStringToObject(package_info_json, "ota_package_version", (char *)&package_info.ota_package_version);
     baidu_json_AddStringToObject(package_info_json, "batch", (char *)&package_info.batch);
     baidu_json_AddItemToObject(data_json, "package_info", package_info_json);
 
@@ -164,7 +167,7 @@ int duer_ota_register_package_info_ops(duer_package_info_ops_t const *ops)
         if (s_lock_notifier == NULL) {
             DUER_LOGE("OTA Notifier: Create mutex failed");
 
-            return DUER_ERR_MEMORY_OVERLOW;
+            return DUER_ERR_MEMORY_OVERFLOW;
         }
     }
 
@@ -184,7 +187,7 @@ void duer_ota_unregister_package_info_ops(void)
 }
 
 // Now we only notifier Duer Cloud, We need to notifier the user the OTA state also (TBD)
-int duer_ota_notifier_state(duer_ota_updater_t const *updater, duer_ota_state state)
+int duer_ota_notifier_state(duer_ota_updater_t const *updater,  duer_ota_state state)
 {
     int ret = DUER_OK;
     baidu_json *data_json = NULL;
@@ -204,7 +207,7 @@ int duer_ota_notifier_state(duer_ota_updater_t const *updater, duer_ota_state st
     if (data_json == NULL) {
         DUER_LOGE("OTA Notifier: Create json object failed");
 
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
 
         goto out;
     }
@@ -213,7 +216,7 @@ int duer_ota_notifier_state(duer_ota_updater_t const *updater, duer_ota_state st
     if (state_json == NULL) {
         DUER_LOGE("OTA Notifier: Create json object failed");
 
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
 
         goto free_data_json;
     }
@@ -267,7 +270,7 @@ int duer_ota_notifier_event(
     if (data_json == NULL) {
         DUER_LOGE("OTA Notifier: Create json object failed");
 
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
 
         goto out;
     }
@@ -276,7 +279,7 @@ int duer_ota_notifier_event(
     if (event_json == NULL) {
         DUER_LOGE("OTA Notifier: Create json object failed");
 
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
 
         goto free_data_json;
     }

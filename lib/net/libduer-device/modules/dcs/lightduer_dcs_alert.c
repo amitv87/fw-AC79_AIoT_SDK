@@ -20,7 +20,7 @@
  */
 
 #include "lightduer_dcs_alert.h"
-#include "printf.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "lightduer_dcs.h"
@@ -41,6 +41,7 @@ static const char *const s_event_name_tab[] = {"SetAlertSucceeded",
                                                "AlertStopped"
                                               };
 static volatile duer_bool s_is_initialized;
+static volatile int s_active_alert_count;
 
 int duer_dcs_report_alert_event(const char *token, duer_dcs_alert_event_type type)
 {
@@ -72,7 +73,7 @@ int duer_dcs_report_alert_event(const char *token, duer_dcs_alert_event_type typ
 
     data = baidu_json_CreateObject();
     if (data == NULL) {
-        rs = DUER_ERR_MEMORY_OVERLOW;
+        rs = DUER_ERR_MEMORY_OVERFLOW;
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
         goto RET;
     }
@@ -95,6 +96,24 @@ int duer_dcs_report_alert_event(const char *token, duer_dcs_alert_event_type typ
     baidu_json_AddStringToObjectCS(payload, DCS_TOKEN_KEY, token);
 
     duer_dcs_data_report_internal(data, DUER_TRUE);
+
+    if (type == ALERT_START) {
+        if (s_active_alert_count == 0) {
+            duer_play_channel_control_internal(DCS_ALERT_STARTED);
+        }
+        s_active_alert_count++;
+    }
+
+    if (type == ALERT_STOP) {
+        if (s_active_alert_count > 0) {
+            s_active_alert_count--;
+            if (s_active_alert_count == 0) {
+                duer_play_channel_control_internal(DCS_ALERT_FINISHED);
+            }
+        } else {
+            DUER_LOGE("No active alert, something wrong happened!");
+        }
+    }
 
 RET:
     DUER_DCS_CRITICAL_EXIT();
@@ -180,7 +199,7 @@ int duer_insert_alert_list(baidu_json *alert_list,
     if (!alert_node) {
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
         DUER_LOGE("Memory overlow");
-        rs = DUER_ERR_MEMORY_OVERLOW;
+        rs = DUER_ERR_MEMORY_OVERFLOW;
         goto exit;
     }
 
@@ -193,7 +212,7 @@ int duer_insert_alert_list(baidu_json *alert_list,
         active_alert_node = baidu_json_CreateObject();
         if (!active_alert_node) {
             DUER_LOGE("Memory overlow");
-            rs = DUER_ERR_MEMORY_OVERLOW;
+            rs = DUER_ERR_MEMORY_OVERFLOW;
             goto exit;
         }
 
@@ -254,6 +273,11 @@ error_out:
     duer_ds_log_dcs_event_report_fail(DCS_ALERTS_STATE_NAME);
 
     return NULL;
+}
+
+baidu_json *duer_dcs_alert_info(void)
+{
+    return duer_get_alert_state_internal();
 }
 
 void duer_dcs_alert_init()

@@ -17,7 +17,6 @@
 //
 // Description: Provide the API for external applications.
 
-#include "duerapp_config.h"
 #include "lightduer_ca.h"
 #include "lightduer_timestamp.h"
 #include "lightduer_lib.h"
@@ -39,6 +38,9 @@
 #define DUER_CONF_KEY_PORT_RPT   "coapPort"
 #define DUER_CONF_KEY_CERT       "rsaCaCrt"
 #define DUER_CONF_KEY_CUID       "cuid"
+#define DUER_CONF_KEY_BDUSS      "bduss"
+#define DUER_CONF_KEY_CLIENT_ID  "clientId"
+#define DUER_CONF_KEY_USER_AGENT "userAgent"
 
 #define DUER_COAP_LIFETIME       "3600"
 
@@ -51,6 +53,9 @@
 #define SR_TAG_UUID             "deviceUUID"
 #define SR_TAG_TOKEN            "token"
 #define SR_TAG_CUID             "cuid"
+#define SR_TAG_BDUSS            "bduss"
+#define SR_TAG_CLIENT_ID        "clientId"
+#define SR_TAG_USER_AGENT       "userAgent"
 
 #if defined(DUER_UDP_REPORTER)
 #define SR_HOST                 "117.185.17.43"
@@ -100,6 +105,10 @@ typedef struct _baidu_ca_s {
     char                   *bindToken;
     // If cuid is not null, deviceUuid will be binded to cuid on IoT cloud
     char                   *cuid;
+    // If bduss is not null, auth by bduss on IoT cloud
+    char                   *bduss;
+    char                   *client_id;
+    char                   *user_agent;
     char                   *serverAddr;
     char                   *report_query;
     duer_size_t             report_query_len;
@@ -174,6 +183,40 @@ DUER_EXT_IMPL const char *baidu_ca_get_uuid(duer_handler hdlr)
 
     return NULL;
 }
+
+DUER_EXT_IMPL const char *baidu_ca_get_client_id(duer_handler hdlr)
+{
+    baidu_ca_t *ctx = (baidu_ca_t *)hdlr;
+
+    if (ctx) {
+        return (char *)ctx->client_id;
+    }
+
+    return NULL;
+}
+
+DUER_EXT_IMPL const char *baidu_ca_get_bduss(duer_handler hdlr)
+{
+    baidu_ca_t *ctx = (baidu_ca_t *)hdlr;
+
+    if (ctx) {
+        return (char *)ctx->bduss;
+    }
+
+    return NULL;
+}
+
+DUER_EXT_IMPL const char *baidu_ca_get_user_agent(duer_handler hdlr)
+{
+    baidu_ca_t *ctx = (baidu_ca_t *)hdlr;
+
+    if (ctx) {
+        return (char *)ctx->user_agent;
+    }
+
+    return NULL;
+}
+
 
 DUER_EXT_IMPL const char *baidu_ca_get_bind_token(duer_handler hdlr)
 {
@@ -343,7 +386,8 @@ exit:
 #endif
 
 DUER_LOC_IMPL char *baidu_ca_get_service_router_payload(
-    const char *uuid, const char *token, const char *cuid)
+    const char *uuid, const char *token, const char *cuid,
+    const char *bduss, const char *client_id, const char *user_agent)
 {
     char *rs = NULL;
     baidu_json *item = baidu_json_CreateObject();
@@ -353,6 +397,15 @@ DUER_LOC_IMPL char *baidu_ca_get_service_router_payload(
         baidu_json_AddStringToObject(item, SR_TAG_TOKEN, token);
         if (cuid != NULL) {
             baidu_json_AddStringToObject(item, SR_TAG_CUID, cuid);
+        }
+        if (bduss != NULL) {
+            baidu_json_AddStringToObject(item, SR_TAG_BDUSS, bduss);
+        }
+        if (client_id != NULL) {
+            baidu_json_AddStringToObject(item, SR_TAG_CLIENT_ID, client_id);
+        }
+        if (user_agent != NULL) {
+            baidu_json_AddStringToObject(item, SR_TAG_USER_AGENT, user_agent);
         }
         rs = baidu_json_PrintUnformatted(item);
         baidu_json_Delete(item);
@@ -418,7 +471,7 @@ DUER_LOC_IMPL duer_status_t baidu_ca_create_service_router(baidu_ca_t *ctx)
         msg_reg.path = (duer_u8_t *)DUER_SR_REG_PATH;
         msg_reg.path_len = DUER_STRLEN(DUER_SR_REG_PATH);
         msg_reg.payload = (duer_u8_t *)baidu_ca_get_service_router_payload(
-                              ctx->uuid, ctx->token, ctx->cuid);
+                              ctx->uuid, ctx->token, ctx->cuid, ctx->bduss, ctx->client_id, ctx->user_agent);
         msg_reg.payload_len = DUER_STRLEN((char *)msg_reg.payload);
         rs = duer_coap_send(ctx->sr, &msg_reg);
         baidu_json_release(msg_reg.payload);
@@ -675,6 +728,10 @@ DUER_EXT_IMPL duer_status_t baidu_ca_load_configuration(duer_handler hdlr, const
     }
 
     string_addr = duer_conf_get_string(ctx->conf, DUER_CONF_KEY_UUID);
+    if (ctx->uuid) {
+        DUER_FREE(ctx->uuid);
+        ctx->uuid = NULL;
+    }
     if (string_addr) {
         ctx->uuid = DUER_MALLOC(DUER_STRLEN(string_addr) + 1);
     }
@@ -686,6 +743,10 @@ DUER_EXT_IMPL duer_status_t baidu_ca_load_configuration(duer_handler hdlr, const
     }
 
     string_addr = duer_conf_get_string(ctx->conf, DUER_CONF_KEY_TOKEN);
+    if (ctx->token) {
+        DUER_FREE(ctx->token);
+        ctx->token = NULL;
+    }
     if (string_addr) {
         ctx->token = DUER_MALLOC(DUER_STRLEN(string_addr) + 1);
     }
@@ -697,12 +758,16 @@ DUER_EXT_IMPL duer_status_t baidu_ca_load_configuration(duer_handler hdlr, const
     }
 
     string_addr = duer_conf_get_string(ctx->conf, DUER_CONF_KEY_BINDTOKEN);
+    if (ctx->bindToken) {
+        DUER_FREE(ctx->bindToken);
+        ctx->bindToken = NULL;
+    }
     if (string_addr) {
         ctx->bindToken = DUER_MALLOC(DUER_STRLEN(string_addr) + 1);
     }
     if (!string_addr || !ctx->bindToken) {
-        DUER_LOGE("    obtain the bindToken failed...");
-        goto error;
+        // DUER_LOGE("    obtain the bindToken failed...");
+        // goto error;
     } else {
         DUER_MEMCPY(ctx->bindToken, string_addr, DUER_STRLEN(string_addr) + 1);
     }
@@ -716,6 +781,10 @@ DUER_EXT_IMPL duer_status_t baidu_ca_load_configuration(duer_handler hdlr, const
 
 
     string_addr = duer_conf_get_string(ctx->conf, DUER_CONF_KEY_HOST);
+    if (ctx->serverAddr) {
+        DUER_FREE(ctx->serverAddr);
+        ctx->serverAddr = NULL;
+    }
     if (string_addr) {
         ctx->serverAddr = DUER_MALLOC(DUER_STRLEN(string_addr) + 1);
     }
@@ -728,10 +797,12 @@ DUER_EXT_IMPL duer_status_t baidu_ca_load_configuration(duer_handler hdlr, const
 
     // cuid may be not exist
     string_addr = (char *)duer_conf_get_string(ctx->conf, DUER_CONF_KEY_CUID);
+    if (ctx->cuid) {
+        DUER_FREE(ctx->cuid);
+        ctx->cuid = NULL;
+    }
     if (string_addr) {
         ctx->cuid = DUER_MALLOC(DUER_STRLEN(string_addr) + 1);
-    } else {
-        ctx->cuid = NULL;
     }
     if (string_addr && !ctx->cuid) {
         DUER_LOGE("    malloc the cuid failed...");
@@ -740,6 +811,63 @@ DUER_EXT_IMPL duer_status_t baidu_ca_load_configuration(duer_handler hdlr, const
         if (ctx->cuid) {
             DUER_MEMCPY(ctx->cuid, string_addr, DUER_STRLEN(string_addr) + 1);
             DUER_LOGI("profile include cuid:%s", ctx->cuid);
+        }
+    }
+
+    // bduss may be not exist
+    string_addr = (char *)duer_conf_get_string(ctx->conf, DUER_CONF_KEY_BDUSS);
+    if (ctx->bduss) {
+        DUER_FREE(ctx->bduss);
+        ctx->bduss = NULL;
+    }
+    if (string_addr) {
+        ctx->bduss = DUER_MALLOC(DUER_STRLEN(string_addr) + 1);
+    }
+    if (string_addr && !ctx->bduss) {
+        DUER_LOGE("    malloc the bduss failed...");
+        goto error;
+    } else {
+        if (ctx->bduss) {
+            DUER_MEMCPY(ctx->bduss, string_addr, DUER_STRLEN(string_addr) + 1);
+            DUER_LOGI("profile include bduss:%s", ctx->bduss);
+        }
+    }
+
+    // client_id may be not exist
+    string_addr = (char *)duer_conf_get_string(ctx->conf, DUER_CONF_KEY_CLIENT_ID);
+    if (ctx->client_id) {
+        DUER_FREE(ctx->client_id);
+        ctx->client_id = NULL;
+    }
+    if (string_addr) {
+        ctx->client_id = DUER_MALLOC(DUER_STRLEN(string_addr) + 1);
+    }
+    if (string_addr && !ctx->client_id) {
+        DUER_LOGE("    malloc the client_id failed...");
+        goto error;
+    } else {
+        if (ctx->client_id) {
+            DUER_MEMCPY(ctx->client_id, string_addr, DUER_STRLEN(string_addr) + 1);
+            DUER_LOGI("profile include client_id:%s", ctx->client_id);
+        }
+    }
+
+    // user_agent may be not exist
+    string_addr = (char *)duer_conf_get_string(ctx->conf, DUER_CONF_KEY_USER_AGENT);
+    if (ctx->user_agent) {
+        DUER_FREE(ctx->user_agent);
+        ctx->user_agent = NULL;
+    }
+    if (string_addr) {
+        ctx->user_agent = DUER_MALLOC(DUER_STRLEN(string_addr) + 1);
+    }
+    if (string_addr && !ctx->user_agent) {
+        DUER_LOGE("    malloc the user_agent failed...");
+        goto error;
+    } else {
+        if (ctx->user_agent) {
+            DUER_MEMCPY(ctx->user_agent, string_addr, DUER_STRLEN(string_addr) + 1);
+            DUER_LOGI("profile include user_agent:%s", ctx->user_agent);
         }
     }
 
@@ -1291,6 +1419,21 @@ DUER_EXT_IMPL duer_status_t baidu_ca_release(duer_handler hdlr)
         if (ctx->cuid) {
             DUER_FREE(ctx->cuid);
             ctx->cuid = NULL;
+        }
+
+        if (ctx->bduss) {
+            DUER_FREE(ctx->bduss);
+            ctx->bduss = NULL;
+        }
+
+        if (ctx->client_id) {
+            DUER_FREE(ctx->client_id);
+            ctx->client_id = NULL;
+        }
+
+        if (ctx->user_agent) {
+            DUER_FREE(ctx->user_agent);
+            ctx->user_agent = NULL;
         }
 
         if (ctx->serverAddr) {

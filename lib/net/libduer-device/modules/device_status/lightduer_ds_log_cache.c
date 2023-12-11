@@ -17,7 +17,6 @@
  * Auth: Leliang Zhang(zhangleliang@baidu.com)
  * Desc: trace log cache, cache the trace log when ca disconnect
  */
-#include "duerapp_config.h"
 #include "lightduer_ds_log_cache.h"
 
 #include "lightduer_connagent.h"
@@ -26,7 +25,7 @@
 #include "lightduer_mutex.h"
 
 #define MAX_CACHED_TRACELOG 16
-//#define LIGHTDUER_DS_LOG_CACHE_DEBUG
+// #define LIGHTDUER_DS_LOG_CACHE_DEBUG
 
 duer_u32_t s_trace_log_cache[MAX_CACHED_TRACELOG];
 volatile duer_u32_t s_current_index = 0;
@@ -96,14 +95,14 @@ duer_status_t duer_ds_log_cache_report()
     report = baidu_json_CreateObject();
     if (report == NULL) {
         DUER_LOGE("report json create fail");
-        result = DUER_ERR_MEMORY_OVERLOW;
+        result = DUER_ERR_MEMORY_OVERFLOW;
         goto out;
     }
 
     cache_log = baidu_json_CreateObject();
     if (cache_log == NULL) {
         DUER_LOGE("cache_log json create fail");
-        result = DUER_ERR_MEMORY_OVERLOW;
+        result = DUER_ERR_MEMORY_OVERFLOW;
         goto out;
     }
 
@@ -111,7 +110,7 @@ duer_status_t duer_ds_log_cache_report()
     while (s_current_index > 0) {
         DUER_SNPRINTF(c_index, sizeof(c_index), "%02d", s_current_index);
         duer_u32_t code = s_trace_log_cache[--s_current_index];
-        baidu_json_AddNumberToObjectCS(cache_log, c_index, code);
+        baidu_json_AddNumberToObject(cache_log, c_index, code);
     }
     duer_mutex_unlock(s_mutex);
 
@@ -134,4 +133,3 @@ out:
     }
     return result;
 }
-

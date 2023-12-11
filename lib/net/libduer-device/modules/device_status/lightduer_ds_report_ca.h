@@ -80,4 +80,3 @@ baidu_json *duer_ds_report_ca_status(void);
 #endif
 
 #endif // BAIDU_DUER_LIGHTDUER_DS_REPORT_CA_H
-

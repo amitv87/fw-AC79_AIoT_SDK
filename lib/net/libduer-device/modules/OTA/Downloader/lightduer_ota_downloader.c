@@ -23,6 +23,7 @@
 #include "lightduer_ota_http_downloader.h"
 #include <string.h>
 #include <stdint.h>
+#include "lightduer_lib.h"
 #include "lightduer_log.h"
 #include "lightduer_types.h"
 #include "lightduer_mutex.h"
@@ -61,17 +62,6 @@ int duer_init_ota_downloader(void)
 int duer_uninit_ota_downloader(void)
 {
     int ret = DUER_OK;
-
-    for (int i = 0; i < MAX_PROTOCOL_COUNT; i++) {
-        if (s_ota_downloader[i]) {
-            duer_ota_downloader_destroy_downloader(s_ota_downloader[i]);
-            if (s_ota_downloader[i]->lock) {
-                duer_mutex_destroy(s_ota_downloader[i]->lock);
-            }
-            DUER_FREE(s_ota_downloader[i]);
-            s_ota_downloader[i] = NULL;
-        }
-    }
 
     ret = duer_mutex_destroy(s_ota_downloader_lock);
     if (ret != DUER_OK) {
@@ -250,8 +240,6 @@ int duer_ota_downloader_destroy_downloader(duer_ota_downloader_t *downloader)
             DUER_LOGE("OTA Downloader: Destroy downloader failed");
         }
 
-        downloader->ops = NULL;	//防止销毁了还在使用
-
         ret = duer_mutex_unlock(downloader->lock);
         if (ret != DUER_OK) {
             DUER_LOGE("OTA Downloader: Can not unlock downloader");
@@ -307,7 +295,10 @@ out:
 int duer_ota_downloader_init_downloader(duer_ota_downloader_t *downloader)
 {
     int ret = DUER_OK;
+    int msg_ret = 0;
     int lock_ret = DUER_OK;
+    size_t str_len = 0;
+    char const *err_msg = NULL;
 
     if (downloader == NULL
         || downloader->ops == NULL
@@ -316,6 +307,11 @@ int duer_ota_downloader_init_downloader(duer_ota_downloader_t *downloader)
         DUER_LOGE("OTA Downloader: Argument error");
 
         ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_downloader_report_err(
+            downloader,
+            "Argument error",
+            ret);
 
         goto err;
     }
@@ -332,6 +328,14 @@ int duer_ota_downloader_init_downloader(duer_ota_downloader_t *downloader)
     ret = downloader->ops->init(downloader);
     if (ret != DUER_OK) {
         DUER_LOGE("OTA Downloader: Init downloader failed");
+
+        msg_ret = duer_ota_downloader_check_err_msg(downloader);
+        if (msg_ret < 0) {
+            duer_ota_downloader_report_err(
+                downloader,
+                "Init downloader failed",
+                ret);
+        }
     }
 
     lock_ret = duer_mutex_unlock(downloader->lock);
@@ -347,8 +351,9 @@ err:
 int duer_ota_downloader_connect_server(duer_ota_downloader_t *downloader, const char *url)
 {
     int ret = DUER_OK;
-    int lock_ret = DUER_OK;
     int url_len = 0;
+    int msg_ret = 0;
+    int lock_ret = DUER_OK;
 
     if (downloader == NULL
         || url == NULL
@@ -359,6 +364,11 @@ int duer_ota_downloader_connect_server(duer_ota_downloader_t *downloader, const 
 
         ret = DUER_ERR_INVALID_PARAMETER;
 
+        duer_ota_downloader_report_err(
+            downloader,
+            "Argument error",
+            ret);
+
         goto err;
     }
 
@@ -367,6 +377,11 @@ int duer_ota_downloader_connect_server(duer_ota_downloader_t *downloader, const 
         DUER_LOGE("OTA Downloader: URL too long");
 
         ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_downloader_report_err(
+            downloader,
+            "URL too long",
+            ret);
 
         goto err;
     }
@@ -385,6 +400,14 @@ int duer_ota_downloader_connect_server(duer_ota_downloader_t *downloader, const 
     ret = downloader->ops->connect_server(downloader, url);
     if (ret != DUER_OK) {
         DUER_LOGE("OTA Downloader: Connect server failed");
+
+        msg_ret = duer_ota_downloader_check_err_msg(downloader);
+        if (msg_ret < 0) {
+            duer_ota_downloader_report_err(
+                downloader,
+                "Connect server failed",
+                ret);
+        }
     }
 
     lock_ret = duer_mutex_unlock(downloader->lock);
@@ -400,6 +423,7 @@ err:
 int duer_ota_downloader_disconnect_server(duer_ota_downloader_t *downloader)
 {
     int ret = DUER_OK;
+    int msg_ret = 0;
     int lock_ret = DUER_OK;
 
     if (downloader == NULL
@@ -409,6 +433,11 @@ int duer_ota_downloader_disconnect_server(duer_ota_downloader_t *downloader)
         DUER_LOGE("OTA Downloader: Argument Error");
 
         ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_downloader_report_err(
+            downloader,
+            "Argument error",
+            ret);
 
         goto err;
     }
@@ -425,6 +454,14 @@ int duer_ota_downloader_disconnect_server(duer_ota_downloader_t *downloader)
     ret = downloader->ops->disconnect_server(downloader);
     if (ret != DUER_OK) {
         DUER_LOGE("OTA Downloader: Disconnect server failed");
+
+        msg_ret = duer_ota_downloader_check_err_msg(downloader);
+        if (msg_ret < 0) {
+            duer_ota_downloader_report_err(
+                downloader,
+                "Disconnect server failed",
+                ret);
+        }
     }
 
     lock_ret = duer_mutex_unlock(downloader->lock);
@@ -443,6 +480,7 @@ int duer_ota_downloader_register_data_notify(
     void *private_data)
 {
     int ret;
+    int msg_ret = 0;
     int lock_ret = DUER_OK;
 
     if (downloader == NULL
@@ -452,6 +490,11 @@ int duer_ota_downloader_register_data_notify(
         DUER_LOGE("OTA Downloader: Argument Error");
 
         ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_downloader_report_err(
+            downloader,
+            "Argument error",
+            ret);
 
         goto err;
     }
@@ -471,6 +514,14 @@ int duer_ota_downloader_register_data_notify(
               private_data);
     if (ret != DUER_OK) {
         DUER_LOGE("OTA Downloader: Register data notify failed");
+
+        msg_ret = duer_ota_downloader_check_err_msg(downloader);
+        if (msg_ret < 0) {
+            duer_ota_downloader_report_err(
+                downloader,
+                "Register data notify failed",
+                ret);
+        }
     }
 
     lock_ret = duer_mutex_unlock(downloader->lock);
@@ -549,3 +600,49 @@ err:
     return data;
 }
 
+void duer_ota_downloader_report_err(
+    duer_ota_downloader_t *downloader,
+    char const *err_msg,
+    int err_code)
+{
+    if (downloader == NULL) {
+        DUER_LOGE("OTA Downloader: Argument error");
+
+        return;
+    }
+
+    DUER_MEMSET(downloader->err_msg, 0, sizeof(downloader->err_msg));
+
+    snprintf(downloader->err_msg, ERR_MSG_LEN, "%s%d", err_msg, err_code);
+}
+
+char const *duer_ota_downloader_get_err_msg(duer_ota_downloader_t const *downloader)
+{
+
+    if (downloader == NULL) {
+        DUER_LOGE("OTA Downloader: Argument error");
+
+        return NULL;
+    }
+
+    return downloader->err_msg;
+}
+
+int duer_ota_downloader_check_err_msg(duer_ota_downloader_t *downloader)
+{
+    size_t str_len = 0;
+
+    if (downloader == NULL) {
+        DUER_LOGE("OTA Downloader: Argument error");
+
+        return -1;
+    }
+
+    str_len = DUER_STRLEN(downloader->err_msg);
+    if (str_len > 0) {
+
+        return 1;
+    }
+
+    return -1;
+}

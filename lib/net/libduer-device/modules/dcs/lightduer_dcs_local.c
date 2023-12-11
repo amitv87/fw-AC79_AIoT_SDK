@@ -22,6 +22,7 @@
 #include "lightduer_dcs_local.h"
 #include <stdlib.h>
 #include "lightduer_log.h"
+#include "lightduer_lib.h"
 #include "lightduer_memory.h"
 #include "lightduer_ds_log_dcs.h"
 #include "lightduer_mutex.h"
@@ -40,6 +41,7 @@ const char *DCS_DUER_DIRECTIVE_PATH = "duer_directive";
 const char *DCS_DUER_PRIVATE_PATH = "duer_private";
 const char *DCS_IOTCLOUD_DIRECTIVE_PATH = "duer_iotcloud_directive";
 const char *DCS_IOTCLOUD_EVENT_PATH = "duer_iotcloud_event";
+const char *DCS_DUER_DLP_PATH = "duer_dlp";
 
 // namespace
 const char *DCS_AUDIO_PLAYER_NAMESPACE = "ai.dueros.device_interface.audio_player";
@@ -50,6 +52,8 @@ const char *DCS_SCREEN_EXTENDED_CARD_NAMESPACE = "ai.dueros.device_interface.scr
 const char *DCS_IOT_CLOUD_SYSTEM_NAMESPACE = "ai.dueros.device_interface.iot_cloud.system";
 const char *DCS_PLAYBACK_CONTROL_NAMESPACE = "ai.dueros.device_interface.playback_controller";
 const char *DCS_RECOMMEND_NAMESPACE = "ai.dueros.device_interface.extensions.recommend";
+const char *DCS_PRIVATE_NAMESPACE = "ai.dueros.private.protocol";
+const char *DCS_PUSH_SERVICE_NAMESPACE = "ai.dueros.device_interface.push_service";
 
 // message keys
 const char *DCS_DIRECTIVE_KEY = "directive";
@@ -95,6 +99,9 @@ const char *DCS_FORMAT_KEY = "format";
 const char *DCS_MESSAGE_KEY = "message";
 const char *DCS_QUERY_KEY = "query";
 const char *DCS_TIME_OF_RECOMMEND = "timeOfRecommendation";
+const char *DCS_STUTTER_DURATION = "stutterDurationInMilliseconds";
+const char *DCS_PREVIOUS_DIALOG_ID_KEY = "previousDialogRequestId";
+const char *DCS_ACTIVE_DIALOG_ID_KEY = "activeDialogRequestId";
 
 // directive name
 const char *DCS_SPEAK_NAME = "Speak";
@@ -119,6 +126,8 @@ const char *DCS_RENDER_WEATHER = "RenderWeather";
 const char *DCS_RENDER_PLAYER_INFO = "RenderPlayerInfo";
 const char *DCS_RENDER_AUDIO_LIST = "RenderAudioList";
 const char *DCS_RENDER_ALBUM_LIST = "RenderAlbumList";
+const char *DCS_SET_ACTIVE_DIALOG = "SetActiveDialog";
+const char *DCS_REQUIRE_PUSH_ACK = "RequirePushAck";
 
 // internal directive.
 const char *DCS_DIALOGUE_FINISHED_NAME = "DialogueFinished";
@@ -143,6 +152,7 @@ const char *DCS_MUTE_CHANGED_NAME = "MuteChanged";
 const char *DCS_SPEECH_STATE_NAME = "SpeechState";
 const char *DCS_LINK_CLICKED_NAME = "LinkClicked";
 const char *DCS_RECOMMEND_NAME = "RecommendationRequested";
+const char *DCS_PUSH_ACK_NAME = "PushAck";
 
 // internal exception type
 const char *DCS_UNEXPECTED_INFORMATION_RECEIVED_TYPE = "UNEXPECTED_INFORMATION_RECEIVED";
@@ -151,16 +161,23 @@ const char *DCS_UNSUPPORTED_OPERATION_TYPE = "UNSUPPORTED_OPERATION";
 
 static duer_mutex_t s_dcs_local_lock;
 static char *s_dialog_req_id;
-static int s_uuid_len;
+static int s_dialog_id_buf_len;
+static int s_msg_id_buf_len;
 static char *s_msg_id;
 static duer_bool s_is_dialog_id_exist;
+static duer_dcs_dialog_request_t s_dialog_request_type;
 
+static dcs_event_hook s_dcs_hook_event_handler = NULL;
 int duer_dcs_data_report_internal(baidu_json *data, duer_bool is_transparent)
 {
     int rs = DUER_OK;
 
     if (!data) {
         return DUER_ERR_INVALID_PARAMETER;
+    }
+
+    if (s_dcs_hook_event_handler) {
+        s_dcs_hook_event_handler(data);
     }
 
     if (!is_transparent) {
@@ -172,23 +189,37 @@ int duer_dcs_data_report_internal(baidu_json *data, duer_bool is_transparent)
     return rs;
 }
 
-static const char *duer_create_random_id(char *buf)
+void duer_reg_dcs_event_hook_hdl_internal(dcs_event_hook cb)
+{
+    if (!s_dcs_hook_event_handler) {
+        s_dcs_hook_event_handler = cb;
+        DUER_LOGI("dcs_event_hook_hdl initialized");
+    } else {
+        DUER_LOGI("dcs_event_hook_hdl has been initialized");
+    }
+}
+
+static const char *duer_create_random_id(char *buf, int len)
 {
     static int count = 0;
-    int eof_pos = s_uuid_len;
-    int size = RANDOM_PART_LEN + 1;
 
     if (buf) {
-        DUER_SNPRINTF(buf + eof_pos, size, "%08x%08x%08x",
-                      duer_random(), duer_timestamp(), count++);
+        DUER_SNPRINTF(buf, len, "%s%08x%08x%08x",
+                      duer_engine_get_uuid(), duer_random(), duer_timestamp(), count++);
     }
 
     return buf;
 }
 
-const char *duer_create_request_id_internal()
+duer_dcs_dialog_request_t duer_get_dialog_request_type(void)
 {
-    duer_create_random_id(s_dialog_req_id);
+    return s_dialog_request_type;
+}
+
+const char *duer_create_request_id_internal(duer_dcs_dialog_request_t type)
+{
+    duer_create_random_id(s_dialog_req_id, s_dialog_id_buf_len);
+    s_dialog_request_type = type;
     duer_cancel_caching_directive_internal();
     DUER_LOGI("Current dialog id: %s", s_dialog_req_id);
     s_is_dialog_id_exist = DUER_TRUE;
@@ -196,10 +227,34 @@ const char *duer_create_request_id_internal()
     return s_dialog_req_id;
 }
 
+duer_status_t duer_set_dialog_id_internal(const char *dialog_id)
+{
+    int len = DUER_STRLEN(dialog_id) + 1;
+    void *new_buf = NULL;
+
+    if (len > s_dialog_id_buf_len) {
+        new_buf = DUER_MALLOC(len);
+        if (!new_buf) {
+            return DUER_ERR_MEMORY_OVERFLOW;
+        }
+        if (s_dialog_req_id) {
+            DUER_FREE(s_dialog_req_id);
+        }
+        s_dialog_req_id = new_buf;
+        s_dialog_id_buf_len = len;
+    }
+
+    DUER_STRNCPY(s_dialog_req_id, dialog_id, s_dialog_id_buf_len);
+    s_is_dialog_id_exist = DUER_TRUE;
+    duer_cancel_caching_directive_internal();
+
+    return DUER_OK;
+}
+
 const char *duer_get_request_id_internal(void)
 {
     if (!s_is_dialog_id_exist) {
-        return duer_create_request_id_internal();
+        return duer_create_request_id_internal(DCS_DIALOG_NONE);
     }
 
     return s_dialog_req_id;
@@ -207,7 +262,7 @@ const char *duer_get_request_id_internal(void)
 
 const char *duer_generate_msg_id_internal()
 {
-    return duer_create_random_id(s_msg_id);
+    return duer_create_random_id(s_msg_id, s_msg_id_buf_len);
 }
 
 char *duer_strdup_internal(const char *str)
@@ -238,6 +293,10 @@ void duer_play_channel_control_internal(duer_dcs_channel_switch_event_t event)
         if (duer_audio_is_playing_internal()) {
             duer_pause_audio_internal(DUER_TRUE);
         }
+
+        if (duer_local_player_is_playing_internal()) {
+            duer_pause_local_player_internal();
+        }
         break;
     case DCS_SPEECH_NEED_PLAY:
         if (duer_audio_is_playing_internal()) {
@@ -247,17 +306,27 @@ void duer_play_channel_control_internal(duer_dcs_channel_switch_event_t event)
         } else {
             // do nothing
         }
+
+        if (duer_local_player_is_playing_internal()) {
+            duer_pause_local_player_internal();
+        }
         break;
     case DCS_SPEECH_FINISHED:
         if (duer_is_multiple_round_dialogue()) {
             duer_open_mic_internal();
         } else if (duer_audio_is_paused_internal() && !duer_wait_dialog_finished_internal()) {
             duer_resume_audio_internal();
+        } else if (duer_local_player_is_paused_internal()
+                   && !duer_wait_dialog_finished_internal()) {
+            duer_resume_local_player_internal();
         } else {
             // do nothing
         }
         break;
     case DCS_AUDIO_NEED_PLAY:
+        if (duer_local_player_is_paused_internal() || duer_local_player_is_playing_internal()) {
+            duer_stop_local_player_internal();
+        }
         if (duer_speech_need_play_internal() || duer_is_recording_internal()) {
             duer_pause_audio_internal(DUER_FALSE);
         } else {
@@ -272,6 +341,10 @@ void duer_play_channel_control_internal(duer_dcs_channel_switch_event_t event)
         }
         if (duer_audio_is_paused_internal()) {
             duer_resume_audio_internal();
+        } else if (duer_local_player_is_paused_internal()) {
+            duer_resume_local_player_internal();
+        } else {
+            // do nothing
         }
         break;
     case DCS_AUDIO_FINISHED:
@@ -283,9 +356,31 @@ void duer_play_channel_control_internal(duer_dcs_channel_switch_event_t event)
         if (duer_audio_is_playing_internal()) {
             duer_pause_audio_internal(DUER_TRUE);
         }
+
+        if (duer_local_player_is_playing_internal()) {
+            duer_pause_local_player_internal();
+        }
         duer_open_mic_internal();
         break;
     case DCS_AUDIO_STOPPED:
+        break;
+    case DCS_ALERT_STARTED:
+        if (duer_audio_is_playing_internal()) {
+            duer_pause_audio_internal(DUER_TRUE);
+        }
+
+        if (duer_local_player_is_playing_internal()) {
+            duer_pause_local_player_internal();
+        }
+        break;
+    case DCS_ALERT_FINISHED:
+        if (duer_audio_is_paused_internal()) {
+            duer_resume_audio_internal();
+        } else if (duer_local_player_is_paused_internal()) {
+            duer_resume_local_player_internal();
+        } else {
+            // do nothing
+        }
         break;
     default:
         break;
@@ -316,22 +411,19 @@ void duer_dcs_local_init_internal(void)
 
     uuid = duer_engine_get_uuid();
     if (uuid) {
-        s_uuid_len = DUER_STRLEN(uuid);
-        len = s_uuid_len + RANDOM_PART_LEN + 1;
+        len = DUER_STRLEN(uuid);
+        s_dialog_id_buf_len = len + RANDOM_PART_LEN + 1;
+        s_msg_id_buf_len = s_dialog_id_buf_len;
         if (!s_dialog_req_id) {
-            s_dialog_req_id = DUER_MALLOC(len);
-            if (s_dialog_req_id) {
-                DUER_SNPRINTF(s_dialog_req_id, len, "%s", uuid);
-            } else {
+            s_dialog_req_id = DUER_MALLOC(s_dialog_id_buf_len);
+            if (!s_dialog_req_id) {
                 DUER_LOGE("Failed malloc s_dialog_id");
             }
         }
 
         if (!s_msg_id) {
-            s_msg_id = DUER_MALLOC(len);
-            if (s_msg_id) {
-                DUER_SNPRINTF(s_msg_id, len, "%s", uuid);
-            } else {
+            s_msg_id = DUER_MALLOC(s_msg_id_buf_len);
+            if (!s_msg_id) {
                 DUER_LOGE("Failed malloc s_msg_id");
             }
         }
@@ -343,7 +435,8 @@ void duer_dcs_local_init_internal(void)
 
 void duer_dcs_local_uninitialize_internal(void)
 {
-    s_uuid_len = 0;
+    s_dialog_id_buf_len = 0;
+    s_msg_id_buf_len = 0;
 
     if (s_dialog_req_id) {
         DUER_FREE(s_dialog_req_id);
@@ -353,11 +446,6 @@ void duer_dcs_local_uninitialize_internal(void)
     if (s_msg_id) {
         DUER_FREE(s_msg_id);
         s_msg_id = NULL;
-    }
-
-    if (s_dcs_local_lock) {
-        duer_mutex_destroy(s_dcs_local_lock);
-        s_dcs_local_lock = NULL;
     }
 }
 

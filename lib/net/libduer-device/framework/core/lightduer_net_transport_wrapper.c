@@ -16,7 +16,7 @@
 // Author: Su Hao (suhao@baidu.com)
 //
 // Description: The network adapter.
-#include "duerapp_config.h"
+
 #include "lightduer_net_transport_wrapper.h"
 #ifndef NET_TRANS_ENCRYPTED_BY_AES_CBC
 #include "lightduer_net_trans_encrypted.h"
@@ -36,6 +36,7 @@ enum _baidu_ca_trans_type_enum {
 
 typedef struct _duer_transport_callbacks {
     duer_status_t (*f_connect)(duer_trans_ptr, const duer_addr_t *);
+    duer_status_t (*f_connect_timeout)(duer_trans_ptr, const duer_addr_t *, duer_u32_t);
     duer_status_t (*f_send)(duer_trans_ptr, const void *, duer_size_t, const duer_addr_t *);
     duer_status_t (*f_recv)(duer_trans_ptr, void *, duer_size_t, duer_addr_t *);
     duer_status_t (*f_recv_timeout)(duer_trans_ptr, void *, duer_size_t, duer_u32_t, duer_addr_t *);
@@ -46,6 +47,7 @@ const DUER_LOC duer_trans_cbs s_duer_trans_callbacks[DUER_TRANS_TOTAL] = {
     // DUER_TRANS_NORMAL
     {
         duer_trans_wrapper_connect,
+        duer_trans_wrapper_connect_timeout,
         duer_trans_wrapper_send,
         duer_trans_wrapper_recv,
         duer_trans_wrapper_recv_timeout,
@@ -55,6 +57,7 @@ const DUER_LOC duer_trans_cbs s_duer_trans_callbacks[DUER_TRANS_TOTAL] = {
     // DUER_TRANS_SECURE mbedtls
     {
         duer_trans_encrypted_connect,
+        duer_trans_encrypted_connect_timeout,
         duer_trans_encrypted_send,
         duer_trans_encrypted_recv,
         duer_trans_encrypted_recv_timeout,
@@ -64,6 +67,7 @@ const DUER_LOC duer_trans_cbs s_duer_trans_callbacks[DUER_TRANS_TOTAL] = {
     // DUER_TRANS_SECURE AES-CBC
     {
         duer_trans_aes_cbc_encrypted_connect,
+        duer_trans_aes_cbc_encrypted_connect_timeout,
         duer_trans_aes_cbc_encrypted_send,
         duer_trans_aes_cbc_encrypted_recv,
         duer_trans_aes_cbc_encrypted_recv_timeout,
@@ -189,6 +193,26 @@ DUER_INT_IMPL duer_status_t duer_trans_connect(duer_trans_handler hdlr,
     return rs;
 }
 
+DUER_INT_IMPL duer_status_t duer_trans_connect_timeout(duer_trans_handler hdlr,
+        const duer_addr_t *addr, duer_u32_t timeout)
+{
+    duer_status_t rs = DUER_ERR_FAILED;
+    duer_trans_ptr trans = (duer_trans_ptr)hdlr;
+
+    if (trans) {
+        trans->addr.type = addr->type;
+        // trans->addr.host ???
+    }
+
+    const duer_trans_cbs *cbs = duer_trans_get_callbacks(trans);
+
+    if (cbs) {
+        rs = cbs->f_connect_timeout(trans, addr, timeout);
+    }
+
+    return rs;
+}
+
 DUER_INT_IMPL duer_status_t duer_trans_send(duer_trans_handler hdlr,
         const void *data,
         duer_size_t size,
@@ -247,6 +271,12 @@ DUER_INT_IMPL duer_status_t duer_trans_close(duer_trans_handler hdlr)
         rs = cbs->f_close(trans);
     }
 
+    if (trans->secure) {
+        DUER_LOGI("cert secure");
+        DUER_FREE(trans->secure);
+        trans->secure = NULL;
+    }
+
     return rs;
 }
 
@@ -268,6 +298,7 @@ DUER_INT_IMPL duer_status_t duer_trans_release(duer_trans_handler hdlr)
         if (trans->secure) {
             DUER_LOGD("cert secure");
             DUER_FREE(trans->secure);
+            trans->secure = NULL;
         }
 
         duer_trans_wrapper_destroy(trans);

@@ -21,7 +21,7 @@
 
 #include "lightduer_ota_unpacker.h"
 #include <stdint.h>
-/* #include <stdbool.h> */
+#include <stdbool.h>
 #include "zlib.h"
 #include "baidu_json.h"
 #include "lightduer_log.h"
@@ -29,6 +29,24 @@
 #include "lightduer_types.h"
 #include "lightduer_mutex.h"
 #include "lightduer_memory.h"
+
+extern int duer_ota_installer_check_err_msg(duer_ota_installer_t *installer);
+
+static void duer_ota_unpacker_report_err_msg(
+    duer_ota_unpacker_t *unpacker,
+    char const *err_msg,
+    int err_code)
+{
+    if (unpacker == NULL || unpacker->err_msg == NULL) {
+        DUER_LOGE("OTA Unpacker: Argument error");
+
+        return;
+    }
+
+    DUER_MEMSET(unpacker->err_msg, 0, sizeof(unpacker->err_msg));
+
+    snprintf(unpacker->err_msg, ERR_MSG_LEN, "%s%d", err_msg, err_code);
+}
 
 int duer_ota_unpacker_set_unpacker_mode(
     duer_ota_unpacker_t *unpacker,
@@ -83,13 +101,13 @@ static void duer_ota_unpacker_show_package_header(duer_ota_package_header_t cons
 
     DUER_LOGI("package signature size: %d", header->package_signature_size);
 
-    DUER_STRNCPY(signature, (const char *)header->package_signature, KEY_LEN);
+    DUER_STRNCPY(signature, header->package_signature, KEY_LEN);
 
     DUER_LOGI("package signature: %s", signature);
 
     DUER_LOGI("meta signature size: %d", header->meta_signature_size);
 
-    DUER_STRNCPY(signature, (const char *)header->meta_signature, KEY_LEN);
+    DUER_STRNCPY(signature, header->meta_signature, KEY_LEN);
 
     DUER_LOGI("meta signature: %s", signature);
 
@@ -258,7 +276,12 @@ static int duer_ota_unpacker_save_meta_data(
         if (unpacker->meta_data == NULL) {
             DUER_LOGE("OTA Unpacker: Malloc meta data buffer failed");
 
-            return DUER_ERR_MEMORY_OVERLOW;
+            duer_ota_unpacker_report_err_msg(
+                unpacker,
+                "Malloc meta data buffer failed",
+                DUER_ERR_MEMORY_OVERFLOW);
+
+            return DUER_ERR_MEMORY_OVERFLOW;
         } else {
             DUER_MEMSET(unpacker->meta_data, 0, unpacker->package_header.meta_size + 1);
         }
@@ -309,12 +332,22 @@ static int duer_ota_unpacker_parse_install_info(
     if (install_json == NULL) {
         DUER_LOGE("OTA Unpacker: Get install json failed");
 
+        duer_ota_unpacker_report_err_msg(
+            unpacker,
+            "Get install json failed",
+            DUER_ERR_FAILED);
+
         return DUER_ERR_FAILED;
     }
 
     modules_json = baidu_json_GetObjectItem(install_json, "module_list");
     if (modules_json == NULL) {
         DUER_LOGE("OTA Unpacker: Get modules json failed");
+
+        duer_ota_unpacker_report_err_msg(
+            unpacker,
+            "Get modules json failed",
+            DUER_ERR_FAILED);
 
         return DUER_ERR_FAILED;
     }
@@ -327,7 +360,12 @@ static int duer_ota_unpacker_parse_install_info(
         if (unpacker->install_info.module_list == NULL) {
             DUER_LOGE("OTA Unpacker: Malloc module list failed");
 
-            return DUER_ERR_MEMORY_OVERLOW;
+            duer_ota_unpacker_report_err_msg(
+                unpacker,
+                "Malloc module list failed",
+                DUER_ERR_MEMORY_OVERFLOW);
+
+            return DUER_ERR_MEMORY_OVERFLOW;
         } else {
             DUER_MEMSET(
                 unpacker->install_info.module_list,
@@ -342,9 +380,14 @@ static int duer_ota_unpacker_parse_install_info(
                           "name",
                           module_json,
                           MODULE_NAME_LENGTH,
-                          (char *)unpacker->install_info.module_list[i].module_name);
+                          unpacker->install_info.module_list[i].module_name);
                 if (ret != DUER_OK) {
                     DUER_FREE(unpacker->install_info.module_list);
+
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        "Get module name failed",
+                        DUER_ERR_FAILED);
 
                     return DUER_ERR_FAILED;
                 }
@@ -353,9 +396,14 @@ static int duer_ota_unpacker_parse_install_info(
                           "signature",
                           module_json,
                           MODULE_SIGNATURE_LENGTH,
-                          (char *)unpacker->install_info.module_list[i].module_signature);
+                          unpacker->install_info.module_list[i].module_signature);
                 if (ret != DUER_OK) {
                     DUER_FREE(unpacker->install_info.module_list);
+
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        "Get module signature failed",
+                        DUER_ERR_FAILED);
 
                     return DUER_ERR_FAILED;
                 }
@@ -364,9 +412,14 @@ static int duer_ota_unpacker_parse_install_info(
                           "version",
                           module_json,
                           MODULE_VERSION_LENGTH,
-                          (char *)unpacker->install_info.module_list[i].module_version);
+                          unpacker->install_info.module_list[i].module_version);
                 if (ret != DUER_OK) {
                     DUER_FREE(unpacker->install_info.module_list);
+
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        "Get module version failed",
+                        DUER_ERR_FAILED);
 
                     return DUER_ERR_FAILED;
                 }
@@ -375,9 +428,14 @@ static int duer_ota_unpacker_parse_install_info(
                           "hw_version",
                           module_json,
                           MODULE_VERSION_LENGTH,
-                          (char *)unpacker->install_info.module_list[i].module_support_hardware_version);
+                          unpacker->install_info.module_list[i].module_support_hardware_version);
                 if (ret != DUER_OK) {
                     DUER_FREE(unpacker->install_info.module_list);
+
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        "Get module hw version failed",
+                        DUER_ERR_FAILED);
 
                     return DUER_ERR_FAILED;
                 }
@@ -396,9 +454,14 @@ static int duer_ota_unpacker_parse_install_info(
                 ret = duer_ota_unpacker_get_int_val(
                           "size",
                           module_json,
-                          (int *)&unpacker->install_info.module_list[i].module_size);
+                          &unpacker->install_info.module_list[i].module_size);
                 if (ret != DUER_OK) {
                     DUER_FREE(unpacker->install_info.module_list);
+
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        "Get module size failed",
+                        DUER_ERR_FAILED);
 
                     return DUER_ERR_FAILED;
                 }
@@ -406,6 +469,11 @@ static int duer_ota_unpacker_parse_install_info(
         }
     } else {
         DUER_LOGE("OTA Unpacker: No module information");
+
+        duer_ota_unpacker_report_err_msg(
+            unpacker,
+            "No module information",
+            DUER_ERR_FAILED);
 
         return DUER_ERR_FAILED;
     }
@@ -449,6 +517,11 @@ static int duer_ota_unpacker_parse_basic_info(
         str_len = DUER_STRLEN(app_name);
         if (str_len > PACKAGE_NAME_LENGTH) {
             DUER_LOGE("OTA Unpacker: The length of app name is too long");
+
+            duer_ota_unpacker_report_err_msg(
+                unpacker,
+                "APP name is too long",
+                DUER_ERR_FAILED);
 
             return DUER_ERR_FAILED;
         }
@@ -532,6 +605,11 @@ static int duer_ota_unpacker_parse_meta_data(duer_ota_unpacker_t *unpacker)
     if (meta_json == NULL) {
         DUER_LOGE("OTA Unpacker: Parse meta json failed");
 
+        duer_ota_unpacker_report_err_msg(
+            unpacker,
+            "Parse meta json failed",
+            DUER_ERR_FAILED);
+
         return DUER_ERR_FAILED;
     }
 
@@ -540,12 +618,22 @@ static int duer_ota_unpacker_parse_meta_data(duer_ota_unpacker_t *unpacker)
         if (ret != DUER_OK) {
             DUER_LOGE("OTA Unpacker: Parse basic info failed");
 
+            duer_ota_unpacker_report_err_msg(
+                unpacker,
+                "Parse basic info failed",
+                DUER_ERR_FAILED);
+
             break;
         }
 
         ret = duer_ota_unpacker_parse_install_info(unpacker, meta_json);
         if (ret != DUER_OK) {
             DUER_LOGE("OTA Unpacker: Parse install info failed");
+
+            duer_ota_unpacker_report_err_msg(
+                unpacker,
+                "Parse install info failed",
+                DUER_ERR_FAILED);
 
             break;
         }
@@ -558,42 +646,73 @@ static int duer_ota_unpacker_parse_meta_data(duer_ota_unpacker_t *unpacker)
 
 duer_ota_unpacker_t *duer_ota_unpacker_create_unpacker(void)
 {
-    int ret = 0;
-    char const *err_msg = NULL;
     duer_ota_unpacker_t *unpacker = NULL;
 
+    unpacker = (duer_ota_unpacker_t *)DUER_MALLOC(sizeof(*unpacker));
+    if (unpacker == NULL) {
+        DUER_LOGE("OTA Unpacker: Malloc failed");
+
+        return NULL;
+    }
+
+    DUER_MEMSET(unpacker, 0, sizeof(*unpacker));
+
+    return unpacker;
+}
+
+int duer_ota_unpacker_init_unpacker(duer_ota_unpacker_t *unpacker)
+{
+    int ret = DUER_OK;
+    int msg_ret = 0;
+    char const *err_msg = NULL;
+
+    if (unpacker == NULL) {
+        DUER_LOGE("OTA Unpacker: Argument error");
+
+        return DUER_ERR_INVALID_PARAMETER;
+    }
+
     do {
-        unpacker = (duer_ota_unpacker_t *)DUER_MALLOC(sizeof(*unpacker));
-        if (unpacker == NULL) {
-            DUER_LOGE("OTA Unpacker: Malloc failed");
-
-            return NULL;
-        }
-
-        DUER_MEMSET(unpacker, 0, sizeof(*unpacker));
-
         unpacker->lock = duer_mutex_create();
         if (unpacker->lock == NULL) {
             DUER_LOGE("OTA Unpacker: Create lock failed");
 
+            duer_ota_unpacker_report_err_msg(
+                unpacker,
+                "Create lock failed",
+                DUER_ERR_FAILED);
+
             break;
         }
 
-        // Now we only use Zlib
         unpacker->decompression = duer_ota_unpacker_get_decompression(ZLIB);
         if (unpacker->decompression == NULL) {
             DUER_LOGE("OTA Unpacker: Get decompression failed");
+
+            duer_ota_unpacker_report_err_msg(
+                unpacker,
+                "Get zlib decompression failed",
+                DUER_ERR_FAILED);
 
             break;
         }
 
         ret = duer_ota_unpacker_init_decompression(unpacker->decompression);
         if (ret != DUER_OK) {
-            err_msg = duer_ota_decompression_get_err_msg(unpacker->decompression);
-            if (err_msg != NULL) {
-                DUER_LOGE("OTA Unpacker: Init decompression failed %s", err_msg);
-            } else {
-                DUER_LOGE("OTA Unpacker: Init decompression failed");
+            DUER_LOGE("OTA Unpacker: Init decompression failed %s", err_msg);
+
+            msg_ret = duer_ota_decompression_check_err_msg(unpacker->decompression);
+            if (msg_ret > 0) {
+                err_msg = duer_ota_decompression_get_err_msg(unpacker->decompression);
+                duer_ota_unpacker_report_err_msg(
+                    unpacker,
+                    err_msg,
+                    ret);
+            } else  {
+                duer_ota_unpacker_report_err_msg(
+                    unpacker,
+                    "Init decompression failed",
+                    ret);
             }
 
             break;
@@ -601,9 +720,35 @@ duer_ota_unpacker_t *duer_ota_unpacker_create_unpacker(void)
 
         unpacker->verifier = duer_ota_verification_create_verifier();
         if (unpacker->verifier == NULL) {
-            DUER_LOGE("OTA Updater: Create verifier failed");
+            DUER_LOGE("OTA Unpacker: Create verifier failed");
 
             ret = DUER_ERR_FAILED;
+
+            duer_ota_unpacker_report_err_msg(
+                unpacker,
+                "Create verifier failed",
+                ret);
+
+            break;
+        }
+
+        ret = duer_ota_verification_init_verifier(unpacker->verifier);
+        if (ret != DUER_OK) {
+            DUER_LOGE("OTA Unpacker: Initialize verifier failed");
+
+            duer_ota_verification_check_err_msg(unpacker->verifier);
+            if (msg_ret < 0) {
+                duer_ota_unpacker_report_err_msg(
+                    unpacker,
+                    "Init OTA verifier failed",
+                    ret);
+            } else {
+                err_msg = duer_ota_verification_get_err_msg(unpacker->verifier);
+                duer_ota_unpacker_report_err_msg(
+                    unpacker,
+                    err_msg,
+                    ret);
+            }
 
             break;
         }
@@ -612,25 +757,18 @@ duer_ota_unpacker_t *duer_ota_unpacker_create_unpacker(void)
         if (ret != DUER_OK) {
             DUER_LOGE("OTA Unpacker: Set unpacker mode failed");
 
+            duer_ota_unpacker_report_err_msg(
+                unpacker,
+                "Set unpacker mode failed",
+                ret);
+
             break;
         }
 
-        return unpacker;
+        return DUER_OK;
     } while (0);
 
-    if (unpacker->lock != NULL) {
-        duer_mutex_destroy(unpacker->lock);
-    }
-
-    if (unpacker->verifier != NULL) {
-        duer_ota_verification_destroy_verifier(unpacker->verifier);
-    }
-
-    if (unpacker != NULL) {
-        DUER_FREE(unpacker);
-    }
-
-    return NULL;
+    return DUER_ERR_FAILED;
 }
 
 int duer_ota_unpacker_destroy_unpacker(duer_ota_unpacker_t *unpacker)
@@ -659,7 +797,7 @@ int duer_ota_unpacker_destroy_unpacker(duer_ota_unpacker_t *unpacker)
     }
 
     if (unpacker->verifier != NULL) {
-        DUER_LOGI("OTA Updater: Destroy verifier");
+        DUER_LOGI("OTA Unpacker: Destroy verifier");
 
         duer_ota_verification_destroy_verifier(unpacker->verifier);
     }
@@ -737,7 +875,10 @@ static int decompress_data_handler(
     size_t decompress_data_size)
 {
     int ret = DUER_OK;
+    int msg_ret = 0;
     size_t module_size = 0;
+    size_t str_len = 0;
+    char const *err_msg = NULL;
     duer_ota_unpacker_t *unpacker = NULL;
     duer_ota_installer_t *installer = NULL;
     duer_ota_unpacker_mode_t previous_state;
@@ -766,6 +907,11 @@ static int decompress_data_handler(
     if (current_state < 0 || current_state >= UNPACKER_MODE_MAX) {
         DUER_LOGE("OTA Unpacker: The state of the unpacker is wrong %d", unpacker->state.mode);
 
+        duer_ota_unpacker_report_err_msg(
+            unpacker,
+            "Unpacker mode is wrong",
+            DUER_ERR_FAILED);
+
         return DUER_ERR_FAILED;
     }
 
@@ -774,11 +920,17 @@ static int decompress_data_handler(
     while (1) {
         switch (current_state) {
         case SAVE_META_DATA:
-            ret = duer_ota_unpacker_save_meta_data(unpacker, (const uint8_t *)buf, decompress_data_size);
+            ret = duer_ota_unpacker_save_meta_data(unpacker, buf, decompress_data_size);
             if (ret != DUER_OK) {
                 DUER_LOGE("OTA Unpacker: Process meta failed ret: %d", ret);
 
-                unpacker->err_msg = "Save meta data failed";
+                msg_ret = duer_ota_unpacker_check_err_msg(unpacker);
+                if (msg_ret < 0) {
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        "Save meta data failed",
+                        ret);
+                }
 
                 return ret;
             }
@@ -789,7 +941,13 @@ static int decompress_data_handler(
             if (ret != DUER_OK) {
                 DUER_LOGE("OTA Unpacker: Parse meta data failed");
 
-                unpacker->err_msg = "Parse meta data failed";
+                msg_ret = duer_ota_unpacker_check_err_msg(unpacker);
+                if (msg_ret < 0) {
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        "Parse meta data failed",
+                        ret);
+                }
 
                 return ret;
             }
@@ -804,14 +962,19 @@ static int decompress_data_handler(
         case GET_OTA_INSTALLER:
             // Now we only support one module
             installer = duer_ota_installer_get_installer(
-                            (const char *)unpacker->install_info.module_list[0].module_name);
+                            unpacker->install_info.module_list[0].module_name);
             if (installer == NULL) {
                 DUER_LOGE("OTA Unpacker: Get %s installer failed",
                           unpacker->install_info.module_list[0].module_name);
 
-                unpacker->err_msg = "Get OTA installer failed";
+                ret = DUER_ERR_FAILED;
 
-                return DUER_ERR_FAILED;
+                duer_ota_unpacker_report_err_msg(
+                    unpacker,
+                    "Get OTA installer failed",
+                    ret);
+
+                return ret;
             }
 
             unpacker->installer = installer;
@@ -828,9 +991,18 @@ static int decompress_data_handler(
 
                 duer_ota_unpacker_set_unpacker_mode(unpacker, CANCEL_OTA_UPDATE);
 
-                unpacker->err_msg = duer_ota_installer_get_err_msg(installer);
-                if (unpacker->err_msg == NULL) {
-                    unpacker->err_msg = "Distribute module information failed";
+                msg_ret = duer_ota_installer_check_err_msg(installer);
+                if (msg_ret < 0) {
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        "Send module info failed",
+                        ret);
+                } else {
+                    err_msg = duer_ota_installer_get_err_msg(installer);
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        err_msg,
+                        ret);
                 }
 
                 break;
@@ -844,9 +1016,18 @@ static int decompress_data_handler(
             if (ret != DUER_OK) {
                 DUER_LOGE("OTA Unpacker: Notify OTA begin failed");
 
-                unpacker->err_msg = duer_ota_installer_get_err_msg(installer);
-                if (unpacker->err_msg == NULL) {
-                    unpacker->err_msg = "Notify OTA begin failed";
+                msg_ret = duer_ota_installer_check_err_msg(installer);
+                if (msg_ret < 0) {
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        "Notify OTA begin failed",
+                        ret);
+                } else {
+                    err_msg = duer_ota_installer_get_err_msg(installer);
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        err_msg,
+                        ret);
                 }
 
                 return DUER_ERR_FAILED;
@@ -863,17 +1044,26 @@ static int decompress_data_handler(
                 ret = duer_ota_installer_send_module_data(
                           installer,
                           unpacker->state.module_data_offset,
-                          (const unsigned char *)buf + unpacker->state.used_decompress_data_offset,
+                          buf + unpacker->state.used_decompress_data_offset,
                           module_size);
                 if (ret != DUER_OK) {
-                    DUER_LOGE("OTA Unpacker: Send module data failed");
+                    DUER_LOGE("OTA Unpacker: Distribute module data failed");
+
+                    msg_ret = duer_ota_installer_check_err_msg(installer);
+                    if (msg_ret < 0) {
+                        duer_ota_unpacker_report_err_msg(
+                            unpacker,
+                            "Distribute module data failed",
+                            ret);
+                    } else {
+                        err_msg = duer_ota_installer_get_err_msg(installer);
+                        duer_ota_unpacker_report_err_msg(
+                            unpacker,
+                            err_msg,
+                            ret);
+                    }
 
                     duer_ota_unpacker_set_unpacker_mode(unpacker, CANCEL_OTA_UPDATE);
-
-                    unpacker->err_msg = duer_ota_installer_get_err_msg(installer);
-                    if (unpacker->err_msg == NULL) {
-                        unpacker->err_msg = "Distribute module data failed";
-                    }
 
                     break;
                 }
@@ -887,18 +1077,27 @@ static int decompress_data_handler(
                 ret = duer_ota_installer_send_module_data(
                           installer,
                           unpacker->state.module_data_offset,
-                          (const unsigned char *)buf + unpacker->state.used_decompress_data_offset,
+                          buf + unpacker->state.used_decompress_data_offset,
                           unpacker->install_info.module_list[0].module_size -
                           unpacker->state.module_data_offset);
                 if (ret != DUER_OK) {
-                    DUER_LOGE("OTA Unpacker: Send module data failed");
+                    DUER_LOGE("OTA Unpacker: Distribute module data failed");
+
+                    msg_ret = duer_ota_installer_check_err_msg(installer);
+                    if (msg_ret < 0) {
+                        duer_ota_unpacker_report_err_msg(
+                            unpacker,
+                            "Distribute module data failed",
+                            ret);
+                    } else {
+                        err_msg = duer_ota_installer_get_err_msg(installer);
+                        duer_ota_unpacker_report_err_msg(
+                            unpacker,
+                            err_msg,
+                            ret);
+                    }
 
                     duer_ota_unpacker_set_unpacker_mode(unpacker, CANCEL_OTA_UPDATE);
-
-                    unpacker->err_msg = duer_ota_installer_get_err_msg(installer);
-                    if (unpacker->err_msg == NULL) {
-                        unpacker->err_msg = "Distribute module data failed";
-                    }
 
                     break;
                 }
@@ -918,12 +1117,21 @@ static int decompress_data_handler(
             if (ret != DUER_OK) {
                 DUER_LOGE("OTA Unpacker: Verify module data failed");
 
-                duer_ota_unpacker_set_unpacker_mode(unpacker, CANCEL_OTA_UPDATE);
-
-                unpacker->err_msg = duer_ota_installer_get_err_msg(installer);
-                if (unpacker->err_msg == NULL) {
-                    unpacker->err_msg = "Verify module data failed";
+                msg_ret = duer_ota_installer_check_err_msg(installer);
+                if (msg_ret < 0) {
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        "Verify module data failed",
+                        ret);
+                } else {
+                    err_msg = duer_ota_installer_get_err_msg(installer);
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        err_msg,
+                        ret);
                 }
+
+                duer_ota_unpacker_set_unpacker_mode(unpacker, CANCEL_OTA_UPDATE);
 
                 break;
             }
@@ -940,7 +1148,10 @@ static int decompress_data_handler(
             if (header_info == NULL) {
                 DUER_LOGE("OTA Unpacker: Get package header failed");
 
-                unpacker->err_msg = "Get package header information failed";
+                duer_ota_unpacker_report_err_msg(
+                    unpacker,
+                    "Get package header information failed",
+                    0);
 
                 duer_ota_unpacker_set_unpacker_mode(unpacker, CANCEL_OTA_UPDATE);
 
@@ -951,7 +1162,19 @@ static int decompress_data_handler(
             if (ret != DUER_OK) {
                 DUER_LOGE("OTA Unpacker: Public key verification failed ret: %d", ret);
 
-                unpacker->err_msg = "Failure of public key verification";
+                msg_ret = duer_ota_verification_check_err_msg(unpacker->verifier);
+                if (msg_ret < 0) {
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        "Failure of public key verification",
+                        ret);
+                } else {
+                    err_msg = duer_ota_verification_get_err_msg(unpacker->verifier);
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        err_msg,
+                        ret);
+                }
 
                 duer_ota_unpacker_set_unpacker_mode(unpacker, CANCEL_OTA_UPDATE);
             } else {
@@ -964,9 +1187,18 @@ static int decompress_data_handler(
             if (ret != DUER_OK) {
                 DUER_LOGE("OTA Unpacker: Cancel OTA update failed");
 
-                unpacker->err_msg = duer_ota_installer_get_err_msg(installer);
-                if (unpacker->err_msg == NULL) {
-                    unpacker->err_msg = "Cancel OTA update failed";
+                err_msg = duer_ota_installer_get_err_msg(installer);
+                str_len = DUER_STRLEN(err_msg);
+                if (str_len == 0) {
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        "Cancle OTA update failed",
+                        ret);
+                } else {
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        err_msg,
+                        ret);
                 }
             }
 
@@ -976,9 +1208,18 @@ static int decompress_data_handler(
             if (ret != DUER_OK) {
                 DUER_LOGE("OTA Unpacker: Update image begin failed");
 
-                unpacker->err_msg = duer_ota_installer_get_err_msg(installer);
-                if (unpacker->err_msg == NULL) {
-                    unpacker->err_msg = "Update image begin failed";
+                msg_ret = duer_ota_installer_check_err_msg(installer);
+                if (msg_ret < 0) {
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        "Update image begin failed",
+                        ret);
+                } else {
+                    err_msg = duer_ota_installer_get_err_msg(installer);
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        err_msg,
+                        ret);
                 }
 
                 duer_ota_unpacker_set_unpacker_mode(unpacker, CANCEL_OTA_UPDATE);
@@ -996,9 +1237,18 @@ static int decompress_data_handler(
 
                 duer_ota_unpacker_set_unpacker_mode(unpacker, CANCEL_OTA_UPDATE);
 
-                unpacker->err_msg = duer_ota_installer_get_err_msg(installer);
-                if (unpacker->err_msg == NULL) {
-                    unpacker->err_msg = "Updating image failed";
+                msg_ret = duer_ota_installer_check_err_msg(installer);
+                if (msg_ret < 0) {
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        "Updating image failed",
+                        ret);
+                } else {
+                    err_msg = duer_ota_installer_get_err_msg(installer);
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        err_msg,
+                        ret);
                 }
 
                 break;
@@ -1014,9 +1264,18 @@ static int decompress_data_handler(
 
                 duer_ota_unpacker_set_unpacker_mode(unpacker, CANCEL_OTA_UPDATE);
 
-                unpacker->err_msg = duer_ota_installer_get_err_msg(installer);
-                if (unpacker->err_msg == NULL) {
-                    unpacker->err_msg = "Verify image failed";
+                msg_ret = duer_ota_installer_check_err_msg(installer);
+                if (msg_ret < 0) {
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        "Verify image failed",
+                        ret);
+                } else {
+                    err_msg = duer_ota_installer_get_err_msg(installer);
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        err_msg,
+                        ret);
                 }
 
                 break;
@@ -1029,6 +1288,12 @@ static int decompress_data_handler(
         case UNZIP_DATA_DONE:
             DUER_LOGI("OTA Unpacker: Unzip data done");
 
+            duer_ota_unpacker_set_unpacker_mode(unpacker, OTA_UPDATE_DONE);
+
+            break;
+        case OTA_UPDATE_DONE:
+            DUER_LOGI("OTA Unpacker: Update OTA done");
+
             break;
         case NOTIFY_OTA_END:
             ret = duer_ota_installer_notify_ota_end(installer);
@@ -1037,15 +1302,23 @@ static int decompress_data_handler(
 
                 duer_ota_unpacker_set_unpacker_mode(unpacker, CANCEL_OTA_UPDATE);
 
-                unpacker->err_msg = duer_ota_installer_get_err_msg(installer);
-                if (unpacker->err_msg == NULL) {
-                    unpacker->err_msg = "Notify OTA end failed";
+                msg_ret = duer_ota_installer_check_err_msg(installer);
+                if (msg_ret < 0) {
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        "Verify image failed",
+                        ret);
+                } else {
+                    err_msg = duer_ota_installer_get_err_msg(installer);
+                    duer_ota_unpacker_report_err_msg(
+                        unpacker,
+                        err_msg,
+                        ret);
                 }
 
                 break;
             }
 
-            // Now support one module
             duer_ota_unpacker_set_unpacker_mode(unpacker, UNZIP_DATA_DONE);
 
             break;
@@ -1059,6 +1332,11 @@ static int decompress_data_handler(
             DUER_LOGE("OTA Unpacker: The state of the unpacker is wrong %d", unpacker->state.mode);
 
             ret = DUER_ERR_FAILED;
+
+            duer_ota_unpacker_report_err_msg(
+                unpacker,
+                "Unpacker state is wrong",
+                ret);
 
             break;
         }
@@ -1079,6 +1357,8 @@ int duer_ota_unpacker_unpack_package(
     size_t size)
 {
     int ret = DUER_OK;
+    int msg_ret = 0;
+    size_t str_len = 0;
     char const *err_msg = NULL;
     duer_ota_unpacker_mode_t previous_state;
     duer_ota_unpacker_mode_t current_state;
@@ -1095,6 +1375,11 @@ int duer_ota_unpacker_unpack_package(
     if (current_state < 0 || current_state >= UNPACKER_MODE_MAX) {
         DUER_LOGE("OTA Unpacker: The state of the unpacker is wrong %d", unpacker->state.mode);
 
+        duer_ota_unpacker_report_err_msg(
+            unpacker,
+            "Unpacker state is wrong",
+            DUER_ERR_FAILED);
+
         return DUER_ERR_FAILED;
     }
 
@@ -1105,7 +1390,10 @@ int duer_ota_unpacker_unpack_package(
         case SAVE_PACKAGE_HEADER:
             ret = duer_ota_unpacker_save_package_header(unpacker, data, size);
             if (ret != DUER_OK) {
-                unpacker->err_msg = "Save package header failed";
+                duer_ota_unpacker_report_err_msg(
+                    unpacker,
+                    "Save package header failed",
+                    ret);
 
                 DUER_LOGE("OTA Unpacker: Save package header failed");
             }
@@ -1125,21 +1413,37 @@ int duer_ota_unpacker_unpack_package(
 
             ret = duer_ota_unpacker_unzip(
                       unpacker->decompression,
-                      (const char *)data + unpacker->state.used_data_offset,
+                      data + unpacker->state.used_data_offset,
                       size - unpacker->state.used_data_offset,
                       (void *)unpacker,
                       decompress_data_handler);
             if (ret != DUER_OK) {
                 DUER_LOGE("OTA Unpacker: Unzip failed ret: %d", ret);
 
-                err_msg = duer_ota_decompression_get_err_msg(unpacker->decompression);
-                if (err_msg == NULL) {
-                    unpacker->err_msg = duer_ota_installer_get_err_msg(unpacker->installer);
-                    if (unpacker->err_msg == NULL) {
-                        unpacker->err_msg = "Unzip failed";
+                msg_ret = duer_ota_unpacker_check_err_msg(unpacker);
+                if (msg_ret < 0) {
+                    msg_ret = duer_ota_decompression_check_err_msg(unpacker->decompression);
+                    if (msg_ret < 0) {
+                        msg_ret = duer_ota_installer_check_err_msg(unpacker->installer);
+                        if (msg_ret < 0) {
+                            duer_ota_unpacker_report_err_msg(
+                                unpacker,
+                                "Unzip failed",
+                                ret);
+                        } else {
+                            err_msg = duer_ota_installer_get_err_msg(unpacker->installer);
+                            duer_ota_unpacker_report_err_msg(
+                                unpacker,
+                                err_msg,
+                                ret);
+                        }
+                    } else {
+                        err_msg = duer_ota_decompression_get_err_msg(unpacker->decompression);
+                        duer_ota_unpacker_report_err_msg(
+                            unpacker,
+                            err_msg,
+                            ret);
                     }
-                } else {
-                    unpacker->err_msg = err_msg;
                 }
 
                 return ret;
@@ -1149,7 +1453,7 @@ int duer_ota_unpacker_unpack_package(
 
             break;
         case CANCEL_OTA_UPDATE:
-            DUER_LOGE("OTA Unpacker: Cancel OTA update");
+            DUER_LOGD("OTA Unpacker: Cancel OTA update");
 
             return DUER_ERR_FAILED;
         default:
@@ -1162,6 +1466,11 @@ int duer_ota_unpacker_unpack_package(
             DUER_LOGE("OTA Unpacker: The state of the unpacker is wrong %d", unpacker->state.mode);
 
             ret = DUER_ERR_FAILED;
+
+            duer_ota_unpacker_report_err_msg(
+                unpacker,
+                "Unpacker state is wrong",
+                ret);
 
             break;
         }
@@ -1179,8 +1488,28 @@ int duer_ota_unpacker_unpack_package(
 char const *duer_ota_unpacker_get_err_msg(duer_ota_unpacker_t const *unpacker)
 {
     if (unpacker == NULL) {
+
         return NULL;
     }
 
     return unpacker->err_msg;
+}
+
+int duer_ota_unpacker_check_err_msg(duer_ota_unpacker_t *unpacker)
+{
+    size_t str_len = 0;
+
+    if (unpacker == NULL) {
+        DUER_LOGE("OTA Unpacker: Argument error");
+
+        return -1;
+    }
+
+    str_len = DUER_STRLEN(unpacker->err_msg);
+    if (str_len > 0) {
+
+        return 1;
+    }
+
+    return -1;
 }

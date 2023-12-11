@@ -9,9 +9,21 @@
 #include "lightduer_statistics.h"
 #include <string.h>
 
+#if defined(DUER_PLATFORM_A113L) || defined(DUER_PLATFORM_SV32WB0X)
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#else
+/* #include "freertos/FreeRTOS.h" */
+/* #include "freertos/task.h" */
+/* #include "freertos/queue.h" */
+#include "os/os_api.h"
+#endif
+
 #include "lightduer_mutex.h"
 #include "lightduer_types.h"
 #include "lightduer_timers.h"
+#include "lightduer_timestamp.h"
 #include "lightduer_log.h"
 #include "lightduer_memory.h"
 #include "lightduer_lib.h"
@@ -27,7 +39,8 @@ __attribute__((weak)) u32 get_free_heap_size(void)
     return 0;
 }
 
-#define DUER_GET_FREE_HEAP_SIZE()    get_free_heap_size()
+
+#define DUER_GET_FREE_HEAP_SIZE(...)    get_free_heap_size()
 
 #define DELAY_TIEM (5 * 1000)
 

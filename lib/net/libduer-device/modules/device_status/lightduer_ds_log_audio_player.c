@@ -59,4 +59,3 @@ duer_status_t duer_ds_log_audply(duer_dslog_audply_code_t log_code, const char *
     }
     return DUER_OK;
 }
-

@@ -44,6 +44,8 @@ const int clock_sys_src_use_lrc_hw = 0;
 
 //config_otg_slave_detect_method_2为1时，从机检测的方式使用方法2
 const int config_otg_slave_detect_method_2 = 0;
+const u32 otg_slave_detect_dm_delay = 50;
+const u32 otg_slave_detect_dm_delay_2 = 1;
 
 /**
  * @brief Log (Verbose/Info/Debug/Warn/Error)

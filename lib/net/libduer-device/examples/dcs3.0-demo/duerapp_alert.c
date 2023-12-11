@@ -118,7 +118,7 @@ static duer_errcode_t duer_alert_list_push(duerapp_alert_node *data)
         new_node = (duer_alert_list_t *)DUER_MALLOC(sizeof(duer_alert_list_t));
         if (!new_node) {
             DUER_LOGE("Memory too low");
-            rt = DUER_ERR_MEMORY_OVERLOW;
+            rt = DUER_ERR_MEMORY_OVERFLOW;
             break;
         }
         new_node->next = NULL;

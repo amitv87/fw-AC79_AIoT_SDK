@@ -32,7 +32,7 @@ extern "C" {
 #define NAME_LEN   24
 #define BATCH_LEN  4
 
-#define OTA_PROTOCOL_VERSION "0.9"
+#define OTA_PROTOCOL_VERSION "1.0"
 
 typedef enum _duer_ota_state {
     OTA_IDLE = 0,
@@ -79,6 +79,8 @@ typedef struct _duer_package_info_s {
     char product[NAME_LEN + 1];
     char batch[BATCH_LEN + 1];
     duer_os_info_t os_info;
+    char duer_os_sdk_version[FIRMWARE_VERSION_LEN + 1];
+    char ota_package_version[FIRMWARE_VERSION_LEN + 1];
 } duer_package_info_t;
 
 typedef struct _duer_package_info_ops_s {

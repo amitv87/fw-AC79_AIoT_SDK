@@ -17,7 +17,7 @@
  * Auth: Leliang Zhang(zhangleliang@baidu.com)
  * Desc: device log report
  */
-#include "duerapp_config.h"
+
 #include "lightduer_ds_log.h"
 
 #include "lightduer_connagent.h"
@@ -25,8 +25,9 @@
 #include "lightduer_ds_log_cache.h"
 #include "lightduer_timestamp.h"
 #include "lightduer_memory.h"
+#include "lightduer_ds_log_storage.h"
 
-//#define LIGHTDUER_DS_LOG_DEBUG // only for debug
+// #define LIGHTDUER_DS_LOG_DEBUG // only for debug
 
 static duer_ds_log_level_enum_t s_report_level = DUER_DS_LOG_DEFAULT_REPORT_LEVEL;
 
@@ -59,7 +60,7 @@ static duer_status_t duer_ds_log_set_level(duer_context ctx, duer_msg_t *msg, du
 
             duer_ds_log_level_enum_t report_level = DUER_DS_LOG_DEFAULT_REPORT_LEVEL;
 
-            baidu_json *value = baidu_json_Parse((const char *)msg->payload);
+            baidu_json *value = baidu_json_Parse((char *)msg->payload);
             if (value) {
                 baidu_json *level = baidu_json_GetObjectItem(value, "level");
                 if (level) {
@@ -147,7 +148,8 @@ duer_status_t duer_ds_log_v_f(duer_ds_log_version_enum_t log_version,
                               duer_ds_log_module_enum_t  log_module,
                               duer_ds_log_family_enum_t  log_family,
                               int log_code,
-                              const baidu_json *log_message)
+                              const baidu_json *log_message,
+                              duer_ds_log_importance_enum_t importance)
 {
     duer_status_t result = DUER_OK;
     baidu_json *log = NULL;
@@ -168,14 +170,14 @@ duer_status_t duer_ds_log_v_f(duer_ds_log_version_enum_t log_version,
     log = baidu_json_CreateObject();
     if (log == NULL) {
         DUER_LOGE("log json create fail");
-        result = DUER_ERR_MEMORY_OVERLOW;
+        result = DUER_ERR_MEMORY_OVERFLOW;
         goto out;
     }
 
     content = baidu_json_CreateObject();
     if (content == NULL) {
         DUER_LOGE("content json create fail");
-        result = DUER_ERR_MEMORY_OVERLOW;
+        result = DUER_ERR_MEMORY_OVERFLOW;
         goto out;
     }
 
@@ -209,15 +211,21 @@ duer_status_t duer_ds_log_v_f(duer_ds_log_version_enum_t log_version,
             // try to store the code
             // which value is DUER_DS_LOG_LEVEL_FATAL<= log_level <=DUER_DS_LOG_DEFAULT_CACHE_LEVEL
             if (DUER_DS_LOG_LEVEL_FATAL <= log_level
-                && log_level <= DUER_DS_LOG_DEFAULT_CACHE_LEVEL) {
+                && log_level <= DUER_DS_LOG_DEFAULT_CACHE_LEVEL
+                && importance != DUER_DS_LOG_IMPORTANCE_MUST_REPORT) {
                 duer_ds_log_cache_push(code, log_message, timestamp);
             }
         } else {
             DUER_LOGE("report log fail: %d", result);
         }
+#ifdef DUER_DS_LOG_STORAGE_ENABLED
         str_log = baidu_json_PrintUnformatted(log);
+        if (importance == DUER_DS_LOG_IMPORTANCE_MUST_REPORT) {
+            duer_ds_log_storage_push(str_log);
+        }
         DUER_LOGW("trace log report fail: %s", str_log);
         baidu_json_release((void *)str_log);
+#endif
     }
 
 out:
@@ -238,14 +246,16 @@ duer_status_t duer_ds_log_f(duer_ds_log_level_enum_t   log_level,
                             duer_ds_log_module_enum_t  log_module,
                             duer_ds_log_family_enum_t  log_family,
                             int log_code,
-                            const baidu_json *log_message)
+                            const baidu_json *log_message,
+                            duer_ds_log_importance_enum_t importance)
 {
-    return duer_ds_log_v_f(DUER_DS_LOG_VERSION_1_0,
+    return duer_ds_log_v_f(DUER_DS_LOG_VERSION_2_0,
                            log_level,
                            log_module,
                            log_family,
                            log_code,
-                           log_message);
+                           log_message,
+                           importance);
 }
 
 duer_status_t duer_ds_log(duer_ds_log_level_enum_t   log_level,
@@ -253,5 +263,23 @@ duer_status_t duer_ds_log(duer_ds_log_level_enum_t   log_level,
                           int log_code,
                           const baidu_json *log_message)
 {
-    return duer_ds_log_f(log_level, log_module, DUER_DS_LOG_FAMILY_UNKNOWN, log_code, log_message);
+    return duer_ds_log_f(log_level,
+                         log_module,
+                         DUER_DS_LOG_FAMILY_UNKNOWN,
+                         log_code,
+                         log_message,
+                         DUER_DS_LOG_IMPORTANCE_NORMAL);
+}
+
+duer_status_t duer_ds_log_important(duer_ds_log_level_enum_t   log_level,
+                                    duer_ds_log_module_enum_t  log_module,
+                                    int log_code,
+                                    const baidu_json *log_message)
+{
+    return duer_ds_log_f(log_level,
+                         log_module,
+                         DUER_DS_LOG_FAMILY_UNKNOWN,
+                         log_code,
+                         log_message,
+                         DUER_DS_LOG_IMPORTANCE_MUST_REPORT);
 }

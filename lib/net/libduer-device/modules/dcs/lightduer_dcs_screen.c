@@ -94,7 +94,7 @@ int duer_dcs_on_link_clicked(const char *url)
 
         data = baidu_json_CreateObject();
         if (data == NULL) {
-            rs = DUER_ERR_MEMORY_OVERLOW;
+            rs = DUER_ERR_MEMORY_OVERFLOW;
             DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
             break;
         }

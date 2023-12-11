@@ -24,14 +24,14 @@
 #include "lightduer_ota_decompression.h"
 #include "zlib.h"
 #include <stdint.h>
-//#include <stdbool.h>
+#include <stdbool.h>
 #include "lightduer_log.h"
 #include "lightduer_lib.h"
 #include "lightduer_types.h"
 #include "lightduer_mutex.h"
 #include "lightduer_memory.h"
 
-#define BUFFER_SIZE (2 * 1024)
+#define BUFFER_SIZE (4 * 1024)
 
 static void *zlib_alloc(void *opaque, unsigned int items, unsigned int size)
 {
@@ -51,6 +51,8 @@ static int zlib_init(duer_ota_decompression_t *decompression, void **pdata)
     if (decompression == NULL || pdata == NULL) {
         DUER_LOGE("OTA Zlib: Argument error");
 
+        duer_ota_decompression_report_err(decompression, "Argument Error", 0);
+
         return DUER_ERR_INVALID_PARAMETER;
     }
 
@@ -59,7 +61,9 @@ static int zlib_init(duer_ota_decompression_t *decompression, void **pdata)
         if (zlib_stream == NULL) {
             DUER_LOGE("OTA Zlib: Malloc zlib stream");
 
-            return DUER_ERR_MEMORY_OVERLOW;
+            duer_ota_decompression_report_err(decompression, "Malloc zlib stream failed", 0);
+
+            return DUER_ERR_MEMORY_OVERFLOW;
         }
 
         zlib_stream->zalloc   = zlib_alloc;
@@ -71,11 +75,10 @@ static int zlib_init(duer_ota_decompression_t *decompression, void **pdata)
         ret = inflateInit(zlib_stream);
         if (ret != Z_OK) {
             DUER_LOGE("OTA Zlib: Init Zlib stream failed ret: %d", ret);
-
             if (zlib_stream->msg == NULL) {
-                decompression->err_msg = "Init zlib failed";
+                duer_ota_decompression_report_err(decompression, "Init zlib stream failed", ret);
             } else {
-                decompression->err_msg = zlib_stream->msg;
+                duer_ota_decompression_report_err(decompression, zlib_stream->msg, ret);
             }
 
             ret = DUER_ERR_FAILED;
@@ -104,7 +107,7 @@ static int zlib_unzip(duer_ota_decompression_t *decompression,
 {
     int ret = DUER_OK;
     int zlib_ret = 0;
-    uint8_t *buf = NULL;
+    uint8_t buf[BUFFER_SIZE];
     size_t decompress_data_size = 0;
     z_streamp zlib_stream;
 
@@ -115,17 +118,14 @@ static int zlib_unzip(duer_ota_decompression_t *decompression,
         || data_handler == NULL) {
         DUER_LOGE("OTA Zlib: Argument error");
 
-        return DUER_ERR_INVALID_PARAMETER;
-    }
+        duer_ota_decompression_report_err(decompression, "Argument error", ret);
 
-    buf = DUER_MALLOC(BUFFER_SIZE);
-    if (NULL == buf) {
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_INVALID_PARAMETER;
     }
 
     zlib_stream = (z_streamp)pdata;
 
-    zlib_stream->next_in = (uint8_t *)compressed_data;
+    zlib_stream->next_in = compressed_data;
     zlib_stream->avail_in = compressed_data_size;
 
     do {
@@ -137,13 +137,19 @@ static int zlib_unzip(duer_ota_decompression_t *decompression,
         case Z_NEED_DICT:
             DUER_LOGE("OTA Zlib: Zlib need dictionary");
 
+            duer_ota_decompression_report_err(decompression, "Zlib need dictionary", zlib_ret);
+
             break;
         case Z_DATA_ERROR:
             DUER_LOGE("OTA Zlib: Zlib data error");
 
+            duer_ota_decompression_report_err(decompression, "Zlib data error", zlib_ret);
+
             break;
         case Z_MEM_ERROR:
             DUER_LOGE("OTA Zlib: Zlib memory error");
+
+            duer_ota_decompression_report_err(decompression, "Zlib memory error", zlib_ret);
 
             break;
         case Z_OK:
@@ -156,6 +162,8 @@ static int zlib_unzip(duer_ota_decompression_t *decompression,
             ret = duer_ota_unpacker_set_unpacker_mode(custom_data, UNZIP_DATA_DONE);
             if (ret != DUER_OK) {
                 DUER_LOGE("OTA Zlib: Set UNZIP_DATA_DONE failed");
+
+                duer_ota_decompression_report_err(decompression, "Set UNZIP_DATA_DONE failed", zlib_ret);
             }
 
             ret = DUER_OK;
@@ -166,24 +174,22 @@ static int zlib_unzip(duer_ota_decompression_t *decompression,
         if (zlib_ret != Z_OK && zlib_ret != Z_STREAM_END) {
             DUER_LOGE("OTA Zlib: Zlib detail error: %s", zlib_stream->msg);
 
-            decompression->err_msg = zlib_stream->msg;
+            duer_ota_decompression_report_err(decompression, zlib_stream->msg, zlib_ret);
 
             (void)inflateEnd(zlib_stream);
-
-            DUER_FREE(buf);
 
             return DUER_ERR_FAILED;
         }
 
         decompress_data_size = BUFFER_SIZE - zlib_stream->avail_out;
 
-        ret = (*data_handler)(custom_data, (const char *)buf, decompress_data_size);
+        ret = (*data_handler)(custom_data, buf, decompress_data_size);
         if (ret != DUER_OK) {
             DUER_LOGE("OTA Zlib: Error handling decompression data");
+
+            break;
         }
     } while (zlib_stream->avail_out == 0);
-
-    DUER_FREE(buf);
 
     return ret;
 }
@@ -210,6 +216,8 @@ static int zlib_unint(duer_ota_decompression_t *decompression, void *pdata)
     if (pdata == NULL) {
         DUER_LOGE("OTA Zlib: Argument error");
 
+        duer_ota_decompression_report_err(decompression, "Argument error", 0);
+
         return DUER_ERR_INVALID_PARAMETER;
     }
 
@@ -219,7 +227,7 @@ static int zlib_unint(duer_ota_decompression_t *decompression, void *pdata)
     if (ret != Z_OK) {
         DUER_LOGE("OTA Zlib: Unint zlib stream failed ret:%d", ret);
 
-        decompression->err_msg = "Unint zlib failed";
+        duer_ota_decompression_report_err(decompression, "Inflate end failed", ret);
 
         ret = DUER_ERR_FAILED;
     }

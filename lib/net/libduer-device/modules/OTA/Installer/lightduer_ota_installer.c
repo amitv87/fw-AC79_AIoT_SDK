@@ -16,7 +16,7 @@
 /*
  * File: lightduer_ota_installer.c
  * Auth: Zhong Shuai (zhongshuai@baidu.com)
- * Desc: OTA installer
+ * Desc: OTA installer Framework
  */
 
 #include "lightduer_ota_installer.h"
@@ -29,6 +29,8 @@
 
 static duer_ota_installer_t *s_installer_list_head = NULL;
 static duer_mutex_t s_lock_ota_installer = NULL;
+
+int duer_ota_installer_check_err_msg(duer_ota_installer_t *installer);
 
 int duer_ota_init_installer(void)
 {
@@ -85,7 +87,7 @@ duer_ota_installer_t *duer_ota_installer_create_installer(char const *name)
         if (installer == NULL) {
             DUER_LOGE("OTA Installer: Malloc failed");
 
-            ret = DUER_ERR_MEMORY_OVERLOW;
+            ret = DUER_ERR_MEMORY_OVERFLOW;
 
             break;
         }
@@ -125,7 +127,6 @@ int duer_ota_installer_destroy_installer(duer_ota_installer_t *installer)
 
     // Waring: May be memory leak
     if (installer->custom_data != NULL) {
-        DUER_LOGW("!!!! WARING : do not run here !!!");
         ret = duer_ota_installer_notify_ota_end(installer);
         if (ret != DUER_OK) {
             DUER_LOGE("OTA Installer: Notify OTA end failed");
@@ -186,6 +187,7 @@ int duer_ota_installer_register_installer(duer_ota_installer_t *installer)
 
                 break;
             }
+            ret = 0;
             installer_tail = installer_obj;
             installer_obj = installer_obj->next;
         }
@@ -321,7 +323,14 @@ int duer_ota_installer_notify_ota_begin(duer_ota_installer_t *installer)
         || installer->notify_ota_begin == NULL) {
         DUER_LOGE("OTA Installer: Argument error");
 
-        return DUER_ERR_INVALID_PARAMETER;
+        ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_installer_report_err(
+            installer,
+            "Argument Error",
+            ret);
+
+        return ret;
     }
 
     ret = duer_mutex_lock(installer->lock);
@@ -334,6 +343,14 @@ int duer_ota_installer_notify_ota_begin(duer_ota_installer_t *installer)
     err = installer->notify_ota_begin(installer, installer->custom_data);
     if (err != DUER_OK) {
         DUER_LOGE("OTA Installer: Notify OTA begin failed");
+
+        ret = duer_ota_installer_check_err_msg(installer);
+        if (ret < 0) {
+            duer_ota_installer_report_err(
+                installer,
+                "Notify OTA begin failed",
+                err);
+        }
     }
 
     ret = duer_mutex_unlock(installer->lock);
@@ -357,7 +374,14 @@ int duer_ota_installer_send_module_info(duer_ota_installer_t *installer, duer_ot
         || installer->get_module_info == NULL) {
         DUER_LOGE("OTA Installer: Argument error");
 
-        return DUER_ERR_INVALID_PARAMETER;
+        ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_installer_report_err(
+            installer,
+            "Argument Error",
+            ret);
+
+        return ret;
     }
 
     ret = duer_mutex_lock(installer->lock);
@@ -370,6 +394,14 @@ int duer_ota_installer_send_module_info(duer_ota_installer_t *installer, duer_ot
     err = installer->get_module_info(installer, &installer->custom_data, module_info);
     if (err != DUER_OK) {
         DUER_LOGE("OTA Installer: Notify module info failed");
+
+        ret = duer_ota_installer_check_err_msg(installer);
+        if (ret < 0) {
+            duer_ota_installer_report_err(
+                installer,
+                "Notify OTA begin failed",
+                err);
+        }
     }
 
     ret = duer_mutex_unlock(installer->lock);
@@ -398,7 +430,14 @@ int duer_ota_installer_send_module_data(
         || installer->get_module_data == NULL) {
         DUER_LOGE("OTA Installer: Argument error");
 
-        return DUER_ERR_INVALID_PARAMETER;
+        ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_installer_report_err(
+            installer,
+            "Argument Error",
+            ret);
+
+        return ret;
     }
 
     ret = duer_mutex_lock(installer->lock);
@@ -412,6 +451,14 @@ int duer_ota_installer_send_module_data(
                                      offset, data, size);
     if (err != DUER_OK) {
         DUER_LOGE("OTA Installer: Send module data failed");
+
+        ret = duer_ota_installer_check_err_msg(installer);
+        if (ret < 0) {
+            duer_ota_installer_report_err(
+                installer,
+                "Send module data failed",
+                err);
+        }
     }
 
     ret = duer_mutex_unlock(installer->lock);
@@ -434,7 +481,14 @@ int duer_ota_installer_verify_module_data(duer_ota_installer_t *installer)
         || installer->verify_module_data == NULL) {
         DUER_LOGE("OTA Installer: Argument error");
 
-        return DUER_ERR_INVALID_PARAMETER;
+        ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_installer_report_err(
+            installer,
+            "Argument Error",
+            ret);
+
+        return ret;
     }
 
     ret = duer_mutex_lock(installer->lock);
@@ -447,6 +501,14 @@ int duer_ota_installer_verify_module_data(duer_ota_installer_t *installer)
     err = installer->verify_module_data(installer, installer->custom_data);
     if (err != DUER_OK) {
         DUER_LOGE("OTA Installer: Verify image failed");
+
+        ret = duer_ota_installer_check_err_msg(installer);
+        if (ret < 0) {
+            duer_ota_installer_report_err(
+                installer,
+                "Verify image failed",
+                err);
+        }
     }
 
     ret = duer_mutex_unlock(installer->lock);
@@ -470,7 +532,14 @@ int duer_ota_installer_update_image_begin(duer_ota_installer_t *installer)
         || installer->update_image_begin == NULL) {
         DUER_LOGE("OTA Installer: Argument error");
 
-        return DUER_ERR_INVALID_PARAMETER;
+        ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_installer_report_err(
+            installer,
+            "Argument Error",
+            ret);
+
+        return ret;
     }
 
     ret = duer_mutex_lock(installer->lock);
@@ -483,6 +552,14 @@ int duer_ota_installer_update_image_begin(duer_ota_installer_t *installer)
     err = installer->update_image_begin(installer, installer->custom_data);
     if (err != DUER_OK) {
         DUER_LOGE("OTA Installer: Update image begin failed");
+
+        ret = duer_ota_installer_check_err_msg(installer);
+        if (ret < 0) {
+            duer_ota_installer_report_err(
+                installer,
+                "Start update image failed",
+                err);
+        }
     }
 
     ret = duer_mutex_unlock(installer->lock);
@@ -505,7 +582,14 @@ int duer_ota_installer_update_image(duer_ota_installer_t *installer)
         || installer->update_image == NULL) {
         DUER_LOGE("OTA Installer: Argument error");
 
-        return DUER_ERR_INVALID_PARAMETER;
+        ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_installer_report_err(
+            installer,
+            "Argument Error",
+            ret);
+
+        return ret;
     }
 
     ret = duer_mutex_lock(installer->lock);
@@ -518,6 +602,14 @@ int duer_ota_installer_update_image(duer_ota_installer_t *installer)
     err = installer->update_image(installer, installer->custom_data);
     if (err != DUER_OK) {
         DUER_LOGE("OTA Installer: Update image failed");
+
+        ret = duer_ota_installer_check_err_msg(installer);
+        if (ret < 0) {
+            duer_ota_installer_report_err(
+                installer,
+                "Updating image failed",
+                err);
+        }
     }
 
     ret = duer_mutex_unlock(installer->lock);
@@ -540,7 +632,14 @@ int duer_ota_installer_verify_image(duer_ota_installer_t *installer)
         || installer->verify_image == NULL) {
         DUER_LOGE("OTA Installer: Argument error");
 
-        return DUER_ERR_INVALID_PARAMETER;
+        ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_installer_report_err(
+            installer,
+            "Argument Error",
+            ret);
+
+        return ret;
     }
 
     ret = duer_mutex_lock(installer->lock);
@@ -553,6 +652,14 @@ int duer_ota_installer_verify_image(duer_ota_installer_t *installer)
     err = installer->verify_image(installer, installer->custom_data);
     if (err != DUER_OK) {
         DUER_LOGE("OTA Installer: Verify image failed");
+
+        ret = duer_ota_installer_check_err_msg(installer);
+        if (ret < 0) {
+            duer_ota_installer_report_err(
+                installer,
+                "Verify image failed",
+                err);
+        }
     }
 
     ret = duer_mutex_unlock(installer->lock);
@@ -575,7 +682,14 @@ int duer_ota_installer_notify_ota_end(duer_ota_installer_t *installer)
         || installer->notify_ota_end == NULL) {
         DUER_LOGE("OTA Installer: Argument error");
 
-        return DUER_ERR_INVALID_PARAMETER;
+        ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_installer_report_err(
+            installer,
+            "Argument Error",
+            ret);
+
+        return ret;
     }
 
     ret = duer_mutex_lock(installer->lock);
@@ -588,6 +702,14 @@ int duer_ota_installer_notify_ota_end(duer_ota_installer_t *installer)
     err = installer->notify_ota_end(installer, installer->custom_data);
     if (err != DUER_OK) {
         DUER_LOGE("OTA Installer: Notify OTA begin failed");
+
+        ret = duer_ota_installer_check_err_msg(installer);
+        if (ret < 0) {
+            duer_ota_installer_report_err(
+                installer,
+                "Notify OTA end failed",
+                err);
+        }
     }
 
     ret = duer_mutex_unlock(installer->lock);
@@ -610,7 +732,14 @@ int duer_ota_installer_cancel_ota_update(duer_ota_installer_t *installer)
         || installer->cancel_ota_update == NULL) {
         DUER_LOGE("OTA Installer: Argument error");
 
-        return DUER_ERR_INVALID_PARAMETER;
+        ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_installer_report_err(
+            installer,
+            "Argument Error",
+            ret);
+
+        return ret;
     }
 
     ret = duer_mutex_lock(installer->lock);
@@ -623,6 +752,14 @@ int duer_ota_installer_cancel_ota_update(duer_ota_installer_t *installer)
     err = installer->cancel_ota_update(installer, installer->custom_data);
     if (err != DUER_OK) {
         DUER_LOGE("OTA Installer: Cancel OTA update failed");
+
+        ret = duer_ota_installer_check_err_msg(installer);
+        if (ret < 0) {
+            duer_ota_installer_report_err(
+                installer,
+                "Cancel OTA update failed",
+                err);
+        }
     }
 
     ret = duer_mutex_unlock(installer->lock);
@@ -635,6 +772,22 @@ int duer_ota_installer_cancel_ota_update(duer_ota_installer_t *installer)
     return err;
 }
 
+void duer_ota_installer_report_err(
+    duer_ota_installer_t *installer,
+    char const *err_msg,
+    int err_code)
+{
+    if (installer == NULL) {
+        DUER_LOGE("OTA Installer: Argument error");
+
+        return;
+    }
+
+    DUER_MEMSET(installer->err_msg, 0, sizeof(installer->err_msg));
+
+    snprintf(installer->err_msg, ERR_MSG_LEN, "%s%d", err_msg, err_code);
+}
+
 const char *duer_ota_installer_get_err_msg(duer_ota_installer_t const *installer)
 {
     if (installer == NULL || installer->err_msg == NULL) {
@@ -644,4 +797,23 @@ const char *duer_ota_installer_get_err_msg(duer_ota_installer_t const *installer
     }
 
     return installer->err_msg;
+}
+
+int duer_ota_installer_check_err_msg(duer_ota_installer_t *installer)
+{
+    size_t str_len = 0;
+
+    if (installer == NULL) {
+        DUER_LOGE("OTA Installer: Argument error");
+
+        return -1;
+    }
+
+    str_len = DUER_STRLEN(installer->err_msg);
+    if (str_len > 0) {
+
+        return 1;
+    }
+
+    return -1;
 }

@@ -16,7 +16,7 @@
 // Author: Leliang Zhang(zhangleliang@baidu.com)
 //
 // Description: aes encryption implementation
-#include "duerapp_config.h"
+
 #include "lightduer_aes.h"
 #include "mbedtls/aes.h"
 #include "lightduer_lib.h"

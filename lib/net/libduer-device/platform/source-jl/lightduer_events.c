@@ -1,9 +1,23 @@
-// Copyright (2017) Baidu Inc. All rights reserveed.
-//
-// File: lightduer_events.c
-// Auth: Zhang Leliang (zhangleliang@baidu.com)
-// Desc: Light duer events looper.
-
+/**
+ * Copyright (2017) Baidu Inc. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * File: lightduer_events.c
+ * Auth: Su Hao (suhao@baidu.com)
+ * Desc: Light duer events looper.
+ */
 
 #include "lightduer_events.h"
 
@@ -11,9 +25,10 @@
 #include "os/os_api.h"
 
 #include "lightduer_connagent.h"
-#include "lightduer_lib.h"
 #include "lightduer_log.h"
+#include "lightduer_lib.h"
 #include "lightduer_memory.h"
+#include "lightduer_mutex.h"
 #include "lightduer_priority_conf.h"
 #include "lightduer_timestamp.h"
 

@@ -21,6 +21,7 @@
 
 #include "lightduer_queue_cache.h"
 //#include "lightduer_connagent.h"
+//#include "lightduer_log.h"
 #include "lightduer_memory.h"
 #include "lightduer_lib.h"
 
@@ -67,7 +68,7 @@ int duer_qcache_push(duer_qcache_handler cache, void *data)
 
         q = duer_qcache_node_create(data);
         if (q == NULL) {
-            rs = DUER_ERR_MEMORY_OVERLOW;
+            rs = DUER_ERR_MEMORY_OVERFLOW;
             break;
         }
 
@@ -128,7 +129,7 @@ int duer_qcache_insert(duer_qcache_handler cache, duer_qcache_iterator it, void 
 
         q = duer_qcache_node_create(data);
         if (q == NULL) {
-            rs = DUER_ERR_MEMORY_OVERLOW;
+            rs = DUER_ERR_MEMORY_OVERFLOW;
             break;
         }
 
@@ -203,4 +204,3 @@ void duer_qcache_destroy(duer_qcache_handler cache)
 {
     duer_qcache_destroy_traverse(cache, NULL);
 }
-

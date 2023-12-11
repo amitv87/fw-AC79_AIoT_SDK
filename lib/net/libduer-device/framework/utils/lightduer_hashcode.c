@@ -18,6 +18,7 @@
 // Description: The hashcode algorithm
 
 #include "lightduer_hashcode.h"
+#include "lightduer_log.h"
 
 /* constants for duer_hashcode() */
 #define DUER__STRHASH_SHORTSTRING   4096L
@@ -30,7 +31,7 @@
 #define DUER__MAGIC_M  ((duer_u32_t) 0x5bd1e995UL)
 #define DUER__MAGIC_R  24
 
-DUER_LOC_IMPL duer_u32_t duer_hashcode_compute(const char *data, duer_size_t len, duer_u32_t seed)
+DUER_LOC_IMPL duer_u32_t duer_hashcode_compute(const duer_s8_t *data, duer_size_t len, duer_u32_t seed)
 {
     duer_u32_t hash = seed ^ ((duer_u32_t)len);
 
@@ -40,14 +41,22 @@ DUER_LOC_IMPL duer_u32_t duer_hashcode_compute(const char *data, duer_size_t len
         * endian access even on big endian architectures, which is
         * OK as long as it is consistent for a build.
         */
-        duer_u32_t k = ((duer_u32_t)data[0]) |
-                       (((duer_u32_t)data[1]) << 8) |
-                       (((duer_u32_t)data[2]) << 16) |
-                       (((duer_u32_t)data[3]) << 24);
+        duer_u32_t k = (((duer_u32_t)data[0]) & 0xff) |
+                       ((((duer_u32_t)data[1]) & 0xff) << 8) |
+                       ((((duer_u32_t)data[2]) & 0xff) << 16) |
+                       ((((duer_u32_t)data[3]) & 0xff) << 24);
+        DUER_DUMPV("data", data, 4);
+        DUER_LOGV("k = %08x", k);
         k *= DUER__MAGIC_M;
+        DUER_LOGV("k = %08x", k);
         k ^= k >> DUER__MAGIC_R;
+        DUER_LOGV("k = %08x", k);
         k *= DUER__MAGIC_M;
+
+        DUER_LOGV("k = %08x", k);
+        DUER_LOGV("hashcode = %08x", hash);
         hash *= DUER__MAGIC_M;
+        DUER_LOGV("hashcode = %08x", hash);
         hash ^= k;
         data += 4;
         len -= 4;
@@ -72,7 +81,8 @@ DUER_LOC_IMPL duer_u32_t duer_hashcode_compute(const char *data, duer_size_t len
     return hash;
 }
 
-DUER_INT_IMPL duer_u32_t duer_hashcode(const char *data, duer_size_t size,
+DUER_INT_IMPL duer_u32_t duer_hashcode(const duer_s8_t *data,
+                                       duer_size_t size,
                                        duer_u32_t seed)
 {
     duer_u32_t hash = 0;

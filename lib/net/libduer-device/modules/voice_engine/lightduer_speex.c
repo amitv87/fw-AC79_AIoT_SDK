@@ -19,6 +19,7 @@
  * Desc: Light duer Speex encoder.
  */
 
+
 #include "duerapp_config.h"
 
 #if USE_OWN_SPEEX_LIB == 0
@@ -28,6 +29,7 @@
 #include "lightduer_lib.h"
 #include "lightduer_memory.h"
 #include "speex/speex.h"
+
 #include "lightduer_ds_log_recorder.h"
 #include "lightduer_timestamp.h"
 
@@ -199,5 +201,4 @@ void duer_speex_destroy(duer_speex_handler handler)
         DUER_FREE(speex);
     }
 }
-
 #endif

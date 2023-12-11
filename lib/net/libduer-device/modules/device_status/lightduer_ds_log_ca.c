@@ -80,7 +80,7 @@ duer_status_t duer_ds_log_ca_start_state_change(int from, int to)
     log_ca = baidu_json_CreateObject();
     if (log_ca == NULL) {
         DUER_LOGE("log_ca json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddNumberToObject(log_ca, "from", from);
@@ -99,7 +99,7 @@ duer_status_t duer_ds_log_ca_start_connect(const char *host, int port)
     log_ca = baidu_json_CreateObject();
     if (log_ca == NULL) {
         DUER_LOGE("log_ca json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddStringToObject(log_ca, "host", host);
@@ -118,7 +118,7 @@ duer_status_t duer_ds_log_ca_started(duer_status_t reason, int count, duer_u32_t
     log_ca = baidu_json_CreateObject();
     if (log_ca == NULL) {
         DUER_LOGE("log_ca json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     switch (reason) {
@@ -133,6 +133,12 @@ duer_status_t duer_ds_log_ca_started(duer_status_t reason, int count, duer_u32_t
         break;
     case DUER_ERR_TRANS_DNS_FAIL:
         baidu_json_AddStringToObject(log_ca, "reason", "DNS FAIL");
+        break;
+    case DUER_ERR_WIFI_SIGNAL_WEAK:
+        baidu_json_AddStringToObject(log_ca, "reason", "wifi signal weak");
+        break;
+    case DUER_ERR_WIFI_DISCONNECTED:
+        baidu_json_AddStringToObject(log_ca, "reason", "wifi disconnected");
         break;
     default:
         baidu_json_AddNumberToObject(log_ca, "reason", reason);
@@ -156,7 +162,7 @@ duer_status_t duer_ds_log_ca_register_cp(const char *name,
     log_ca = baidu_json_CreateObject();
     if (log_ca == NULL) {
         DUER_LOGE("log_ca json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddStringToObject(log_ca, "name", name);
@@ -185,7 +191,7 @@ duer_status_t duer_ds_log_ca_call_cp(const char *name)
     log_ca = baidu_json_CreateObject();
     if (log_ca == NULL) {
         DUER_LOGE("log_ca json create fail");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     baidu_json_AddStringToObject(log_ca, "name", name);
@@ -219,7 +225,7 @@ duer_status_t duer_ds_log_ca_mbedtls_error(duer_s32_t code)
     // log_ca = baidu_json_CreateObject();
     // if (log_ca == NULL) {
     //     DUER_LOGE("log_ca json create fail");
-    //     return DUER_ERR_MEMORY_OVERLOW;
+    //     return DUER_ERR_MEMORY_OVERFLOW;
     // }
     // DUER_LOGE("mbedtls error : %d", code);
     // baidu_json_AddNumberToObject(log_ca, "code", code);
@@ -238,7 +244,7 @@ duer_status_t duer_ds_log_ca_malloc_error(const char *file, duer_u32_t line)
     // log_ca = baidu_json_CreateObject();
     // if (log_ca == NULL) {
     //     DUER_LOGE("log_ca json create fail");
-    //     return DUER_ERR_MEMORY_OVERLOW;
+    //     return DUER_ERR_MEMORY_OVERFLOW;
     // }
 
     // baidu_json_AddStringToObject(log_ca, "file", file);
@@ -249,4 +255,3 @@ duer_status_t duer_ds_log_ca_malloc_error(const char *file, duer_u32_t line)
 
     return result;
 }
-

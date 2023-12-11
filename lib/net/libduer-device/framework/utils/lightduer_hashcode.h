@@ -34,7 +34,7 @@ extern "C" {
  * @Param seed, in, the hash seed
  * @Return duer_u32_t, the hashcode value
  */
-DUER_INT duer_u32_t duer_hashcode(const char *data,
+DUER_INT duer_u32_t duer_hashcode(const duer_s8_t *data,
                                   duer_size_t size,
                                   duer_u32_t seed);
 

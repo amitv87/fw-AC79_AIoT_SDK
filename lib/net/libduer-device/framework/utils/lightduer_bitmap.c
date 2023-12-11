@@ -17,7 +17,6 @@
 //
 // Description: bitmap cache for fix-sized objects.
 
-//#include "stdio.h"
 #include "stdlib.h"
 
 #include "lightduer_bitmap.h"
@@ -264,4 +263,14 @@ int free_obj(bitmap_objects_t *bop, void *obj)
     //dump_bitmap(&bitmap_objects, "after free");
     duer_mutex_unlock(s_bitmap_lock);
     return r;
+}
+
+int lock_bitmap(bitmap_objects_t *bop)
+{
+    return duer_mutex_lock(s_bitmap_lock);
+}
+
+int unlock_bitmap(bitmap_objects_t *bop)
+{
+    return duer_mutex_unlock(s_bitmap_lock);
 }

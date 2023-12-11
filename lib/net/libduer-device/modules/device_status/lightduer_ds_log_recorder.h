@@ -56,20 +56,26 @@ duer_status_t duer_ds_log_rec_start(duer_u32_t id);
  * report the message for log code DUER_DS_LOG_REC_STOP
  * {
  *     "id": [session id],
- *     "rec_compress" : {
- *         "max" : [maximum consuming time of compressing one frame],
- *         "min" : [minimum consuming time of compressing one frame],
- *         "avg" : [average consuming time of compressing one frame],
- *         "frames" : [total frames of the speech],
- *         "length" : [total length of speech data(before compress)]
- *     }
  *     "speex_compress" : {
  *         "max" : [maximum consuming time of compressing one frame in speex],
  *         "min" : [minimum consuming time of compressing one frame in speex],
- *         "avg" : [average consuming time of compressing one frame in speex],
- *         "frames" : [total frames of speex-compressed-speech],
- *         "length" : [total length of speex-compressed-speech data(after speex compress)]
- *     }
+ *         "avg" : [average consuming time of compressing one frame in speex]
+ *     },
+ *     "request_delay": {
+ *         "max" : [maximum consuming time of request send a voice fragment in ca],
+ *         "min" : [minimum consuming time of request send a voice fragment in ca],
+ *         "avg" : [average consuming time of request send a voice fragment in ca]
+ *     },
+ *     "network_delay": {
+ *         "max" : [maximum consuming time of socket send a voice fragment],
+ *         "min" : [minimum consuming time of socket send a voice fragment],
+ *         "avg" : [average consuming time of socket send a voice fragment]
+ *     },
+ *     "total_delay": {
+ *         "max" : [maximum consuming time of send a voice fragment],
+ *         "min" : [minimum consuming time of send a voice fragment],
+ *         "avg" : [average consuming time of send a voice fragment]
+ *     },
  * }
  */
 duer_status_t duer_ds_log_rec_stop(duer_u32_t id);
@@ -79,4 +85,3 @@ duer_status_t duer_ds_log_rec_stop(duer_u32_t id);
 #endif
 
 #endif // BAIDU_DUER_LIGHTDUER_DS_LOG_RECORDER_H
-

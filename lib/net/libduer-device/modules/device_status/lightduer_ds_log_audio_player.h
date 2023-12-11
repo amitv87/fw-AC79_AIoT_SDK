@@ -71,4 +71,3 @@ duer_status_t duer_ds_log_audply(duer_dslog_audply_code_t log_code, const char *
 #endif
 
 #endif // BAIDU_DUER_LIBDUER_DEVICE_MODULES_DEVICES_STATUS_LIGHTDUER_DS_LOG_AUDIO_PLAYER_H
-

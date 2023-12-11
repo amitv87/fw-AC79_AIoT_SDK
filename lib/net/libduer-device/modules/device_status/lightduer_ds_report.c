@@ -17,7 +17,7 @@
  * Auth: Leliang Zhang(zhangleliang@baidu.com)
  * Desc: device status report
  */
-#include "duerapp_config.h"
+
 #include "lightduer_ds_report.h"
 
 #include "lightduer_connagent.h"
@@ -53,7 +53,7 @@ duer_status_t duer_ds_register_report_function(duer_ds_report_function_t report_
 
         if (!s_head) {
             DUER_LOGE("memory overflow");
-            return DUER_ERR_MEMORY_OVERLOW;
+            return DUER_ERR_MEMORY_OVERFLOW;
         }
 
         s_head->report_function = report_function;
@@ -79,7 +79,7 @@ duer_status_t duer_ds_register_report_function(duer_ds_report_function_t report_
     p->next = (function_node_t *)DUER_MALLOC(sizeof(function_node_t));
     if (!p->next) {
         DUER_LOGE("memory overflow");
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     p->next->report_function = report_function;

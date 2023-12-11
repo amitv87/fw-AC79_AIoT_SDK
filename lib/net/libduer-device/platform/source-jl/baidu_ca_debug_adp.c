@@ -1,14 +1,41 @@
-// Copyright (2017) Baidu Inc. All rights reserved.
-//
-// File: baidu_ca_debug_adp.c
-// Auth: Zhang Leliang (zhangleliang@baidu.com)
-// Desc: Adapt the debug function to linux.
+/**
+ * Copyright (2017) Baidu Inc. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * File: baidu_ca_debug_adp.c
+ * Auth: Su Hao (suhao@baidu.com)
+ * Desc: Adapt the debug function to esp32.
+ */
 
-#include "printf.h"
-
+#include <time.h>
 #include "baidu_ca_adapter_internal.h"
 #include "lightduer_log.h"
 #include "lightduer_timestamp.h"
+
+#ifdef ENABLE_LIGHTDUER_SNPRINTF
+#include "lightduer_snprintf.h"
+#endif
+
+#if defined(DUER_PLATFORM_ESPRESSIF)
+#include "esp_log.h"
+#include "esp_err.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#elif defined(DUER_PLATFORM_MARVELL)
+int wmprintf(const char *format, ...);
+#endif
 
 #ifdef DUER_DEBUG_LEVEL
 
@@ -51,6 +78,45 @@ void bcadbg(duer_context ctx, duer_u32_t level, const char *file, duer_u32_t lin
         return;
     }
 #endif
-    printf("[%s](%u)%s(%d):%s\n",
-           duer_get_tag(level), duer_timestamp(), file, line, msg);
+
+#if defined(DUER_PLATFORM_ESPRESSIF)
+    TaskHandle_t tid = xTaskGetCurrentTaskHandle();
+#ifdef ENABLE_LIGHTDUER_SNPRINTF
+    char line_header[32];
+    lightduer_snprintf(line_header, sizeof(line_header), "%s (%u,tid:%x) ", duer_get_tag(level), duer_timestamp(), tid);
+    if (duer_debug_should_print(level)) {
+        fputs(line_header, stdout);
+    }
+    if (duer_debug_should_hook(level)) {
+        duer_debug_hook(line_header);
+    }
+    time_t t;
+    struct tm *now;
+    time(&t);
+    t += 28800; //GMT+8
+    now = localtime(&t);
+    strftime(line_header, sizeof(line_header), "(%F_%H:%M:%S) ", now);
+    if (duer_debug_should_print(level)) {
+        fputs(line_header, stdout);
+    }
+
+    if (duer_debug_should_hook(level)) {
+        duer_debug_hook(line_header);
+    }
+
+    if (duer_debug_should_print(level)) {
+        fputs(msg, stdout);
+    }
+
+    if (duer_debug_should_hook(level)) {
+        duer_debug_hook(msg);
+    }
+#else
+    esp_log_write(ESP_LOG_INFO, "duer", "%s (%u,tid:%x) %s(%4d): %s", duer_get_tag(level), duer_timestamp(), tid, file, line, msg);
+#endif
+#elif defined(DUER_PLATFORM_MARVELL)
+    wmprintf("%s (%u) %s(%4d): %s", duer_get_tag(level), duer_timestamp(), file, line, msg);
+#else
+    printf("%s (%u) %s(%4d): %s", duer_get_tag(level), duer_timestamp(), file, line, msg);
+#endif
 }

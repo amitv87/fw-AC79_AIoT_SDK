@@ -21,19 +21,21 @@
 #include "lightduer_lib.h"
 
 typedef struct _baidu_ca_transport_t {
-    duer_soc_create_f        f_create;
-    duer_soc_connect_f       f_connect;
-    duer_soc_recv_f          f_recv;
-    duer_soc_recv_timeout_f  f_recv_timeout;
-    duer_soc_send_f          f_send;
-    duer_soc_close_f         f_close;
-    duer_soc_destroy_f       f_destroy;
+    duer_soc_create_f            f_create;
+    duer_soc_connect_f           f_connect;
+    duer_soc_connect_timeout_f   f_connect_timeout;
+    duer_soc_recv_f              f_recv;
+    duer_soc_recv_timeout_f      f_recv_timeout;
+    duer_soc_send_f              f_send;
+    duer_soc_close_f             f_close;
+    duer_soc_destroy_f           f_destroy;
 } duer_transport_t;
 
 DUER_LOC_IMPL duer_transport_t s_duer_transport = {NULL};
 
 DUER_EXT_IMPL void baidu_ca_transport_init(duer_soc_create_f f_create,
         duer_soc_connect_f f_conn,
+        duer_soc_connect_timeout_f f_conn_timeout,
         duer_soc_send_f f_send,
         duer_soc_recv_f f_recv,
         duer_soc_recv_timeout_f f_recv_timeout,
@@ -42,6 +44,7 @@ DUER_EXT_IMPL void baidu_ca_transport_init(duer_soc_create_f f_create,
 {
     s_duer_transport.f_create = f_create;
     s_duer_transport.f_connect = f_conn;
+    s_duer_transport.f_connect_timeout = f_conn_timeout;
     s_duer_transport.f_send = f_send;
     s_duer_transport.f_recv = f_recv;
     s_duer_transport.f_recv_timeout = f_recv_timeout;
@@ -65,6 +68,18 @@ DUER_INT_IMPL duer_status_t duer_trans_wrapper_connect(duer_trans_ptr trans,
 
     if (trans && s_duer_transport.f_connect) {
         rs = s_duer_transport.f_connect(trans->ctx, addr);
+    }
+
+    return rs;
+}
+
+DUER_INT_IMPL duer_status_t duer_trans_wrapper_connect_timeout(duer_trans_ptr trans,
+        const duer_addr_t *addr, duer_u32_t timeout)
+{
+    duer_status_t rs = DUER_ERR_FAILED;
+
+    if (trans && s_duer_transport.f_connect_timeout) {
+        rs = s_duer_transport.f_connect_timeout(trans->ctx, addr, timeout);
     }
 
     return rs;

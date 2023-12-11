@@ -16,7 +16,7 @@
 // Author: Su Hao (suhao@baidu.com)
 //
 // Description: The debug module.
-#include "duerapp_config.h"
+
 #include "lightduer_debug.h"
 #include <stdarg.h>
 #include "lightduer_lib.h"
@@ -24,6 +24,9 @@
 #ifdef ENABLE_LIGHTDUER_SNPRINTF
 #include "lightduer_snprintf.h"
 #endif
+
+#define DUER_LINE_CHARS     (16)
+#define DUER_BUFF_SIZE      (3 * (DUER_LINE_CHARS) + 1)
 
 typedef struct _baidu_ca_debug_s {
     duer_context     context;
@@ -118,4 +121,35 @@ DUER_INT_IMPL void duer_debug(duer_u32_t level, const char *file, duer_u32_t lin
     }
 
     duer_debug_print(level, file, line, str);
+}
+
+DUER_INT void duer_dump(duer_u32_t level, const char *file, duer_u32_t line,
+                        const char *tag, const void *data, duer_size_t size)
+{
+    const char *p = (const char *)data;
+    duer_size_t i;
+    duer_size_t length;
+    char buff[DUER_BUFF_SIZE];
+
+    if (p == NULL || size == 0) {
+        return ;
+    }
+
+    duer_debug(level, file, line, " - [%s][%p][%u]", tag, data, size);
+
+    length = 0;
+
+    for (i = 0; i < size; i++) {
+        length += DUER_SNPRINTF(buff + length, DUER_BUFF_SIZE - length, "%02x", p[i] & 0xff);
+        if (i % DUER_LINE_CHARS == (DUER_LINE_CHARS - 1)) {
+            duer_debug(level, file, line, " +  %s", buff);
+            length = 0;
+        } else {
+            length += DUER_SNPRINTF(buff + length, DUER_BUFF_SIZE - length, " ");
+        }
+    }
+
+    if (length > 0) {
+        duer_debug(level, file, line, " +  %s", buff);
+    }
 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /**
- * File: lightduer_dcs_router.h
+ * File: lightduer_dcs.h
  * Auth: Gang Chen (chengang12@baidu.com)
  * Desc: Light duer DCS APIS.
  */
@@ -47,6 +47,7 @@ typedef enum {
 
 typedef enum {
     DCS_RECOMMEND_POWER_ON,
+    DCS_RECOMMEND_OUT_OF_BOX,
     DCS_RECOMMEND_TIME_NUMBER,
 } duer_dcs_recommend_time_t;
 
@@ -60,6 +61,11 @@ enum duer_dcs_device_capability {
     DCS_TTS_HTTPS_PROTOCAL_SUPPORTED = 0x01, // the device support https protocal to playing tts
     DCS_WECHAT_SUPPORTED             = 0x02, // the device support wechat
 };
+
+/**
+ * Internal used private namespace.
+ */
+extern const char *DCS_PRIVATE_NAMESPACE;
 
 /**
  * Initialize the dcs framework.
@@ -89,10 +95,13 @@ void duer_dcs_voice_input_init(void);
  * DESC:
  * Notify DCS when recorder start to record.
  *
- * PARAM: sample_rate: 8000 or 16000
+ * PARAM: none
  *
  * @RETURN: 0 when success, negative when fail.
  */
+// int duer_dcs_on_listen_started(void);
+// int duer_dcs_on_listen_started();
+
 int duer_dcs_on_listen_started(duer_u16_t sample_rate);
 
 /**
@@ -265,6 +274,16 @@ int duer_dcs_on_link_clicked(const char *url);
 
 /**
  * DESC:
+ * Notify DCS when an audio is started.
+ *
+ * PARAM: none
+ *
+ * @RETURN: none.
+ */
+void duer_dcs_audio_on_started(void);
+
+/**
+ * DESC:
  * Notify DCS when an audio is finished.
  *
  * PARAM: none
@@ -393,6 +412,16 @@ int duer_dcs_sync_state(void);
 
 /**
  * DESC:
+ * Developer needs to implement this interface to handle invalid bduss event.
+ *
+ * PARAM: none
+ *
+ * @RETURN: none.
+ */
+void duer_dcs_system_invalid_bduss_handler(void);
+
+/**
+ * DESC:
  * Sending an "Exited" event to close the multi dialogue.
  *
  * @RETURN: 0 if succuss, negative if failed.
@@ -486,6 +515,232 @@ duer_status_t duer_dcs_capability_declare(duer_u32_t capability);
  * @RETURN: 0 if succuss, negative if failed.
  */
 int duer_dcs_recommend_request(duer_dcs_recommend_time_t time);
+
+/**
+ * DESC:
+ * Similar to duer_dcs_on_listen_started, except not create new dialog id, but get current one.
+ *
+ * PARAM: none
+ *
+ * @RETURN: 0 when success, negative when fail.
+ */
+// int duer_dcs_on_listen_started_with_current_dialogid(void);
+int duer_dcs_on_listen_started_with_current_dialogid(duer_u16_t sample_rate);
+
+/**
+ * DESC:
+ * Developer needs to implement this interface to pause local player.
+ *
+ * PARAM: none
+ *
+ * @RETURN: None
+ */
+void duer_dcs_local_player_pause_handler(void);
+
+/**
+ * DESC:
+ * Developer needs to implement this interface to resume local player.
+ *
+ * PARAM: none
+ *
+ * @RETURN: None
+ */
+void duer_dcs_local_player_resume_handler(void);
+
+/**
+ * DESC:
+ * Developer needs to implement this interface to stop local player.
+ *
+ * PARAM: none
+ *
+ * @RETURN: None
+ */
+void duer_dcs_local_player_stop_handler(void);
+
+/**
+ * DESC:
+ * Notify DCS module when local player paused.
+ *
+ * PARAM: none
+ *
+ * @RETURN: None
+ */
+void duer_dcs_local_player_on_paused(void);
+
+/**
+ * DESC:
+ * Notify DCS module when local player playing.
+ *
+ * PARAM: none
+ *
+ * @RETURN: None
+ */
+void duer_dcs_local_player_on_played(void);
+
+/**
+ * DESC:
+ * Notify DCS module when local player stopped.
+ *
+ * PARAM: none
+ *
+ * @RETURN: None
+ */
+void duer_dcs_local_player_on_stopped(void);
+
+/**
+ * DESC:
+ * Get the client context.
+ *
+ * PARAM: none
+ *
+ * @RETURN: NULL if failed, pointer point to the client context if success.
+ */
+baidu_json *duer_dcs_get_client_context(void);
+
+/**
+ * DESC:
+ * Initialize dcs push-service interface.
+ *
+ * PARAM: none
+ *
+ * @RETURN: none
+ */
+void duer_dcs_push_service_init(void);
+
+/**
+ * DESC:
+ * Used to get create a new dialogue request id
+ *
+ * PARAM: None.
+ *
+ * @RETURN: the const char of dialogue request id.
+ */
+const char *duer_create_request_id();
+
+/**
+ * DESC:
+ * Initialize dcs scree extended card interface.
+ *
+ * PARAM: none
+ *
+ * @RETURN: none
+ */
+void duer_dcs_screen_ext_card_init(void);
+
+/**
+ * DESC:
+ * To get render audio list.
+ * Caller should free the json after used by baidu_json_delete
+ *
+ * PARAM: none
+ *
+ * @RETURN: render audio list.
+ */
+baidu_json *duer_dcs_audio_get_audio_list();
+
+/**
+ * DESC:
+ * To get render player info.
+ * Caller should free the json after used by baidu_json_delete
+ *
+ * PARAM: none
+ *
+ * @RETURN: render player info.
+ */
+baidu_json *duer_dcs_audio_get_player_info();
+
+/**
+ * DESC:
+ * To get speaker controller info.
+ * Caller should free the json after used by baidu_json_delete
+ *
+ * PARAM: none
+ *
+ * @RETURN: speaker controller info.
+ */
+baidu_json *duer_dcs_speaker_controller_info(void);
+
+/**
+ * DESC:
+ * To get alert info.
+ * Caller should free the json after used by baidu_json_delete
+ *
+ * PARAM: none
+ *
+ * @RETURN: alert info.
+ */
+baidu_json *duer_dcs_alert_info(void);
+
+/**
+ * DESC:
+ * To get audio player info.
+ * Caller should free the json after used by baidu_json_delete
+ *
+ * PARAM: none
+ *
+ * @RETURN: audio player info.
+ */
+baidu_json *duer_dcs_audio_player_info(void);
+
+/**
+ * DESC:
+ * Initialize text input interface.
+ *
+ * PARAM: none
+ *
+ * @RETURN: none
+ */
+void duer_dcs_text_input_init(void);
+
+/**
+ * DESC:
+ * Send text query
+ *
+ * @PARAM[in] query: the text query.
+ *
+ * @RETURN: 0 if succuss, negative if failed.
+ */
+int duer_dcs_text_input(const char *query);
+
+/**
+ * DESC:
+ * Initialize dcs notifications interface.
+ *
+ * PARAM: none
+ *
+ * @RETURN: none
+ */
+void duer_dcs_notifications_init(void);
+
+/**
+ * DESC:
+ * Developer needs to implement this interface to set indicator.
+ *
+ * PARAM: none
+ *
+ * @RETURN: None
+ */
+void duer_dcs_set_indicator_handler(void);
+
+/**
+ * DESC:
+ * Developer needs to implement this interface to clear indicator.
+ *
+ * PARAM: none
+ *
+ * @RETURN: None
+ */
+void duer_dcs_clear_indicator_handler(void);
+
+/**
+ * DESC:
+ * Initialize dcs led controller interface.
+ *
+ * PARAM: none
+ *
+ * @RETURN: none
+ */
+void duer_dcs_led_controller_init(void);
 
 #ifdef __cplusplus
 }

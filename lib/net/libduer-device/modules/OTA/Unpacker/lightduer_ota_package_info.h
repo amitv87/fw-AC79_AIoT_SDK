@@ -21,12 +21,12 @@
 
 #include <stddef.h>
 #include <stdint.h>
-//#include <stdbool.h>
+#include <stdbool.h>
 
 #ifndef BAIDU_DUER_LIGHTDUER_INCLUDE_LIGHTDUER_OTA_PACKAGE_INFO_H
 #define BAIDU_DUER_LIGHTDUER_INCLUDE_LIGHTDUER_OTA_PACKAGE_INFO_H
 
-#define KEY_LEN	                     (128)
+#define KEY_LEN                      (128)
 #define PACKAGE_NAME_LENGTH          (15)
 #define META_VERSION_LENGTH          (3)
 #define PACKAGE_VERSION_LENGTH       (15)
@@ -78,7 +78,7 @@ typedef struct _duer_ota_package_basic_info_s {
     uint8_t meta_version[META_VERSION_LENGTH + 1];
     duer_ota_package_type_t package_type;
     // Enforce the update
-    uint8_t update;
+    bool update;
 } duer_ota_package_basic_info_t;
 
 typedef struct _duer_ota_module_info_s {
@@ -86,7 +86,7 @@ typedef struct _duer_ota_module_info_s {
     uint32_t module_size;
     duer_ota_module_type_t module_type;
     // Enforce the update
-    uint8_t update;
+    bool update;
     uint8_t module_signature[MODULE_SIGNATURE_LENGTH + 1];
     uint8_t module_version[MODULE_VERSION_LENGTH + 1];
     uint8_t module_support_hardware_version[MODULE_VERSION_LENGTH + 1];

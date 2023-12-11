@@ -312,6 +312,21 @@ const char *duer_engine_get_uuid(void)
     return baidu_ca_get_uuid(g_handler);
 }
 
+const char *duer_engine_get_client_id(void)
+{
+    return baidu_ca_get_client_id(g_handler);
+}
+
+const char *duer_engine_get_bduss(void)
+{
+    return baidu_ca_get_bduss(g_handler);
+}
+
+const char *duer_engine_get_user_agent(void)
+{
+    return baidu_ca_get_user_agent(g_handler);
+}
+
 const char *duer_engine_get_bind_token(void)
 {
     return baidu_ca_get_bind_token(g_handler);
@@ -402,9 +417,12 @@ void duer_engine_clear_data(int what, void *object)
     duer_mutex_lock(g_qcache_mutex);
     while ((msg = duer_qcache_top(g_qcache_handler)) != NULL) {
         if (what == 0
-            || msg->create_timestamp < (duer_u32_t)what
-            || ((msg->create_timestamp & DUER_MOST_BIT_MASK) != 0
-                && ((duer_u32_t)what) & DUER_MOST_BIT_MASK) == 0) {
+            || (msg->create_timestamp < (duer_u32_t)what)
+            || (// timestamp overflow
+                (msg->create_timestamp & DUER_MOST_BIT_MASK) != 0
+                && (((duer_u32_t)what) & DUER_MOST_BIT_MASK) == 0
+            )
+           ) {
             duer_qcache_pop(g_qcache_handler);
             duer_engine_release_data(msg);
         } else {
@@ -436,7 +454,7 @@ int duer_engine_enqueue_report_data(duer_context_t *context, const baidu_json *d
 
         payload = baidu_json_CreateObject();
         if (payload == NULL) {
-            rs = DUER_ERR_MEMORY_OVERLOW;
+            rs = DUER_ERR_MEMORY_OVERFLOW;
             break;
         }
 
@@ -453,7 +471,7 @@ int duer_engine_enqueue_report_data(duer_context_t *context, const baidu_json *d
 
         msg = baidu_ca_build_report_message(g_handler, DUER_TRUE);
         if (msg == NULL) {
-            rs = DUER_ERR_MEMORY_OVERLOW;
+            rs = DUER_ERR_MEMORY_OVERFLOW;
             break;
         }
 
@@ -515,14 +533,14 @@ int duer_engine_enqueue_response(const duer_msg_t *req, int msg_code,
 
         msg = baidu_ca_build_response_message(g_handler, req, msg_code);
         if (msg == NULL) {
-            rs = DUER_ERR_MEMORY_OVERLOW;
+            rs = DUER_ERR_MEMORY_OVERFLOW;
             break;
         }
 
         if (size > 0) {
             content = (char *)DUER_MALLOC(size);
             if (content == NULL) {
-                rs = DUER_ERR_MEMORY_OVERLOW;
+                rs = DUER_ERR_MEMORY_OVERFLOW;
                 DUER_DS_LOG_CA_MEMORY_OVERFLOW();
                 break;
             }
@@ -585,7 +603,7 @@ int duer_engine_enqueue_seperate_response(const char *token,
                 token, token_len,
                 msg_code, DUER_TRUE);
         if (msg == NULL) {
-            rs = DUER_ERR_MEMORY_OVERLOW;
+            rs = DUER_ERR_MEMORY_OVERFLOW;
             break;
         }
 
@@ -596,7 +614,7 @@ int duer_engine_enqueue_seperate_response(const char *token,
             str_size = DUER_STRLEN(data_str);
             content = (char *)DUER_MALLOC(str_size);// response message see duer_engine_release_data
             if (content == NULL) {
-                rs = DUER_ERR_MEMORY_OVERLOW;
+                rs = DUER_ERR_MEMORY_OVERFLOW;
                 DUER_DS_LOG_CA_MEMORY_OVERFLOW();
                 break;
             }
@@ -745,10 +763,10 @@ void duer_engine_send(int what, void *object)
                 duer_ds_report_ca_update_avg_latency(latency);
             }
             DUER_LOGV("new_timestamp:%u, latency:%u", timestamp, latency);
-#ifdef DUER_DEBUG_AFTER_SEND
+// #ifdef DUER_DEBUG_AFTER_SEND
             DUER_LOGI("data sent: %.*s", msg->payload_len,
                       DUER_STRING_OUTPUT((const char *)msg->payload));
-#endif
+// #endif
 
             duer_engine_release_data(msg);
             msg = NULL;

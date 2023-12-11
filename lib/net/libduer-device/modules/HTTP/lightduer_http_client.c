@@ -28,7 +28,7 @@
 #include "lightduer_memory.h"
 #include "lightduer_ds_log.h"
 #include "lightduer_net_transport_wrapper.h"
-
+#include "lightduer_sleep.h"
 const char *duer_engine_get_rsa_cacrt(void);
 
 #define HC_CHECK_ERR(p_client, ret, log_str, http_res) \
@@ -44,12 +44,17 @@ static const int DUER_HTTP_SCHEME_LEN_MAX          = 8;
 static const int DUER_HTTP_HOST_LEN_MAX            = 255;
 static const int DUER_HTTP_REDIRECTION_MAX         = 30;
 static const int DUER_HTTP_TIME_OUT                = (2 * 1000); //TIME OUT IN MILI-SECOND
-static const int DUER_HTTP_TIME_OUT_TRIES          = 30;
+static const int DUER_HTTP_CONNECT_TIME_OUT        = (5 * 1000); //TIME OUT IN MILI-SECOND
+static const int DUER_HTTP_TIME_OUT_RETRY_COUNT    = 1;
 static const int DUER_HTTP_REQUEST_CMD_LEN_MAX     = 6;
 static const int DUER_HTTP_CHUNK_SIZE              = 1025;
 static const int DUER_HTTP_RSP_CHUNK_SIZE          = 100;
 static const int DUER_HTTP_RESUME_COUNT_MAX        = 10;
+static const int DUER_HTTP_RESUME_CONNECT_COUNT_MAX = 3;
 static const int DUER_HTTP_RANGE_LEN_MAX           = 10;
+static const int DUER_HTTP_PORT_LEN_MAX            = 5;
+static const int DUER_HTTP_CONTENT_LEN_MAX         = 10;
+static const duer_u32_t DUER_HTTP_CLIENT_MAX_RESOLVE_IP_COUNT = 3;
 
 static const int DUER_SCHEME_HTTP = 0;
 static const int DUER_SCHEME_HTTPS = 1;
@@ -123,6 +128,18 @@ duer_http_result_t duer_http_init(duer_http_client_t *p_client)
 
     DUER_MEMSET(p_client, 0, sizeof(duer_http_client_t));
 
+    p_client->lock = duer_mutex_create();
+    if (!p_client->lock) {
+        DUER_LOGE("Failed to create http mutex");
+        return DUER_HTTP_ERR_FAILED;
+    }
+
+    p_client->max_resume_retry_count = DUER_HTTP_RESUME_COUNT_MAX;
+    p_client->max_timeout_retry_count = DUER_HTTP_TIME_OUT_RETRY_COUNT;
+    p_client->max_connect_retry_count = DUER_HTTP_RESUME_CONNECT_COUNT_MAX;
+    p_client->timeout_ms = DUER_HTTP_TIME_OUT;
+    p_client->connect_timeout_ms = DUER_HTTP_CONNECT_TIME_OUT;
+
     duer_ds_log_http(DUER_DS_LOG_HTTP_INIT, NULL);
 
     DUER_LOGV("leave\n");
@@ -145,12 +162,25 @@ void duer_http_destroy(duer_http_client_t *p_client)
         p_client->connect_keep_timer = NULL;
     }
 
+    if (p_client->lock) {
+        duer_mutex_lock(p_client->lock);
+    }
     http_client_close_socket_connect(p_client);
+    if (p_client->lock) {
+        duer_mutex_unlock(p_client->lock);
+    }
 
-    DUER_LOGI("duer_http_destroy");
-    p_client->ops.destroy(p_client->ops.n_handle);
-    p_client->ops.n_handle = 0;
+    DUER_LOGD("duer_http_destroy");
+    if (p_client->ops.n_handle) {
+        p_client->ops.destroy(p_client->ops.n_handle);
+        p_client->ops.n_handle = 0;
+    }
 
+    if (p_client->lock) {
+        duer_mutex_destroy(p_client->lock);
+    }
+
+    DUER_MEMSET(p_client, 0, sizeof(duer_http_client_t));
     duer_ds_log_http(DUER_DS_LOG_HTTP_DESTROYED, NULL);
     DUER_LOGV("leave\n");
     return;
@@ -202,17 +232,79 @@ void duer_http_reg_url_get_cb(duer_http_client_t *p_client, duer_http_get_url_cb
     DUER_LOGV("leave\n");
 }
 
-void duer_http_reg_stop_notify_cb(duer_http_client_t *p_client,
-                                  duer_http_stop_notify_cb_t chk_stp_cb)
+void duer_http_reg_keep_retry_cb(duer_http_client_t *p_client, duer_http_keep_retry_cb cb)
 {
-    DUER_LOGV("entry\n");
-
     if (!p_client) {
         DUER_LOGE("Args err: p_client is null!\n");
         return;
     }
 
-    p_client->check_stop_notify_cb = chk_stp_cb;
+    p_client->keep_retry_cb = cb;
+}
+
+void duer_http_reg_rsp_header_cb(duer_http_client_t *p_client, duer_http_header_cb cb)
+{
+    if (!p_client) {
+        DUER_LOGE("Args err: p_client is null!\n");
+        return;
+    }
+
+    p_client->rsp_header_cb = cb;
+}
+
+void duer_http_reg_inform_ip_cb(duer_http_client_t *p_client, duer_http_inform_ip_cb cb)
+{
+    if (!p_client) {
+        DUER_LOGE("Args err: p_client is null!\n");
+        return;
+    }
+
+    p_client->inform_ip_cb = cb;
+}
+
+void duer_http_set_max_resume_retry_count(duer_http_client_t *p_client, size_t count)
+{
+    if (!p_client) {
+        DUER_LOGE("Args err: p_client is null!\n");
+        return;
+    }
+    p_client->max_resume_retry_count = count;
+}
+
+void duer_http_set_max_timeout_retry_count(duer_http_client_t *p_client, size_t count)
+{
+    if (!p_client) {
+        DUER_LOGE("Args err: p_client is null!\n");
+        return;
+    }
+    p_client->max_timeout_retry_count = count;
+}
+
+void duer_http_set_connect_timeout_ms(duer_http_client_t *p_client, size_t timeout_ms)
+{
+    if (!p_client) {
+        DUER_LOGE("Args err: p_client is null!\n");
+        return;
+    }
+    p_client->connect_timeout_ms = timeout_ms;
+}
+
+void duer_http_set_recv_timeout_ms(duer_http_client_t *p_client, size_t timeout_ms)
+{
+    if (!p_client) {
+        DUER_LOGE("Args err: p_client is null!\n");
+        return;
+    }
+    p_client->timeout_ms = timeout_ms;
+}
+
+void duer_http_stop_notify(duer_http_client_t *p_client)
+{
+    DUER_LOGV("entry\n");
+
+    if (p_client) {
+        p_client->stop_flag = 1;
+    }
 
     DUER_LOGV("leave\n");
 }
@@ -378,6 +470,8 @@ static duer_http_result_t duer_http_send(duer_http_client_t *p_client,
 {
     size_t written_len = 0;
     int    ret         = 0;
+    size_t elapsed_ms = 0;
+    const size_t SLEEP_MS = 10;
 
     DUER_LOGV("entry\n");
 
@@ -387,24 +481,27 @@ static duer_http_result_t duer_http_send(duer_http_client_t *p_client,
 
     DUER_LOGD("send %d bytes:(%s)\n", len, buf);
 
-    //modify by lyx
-    uint8_t retry = 0;
-    do {
-        p_client->ops.set_blocking(p_client->ops.n_handle, true);
-        ret = p_client->ops.send(p_client->ops.n_handle, buf, len);
-    } while (ret == DUER_ERR_TRANS_WOULD_BLOCK && retry++ < 8);
+    p_client->ops.set_blocking(p_client->ops.n_handle, true);
 
-    if (ret > 0) {
-        written_len += ret;
-        p_client->upload_size += ret;
-    } else if (ret == 0) {
-        duer_ds_log_http(DUER_DS_LOG_HTTP_CONNECT_CLOSED_BY_SERVER, NULL);
-        DUER_LOGE("Connection was closed by server");
-        return DUER_HTTP_CLOSED;
-    } else {
-        duer_ds_log_http_report_err_code(DUER_DS_LOG_HTTP_SEND_FAILED, ret);
-        DUER_LOGE("Connection error (send returned %d)", ret);
-        return DUER_HTTP_ERR_CONNECT;
+    while (written_len < len && !p_client->stop_flag && elapsed_ms <= p_client->timeout_ms) {
+        ret = p_client->ops.send(p_client->ops.n_handle, buf + written_len, len - written_len);
+
+        if (ret > 0) {
+            elapsed_ms = 0;
+            written_len += ret;
+            p_client->upload_size += ret;
+        } else if (ret == 0) {
+            duer_ds_log_http(DUER_DS_LOG_HTTP_CONNECT_CLOSED_BY_SERVER, NULL);
+            DUER_LOGE("Connection was closed by server");
+            return DUER_HTTP_CLOSED;
+        } else if (ret == DUER_ERR_TRANS_WOULD_BLOCK) {
+            duer_sleep(SLEEP_MS);
+            elapsed_ms += SLEEP_MS;
+        } else {
+            duer_ds_log_http_report_err_code(DUER_DS_LOG_HTTP_SEND_FAILED, ret);
+            DUER_LOGE("Connection error (send returned %d)", ret);
+            return DUER_HTTP_ERR_CONNECT;
+        }
     }
 
     DUER_LOGD("Written %d bytes", written_len);
@@ -422,7 +519,8 @@ static duer_http_result_t duer_http_send(duer_http_client_t *p_client,
  * @param[in]  buf:        a buffer to store received data
  * @param[in]  max_len:    max size needed to read
  * @param[out] p_read_len: really size the data is read
- * @param[in]  to_try:     check to try or not when timeout
+ * @param[in]  to_try:     0 means return when any data received,
+ *                         1 means try to recv more data until buf full or timeout too many times
  *
  * RETURN      DUER_HTTP_OK if success, other duer_http_result_t type code if failed
  */
@@ -433,55 +531,75 @@ static duer_http_result_t duer_http_recv(duer_http_client_t *p_client,
         int to_try)
 {
     int    ret             = 0;
-    int    n_try_times     = 0;
     size_t sz_read_len     = 0;
     duer_http_result_t res      = DUER_HTTP_OK;
+    duer_u32_t start_time = 0;
+    duer_u32_t now = 0;
+    duer_u32_t elapsed = 0;
 
     DUER_LOGV("entry\n");
 
     DUER_LOGV("Trying to read %d bytes", max_len);
 
+    start_time = duer_timestamp();
+    elapsed = start_time;
     while (sz_read_len < max_len) {
         DUER_LOGD("Trying(%d ) times to read at most %4d bytes [Not blocking] %d,%d",
-                  n_try_times, max_len - sz_read_len, max_len, sz_read_len);
+                  p_client->timeout_count, max_len - sz_read_len, max_len, sz_read_len);
         p_client->ops.set_blocking(p_client->ops.n_handle, true);
-        p_client->ops.set_timeout(p_client->ops.n_handle, DUER_HTTP_TIME_OUT);
+        p_client->ops.set_timeout(p_client->ops.n_handle, p_client->timeout_ms);
         ret = p_client->ops.recv(p_client->ops.n_handle, buf + sz_read_len, max_len - sz_read_len);
 
         if (ret > 0) {
             sz_read_len += ret;
+            if (!to_try) {
+                break;
+            }
+
+            if (sz_read_len < max_len) {
+                now = duer_timestamp();
+                if (DUER_TIME_AFTER(now, start_time + p_client->timeout_ms)) {
+                    DUER_LOGI("Timeout count: %u, max_count: %u, read length: %u",
+                              p_client->timeout_count, p_client->max_timeout_retry_count, sz_read_len);
+                    ++p_client->timeout_count;
+                    start_time = now;
+                }
+            }
         } else if (ret == 0) {
             duer_ds_log_http(DUER_DS_LOG_HTTP_CONNECT_CLOSED_BY_SERVER, NULL);
             res = DUER_HTTP_CLOSED;
             break;
         } else {
-            if (ret != DUER_ERR_TRANS_WOULD_BLOCK) {
+            DUER_LOGI("Timeout count: %u, max_count: %u, read length: %u, ret: %d",
+                      p_client->timeout_count, p_client->max_timeout_retry_count, sz_read_len, ret);
+            if ((ret != DUER_ERR_TRANS_TIMEOUT) && (ret != DUER_ERR_TRANS_WOULD_BLOCK)) {
                 DUER_LOGI("http recv error:%d", ret);
                 duer_ds_log_http_report_err_code(DUER_DS_LOG_HTTP_RECEIVE_FAILED, ret);
                 res = DUER_HTTP_ERR_CONNECT;
                 break;
             }
+            ++p_client->timeout_count;
+            start_time = duer_timestamp();
         }
 
-        if (!to_try || (sz_read_len == max_len)) {
+        if (p_client->timeout_count > p_client->max_timeout_retry_count) {
+            res = DUER_HTTP_ERR_TIMEOUT;
             break;
-        } else {
-            n_try_times++;
-            if (n_try_times >= DUER_HTTP_TIME_OUT_TRIES) {
-                res = DUER_HTTP_ERR_TIMEOUT;
-                break;
-            }
         }
 
-        if (p_client->check_stop_notify_cb && p_client->check_stop_notify_cb()) {
+        if (p_client->stop_flag) {
             DUER_LOGI("Stopped getting media data from url by stop flag!\n");
             break;
         }
     }
 
-    DUER_LOGV("Read %d bytes", sz_read_len);
+    elapsed = duer_timestamp() - elapsed;
+    if (elapsed > p_client->timeout_ms) {
+        DUER_LOGE("recv %d bytes, elapsed %u ms more than %u timeout",
+                  sz_read_len, elapsed, p_client->timeout_ms);
+    }
+    DUER_LOGD("Read %d bytes, expecte %d, res=%d.", sz_read_len, max_len, res);
 
-    buf[sz_read_len] = '\0';
     *p_read_len = sz_read_len;
 
     DUER_LOGV("leave\n");
@@ -505,17 +623,22 @@ static duer_http_result_t duer_http_send_request(duer_http_client_t *p_client,
         duer_http_method_t method,
         char *path,
         char *host,
-        unsigned short port)
+        unsigned short port,
+        size_t len,
+        const char *type)
 {
-    int   ret           = 0;
-    int   req_fmt_len   = 0;
-    char *p_request_buf = NULL;
+    int        ret           = 0;
+    int        req_fmt_len   = 0;
+    char      *p_request_buf = NULL;
+    duer_bool  is_default_port = DUER_FALSE;
 
     DUER_LOGV("entry");
 
-    req_fmt_len = DUER_STRLEN("%s %s HTTP/1.1\r\nHost: %s\r\nAccept: */*\r\nRange: bytes=%d-\r\n");
+    req_fmt_len = DUER_STRLEN("%s %s HTTP/1.1\r\nHost: %s\r\nAccept: */*\r\nRange: bytes=%d-" \
+                              "Content-Length:%u\r\nContent-Type:%s\r\n");
     req_fmt_len += DUER_HTTP_REQUEST_CMD_LEN_MAX + DUER_STRLEN(path) + DUER_STRLEN(host) \
-                   + DUER_HTTP_RANGE_LEN_MAX;
+                   + DUER_HTTP_PORT_LEN_MAX + DUER_HTTP_RANGE_LEN_MAX + DUER_HTTP_CONTENT_LEN_MAX,
+                   + (type == NULL ? 0 : DUER_STRLEN(type));
 
     p_request_buf = (char *)DUER_MALLOC(req_fmt_len);
 
@@ -527,17 +650,37 @@ static duer_http_result_t duer_http_send_request(duer_http_client_t *p_client,
 
     DUER_MEMSET(p_request_buf, 0, req_fmt_len);
 
-    if (p_client->recv_size > 0) {
-        DUER_SNPRINTF(p_request_buf,
-                      req_fmt_len,
-                      "%s %s HTTP/1.1\r\nHost: %s\r\nAccept: */*\r\nRange: bytes=%d-\r\n",
-                      s_hc_request_cmd[method],
-                      path,
-                      host,
-                      (unsigned int)p_client->recv_size);
+    if (p_client->scheme == DUER_SCHEME_HTTPS) {
+        if (port == DUER_DEFAULT_HTTPS_PORT) {
+            is_default_port = DUER_TRUE;
+        }
     } else {
+        if (port == DUER_DEFAULT_HTTP_PORT) {
+            is_default_port = DUER_TRUE;
+        }
+    }
+
+    if (is_default_port) {
         DUER_SNPRINTF(p_request_buf, req_fmt_len, "%s %s HTTP/1.1\r\nHost: %s\r\nAccept: */*\r\n",
                       s_hc_request_cmd[method], path, host);
+    } else {
+        DUER_SNPRINTF(p_request_buf, req_fmt_len, "%s %s HTTP/1.1\r\nHost: %s:%d\r\nAccept: */*\r\n",
+                      s_hc_request_cmd[method], path, host, port);
+    }
+
+    if (method == DUER_HTTP_POST || method == DUER_HTTP_PUT) {
+        DUER_SNPRINTF(p_request_buf + DUER_STRLEN(p_request_buf),
+                      req_fmt_len - DUER_STRLEN(p_request_buf),
+                      "Content-Length:%u\r\nContent-Type:%s\r\n",
+                      len,
+                      type);
+    }
+
+    if (p_client->recv_size > 0) {
+        DUER_SNPRINTF(p_request_buf + DUER_STRLEN(p_request_buf),
+                      req_fmt_len - DUER_STRLEN(p_request_buf),
+                      "Range: bytes=%d-\r\n",
+                      p_client->recv_size);
     }
 
     DUER_LOGD(" request buffer %d bytes{%s}", req_fmt_len, p_request_buf);
@@ -579,6 +722,11 @@ static duer_http_result_t duer_http_send_headers(duer_http_client_t *p_client,
     DUER_LOGD("Send custom header(s) %d (if any)", p_client->sz_headers_count);
 
     for (nh = 0; nh < p_client->sz_headers_count * 2; nh += 2) {
+        if (!p_client->pps_custom_headers[nh] || !p_client->pps_custom_headers[nh + 1]) {
+            DUER_LOGE("Invalid custom header");
+            return DUER_HTTP_ERR_FAILED;
+        }
+
         DUER_LOGD("hdr[%2d] %s: %s", nh, p_client->pps_custom_headers[nh],
                   p_client->pps_custom_headers[nh + 1]);
 
@@ -677,6 +825,7 @@ static duer_http_result_t duer_http_recv_rsp_and_parse(duer_http_client_t *p_cli
     DUER_LOGV("enrty\n");
 
     ret = duer_http_recv(p_client, buf, max_len, &rev_len, 1);
+    buf[rev_len] = '\0';
 
     DUER_LOGD("response received: %s\n", buf);
 
@@ -709,8 +858,7 @@ static duer_http_result_t duer_http_recv_rsp_and_parse(duer_http_client_t *p_cli
                      DUER_HTTP_ERR_PRTCL);
     }
 
-    if ((p_client->n_http_response_code < DUER_HTTP_MIN_VALID_RSP_CODE)
-        || (p_client->n_http_response_code >= DUER_HTTP_MIN_INVALID_RSP_CODE)) {
+    if (p_client->n_http_response_code < DUER_HTTP_MIN_VALID_RSP_CODE) {
         //Did not return a 2xx code;
         //TODO fetch headers/(&data?) anyway and implement a mean of writing/reading headers
         DUER_LOGE("Response code %d", p_client->n_http_response_code);
@@ -855,6 +1003,9 @@ static duer_http_result_t duer_http_recv_headers_and_parse(duer_http_client_t *p
             }
 
             DUER_LOGD("Read header (%s: %s)", key, value);
+            if (p_client->rsp_header_cb != NULL) {
+                p_client->rsp_header_cb(p_client->p_data_hdlr_ctx, key, value);
+            }
 
             if (!DUER_STRNCASECMP(key, "Content-Length", max_len)) {
                 DUER_SSCANF(value, "%d", &http_content_len);
@@ -868,13 +1019,15 @@ static duer_http_result_t duer_http_recv_headers_and_parse(duer_http_client_t *p
 
                     DUER_LOGI("Http client data is chunked transfored\n");
 
-                    p_client->p_chunk_buf = (char *)DUER_MALLOC(DUER_HTTP_CHUNK_SIZE);
-                    if (!p_client->p_chunk_buf) {
-                        DUER_DS_LOG_REPORT_HTTP_MEMORY_ERROR();
-                        HC_CHECK_ERR(p_client,
-                                     !p_client->p_chunk_buf,
-                                     "Malloc memory failed for p_chunk_buf!",
-                                     DUER_HTTP_ERR_FAILED);
+                    if (p_client->p_chunk_buf == NULL) {
+                        p_client->p_chunk_buf = (char *)DUER_MALLOC(DUER_HTTP_CHUNK_SIZE);
+                        if (!p_client->p_chunk_buf) {
+                            DUER_DS_LOG_REPORT_HTTP_MEMORY_ERROR();
+                            HC_CHECK_ERR(p_client,
+                                         !p_client->p_chunk_buf,
+                                         "Malloc memory failed for p_chunk_buf!",
+                                         DUER_HTTP_ERR_FAILED);
+                        }
                     }
                 }
             } else if (!DUER_STRNCASECMP(key, "Content-Type", max_len)) {
@@ -984,7 +1137,7 @@ static duer_http_result_t duer_http_recv_chunked_size(duer_http_client_t *p_clie
     rev_len = *p_read_len;
 
     while (!found_cr_lf) {
-        if (p_client->check_stop_notify_cb && p_client->check_stop_notify_cb()) {
+        if (p_client->stop_flag) {
             DUER_LOGI("Stopped getting media data from url by stop flag!\n");
             return res;
         }
@@ -1094,7 +1247,7 @@ static duer_http_result_t duer_http_recv_chunk(duer_http_client_t *p_client,
             goto RET;
         }
 
-        if (p_client->check_stop_notify_cb && p_client->check_stop_notify_cb()) {
+        if (p_client->stop_flag) {
             DUER_LOGI("Stopped getting media data from url by stop flag!\n");
             goto RET;
         }
@@ -1117,7 +1270,7 @@ static duer_http_result_t duer_http_recv_chunk(duer_http_client_t *p_client,
         //when chunk size is less than max_len of "buf"
         if (p_client->sz_chunk_size  + DUER_HTTP_CR_LF_LEN <= max_len) {
             if (rev_len < p_client->sz_chunk_size + DUER_HTTP_CR_LF_LEN) {
-                if (p_client->check_stop_notify_cb && p_client->check_stop_notify_cb()) {
+                if (p_client->stop_flag) {
                     DUER_LOGI("Stopped getting media data from url by stop flag!\n");
                     goto RET;
                 }
@@ -1202,7 +1355,7 @@ static duer_http_result_t duer_http_recv_chunk(duer_http_client_t *p_client,
             need_to_read = p_client->sz_chunk_size - rev_len;
 
             while (need_to_read) {
-                if (p_client->check_stop_notify_cb && p_client->check_stop_notify_cb()) {
+                if (p_client->stop_flag) {
                     DUER_LOGI("Stopped getting media data from url by stop flag!\n");
                     goto RET;
                 }
@@ -1333,7 +1486,7 @@ static duer_http_result_t duer_http_recv_content_data(duer_http_client_t *p_clie
     need_to_read -= rev_len;
 
     while (need_to_read || rev_len) {
-        if (p_client->check_stop_notify_cb && p_client->check_stop_notify_cb()) {
+        if (p_client->stop_flag) {
             DUER_LOGI("Stopped getting media data from url by stop flag!\n");
             break;
         }
@@ -1487,6 +1640,58 @@ static duer_http_result_t duer_http_parse_redirect_location(duer_http_client_t *
     return DUER_HTTP_OK;
 }
 
+static int duer_http_socket_do_connect(duer_http_client_t *p_client,
+                                       const char *host,
+                                       unsigned short port)
+{
+    if (p_client->stop_flag) {
+        return DUER_CANCEL;
+    }
+#ifdef DUER_HTTP_DNS_SUPPORT
+    duer_ip_list_t *ip_list = NULL;
+    duer_auto_dns_resolve_type_t resolve_type;
+    int ret = duer_auto_dns_resolve_multi_ip_with_type(host, DUER_HTTP_CLIENT_MAX_RESOLVE_IP_COUNT,
+              &ip_list, &resolve_type);
+    if (ip_list == NULL) {
+        if (ret == DUER_OK) {
+            ret = DUER_ERR_TRANS_DNS_FAIL;
+        }
+        if (p_client->inform_ip_cb && !p_client->stop_flag) {
+            p_client->inform_ip_cb(p_client->p_data_hdlr_ctx,
+                                   host, NULL, DUER_AUTO_DNS_RESOLVE_FAILED, ret);
+        }
+        return ret;
+    }
+
+    DUER_LOGI("Host: %s, resolved ip count: %u, connect_timeout: %u", host, ip_list->count,
+              p_client->connect_timeout_ms);
+    for (duer_u32_t i = 0; i < ip_list->count; ++i) {
+        if (p_client->stop_flag) {
+            ret = DUER_CANCEL;
+            break;
+        }
+
+        ret = p_client->ops.connect(p_client->ops.n_handle, host, ip_list->list[i], port,
+                                    p_client->connect_timeout_ms);
+
+        if (p_client->inform_ip_cb && !p_client->stop_flag) {
+            char ip[DUER_HTTP_DNS_IP_LEN_MAX];
+            inet_ntoa_r(ip_list->list[i], ip, DUER_HTTP_DNS_IP_LEN_MAX);
+            p_client->inform_ip_cb(p_client->p_data_hdlr_ctx, host, ip, resolve_type, ret);
+        }
+
+        if (ret == DUER_OK) {
+            break;
+        }
+    }
+    duer_http_free_ip_list(ip_list);
+#else
+    int ret = p_client->ops.connect(p_client->ops.n_handle, host, 0, port,
+                                    p_client->connect_timeout_ms);
+#endif  // DUER_HTTP_DNS_SUPPORT
+    return ret;
+}
+
 static duer_http_result_t duer_http_socket_connect(duer_http_client_t *p_client,
         const char *host,
         const unsigned short port)
@@ -1496,6 +1701,7 @@ static duer_http_result_t duer_http_socket_connect(duer_http_client_t *p_client,
     int rs = 0;
     int len = 0;
 
+    duer_mutex_lock(p_client->lock);
     if (!p_client->last_host) {
         is_need_connect = true;
     } else if (DUER_STRNCMP(host, p_client->last_host, DUER_HTTP_HOST_LEN_MAX)
@@ -1504,7 +1710,7 @@ static duer_http_result_t duer_http_socket_connect(duer_http_client_t *p_client,
         http_client_close_socket_connect(p_client);
     } else {
         p_client->ops.set_timeout(p_client->ops.n_handle, 0);
-        // p_client->ops.set_timeout(p_client->ops.n_handle, DUER_HTTP_TIME_OUT);
+        // p_client->ops.set_timeout(p_client->ops.n_handle, p_client->timeout_ms);
         rs = p_client->ops.recv(p_client->ops.n_handle, p_client->buf, 1);
         // connect had been closed by server or error happened
         if ((rs == 0) || ((rs < 0) && (rs != DUER_ERR_TRANS_WOULD_BLOCK))) {
@@ -1514,33 +1720,49 @@ static duer_http_result_t duer_http_socket_connect(duer_http_client_t *p_client,
             ret = DUER_HTTP_OK;
         }
     }
+    duer_mutex_unlock(p_client->lock);
 
     if (!is_need_connect) {
+        DUER_LOGI("The connection still alive");
         goto RET;
     }
 
+    DUER_LOGI("Http reconnect");
+
+    p_client->timeout_count = 0;
     rs = p_client->ops.open(p_client->ops.n_handle);
 
     if (rs >= 0) {
         if (p_client->scheme == DUER_SCHEME_HTTPS) {
             const char *ca_pem = duer_engine_get_rsa_cacrt();
+            if (!ca_pem) {
+                DUER_LOGE("Failed to get ca pem");
+                ret = DUER_HTTP_ERR_FAILED;
+                goto RET;
+            }
             duer_trans_set_pk((duer_trans_handler)p_client->ops.n_handle, ca_pem, DUER_STRLEN(ca_pem) + 1);
         } else {
             duer_trans_unset_pk((duer_trans_handler)p_client->ops.n_handle);
         }
-        p_client->ops.set_timeout(p_client->ops.n_handle, DUER_HTTP_TIME_OUT);
-        rs = p_client->ops.connect(p_client->ops.n_handle, host, port);
+
+        p_client->ops.set_timeout(p_client->ops.n_handle, p_client->timeout_ms);
+        rs = duer_http_socket_do_connect(p_client, host, port);
         DUER_LOGD("n_handle %d, rs: %d", p_client->ops.n_handle, rs);
+
         if (rs < 0) {
             if (rs == DUER_INF_TRANS_IP_BY_HTTP_DNS) {
                 DUER_LOGI("ip got by http dns");
                 duer_ds_log_http(DUER_DS_LOG_HTTP_DNS_GET_IP, NULL);
             } else if (rs == DUER_ERR_TRANS_WOULD_BLOCK) {
                 DUER_LOGD("http connect would block");
+            } else if (rs == DUER_CANCEL) {
+                DUER_LOGI("Stopped getting media data from url by stop flag!\n");
+                ret = rs;
+                goto RET;
             } else {
                 p_client->ops.close(p_client->ops.n_handle);
                 DUER_LOGE("Failed to connect socket, rs: %d", rs);
-                ret = DUER_HTTP_ERR_CONNECT;
+                ret = (rs == DUER_ERR_TRANS_DNS_FAIL ? DUER_HTTP_ERR_DNS : DUER_HTTP_ERR_CONNECT);
                 goto RET;
             }
         }
@@ -1551,15 +1773,18 @@ static duer_http_result_t duer_http_socket_connect(duer_http_client_t *p_client,
     }
 
     len = DUER_STRLEN(host);
+    duer_mutex_lock(p_client->lock);
     p_client->last_host = (char *)DUER_MALLOC(len + 1);
 
     if (!p_client->last_host) {
+        DUER_LOGE("Memory overlow");
         ret = DUER_HTTP_ERR_FAILED;
     } else {
         DUER_SNPRINTF(p_client->last_host, len + 1, "%s", host);
         p_client->last_host[len] = '\0';
         p_client->last_port = port;
     }
+    duer_mutex_unlock(p_client->lock);
 
 RET:
     return ret;
@@ -1577,17 +1802,19 @@ RET:
  *
  * RETURN      DUER_HTTP_OK if success, other duer_http_result_t type code if failed
  */
-static duer_http_result_t duer_http_connect(duer_http_client_t *p_client,
+static duer_http_result_t duer_http_connect_and_send_req(duer_http_client_t *p_client,
         const char *url,
         duer_http_method_t method,
-        size_t *remain_size_in_buf)
+        size_t *remain_size_in_buf,
+        const char *data,
+        size_t len,
+        const char *type)
 {
     char   scheme[DUER_HTTP_SCHEME_LEN_MAX];
     char  *p_path          = NULL;
     char  *host            = NULL;
     bool   is_relative_url = false;
     int    path_len_max    = 0;
-    int    ret             = 0;
     int    redirect_count  = 0;
     size_t rev_len         = 0;
     unsigned short port    = 0;
@@ -1607,13 +1834,13 @@ static duer_http_result_t duer_http_connect(duer_http_client_t *p_client,
             duer_ds_log_http_report_with_url(DUER_DS_LOG_HTTP_URL_PARSE_FAILED, NULL);
             DUER_LOGE("url is NULL!");
             res = DUER_HTTP_ERR_FAILED;
-            goto RET;
+            break;
         }
 
         if (DUER_HTTP_CHUNK_SIZE <= DUER_HTTP_RSP_CHUNK_SIZE) {
             DUER_LOGE("http client chunk size config error!!!\n");
             res = DUER_HTTP_ERR_FAILED;
-            goto RET;
+            break;
         }
 
         path_len_max = DUER_STRLEN(url) + 1;
@@ -1623,9 +1850,10 @@ static duer_http_result_t duer_http_connect(duer_http_client_t *p_client,
             DUER_DS_LOG_REPORT_HTTP_MEMORY_ERROR();
             DUER_LOGE("Mallco memory(size:%d) Failed!\n", path_len_max);
             res = DUER_HTTP_ERR_FAILED;
-            goto RET;
+            break;
         }
 
+        port = 0;
         //to parse url
         res = duer_http_parse_url(url, scheme, sizeof(scheme), host, &port, p_path,
                                   path_len_max, is_relative_url);
@@ -1634,7 +1862,7 @@ static duer_http_result_t duer_http_connect(duer_http_client_t *p_client,
             duer_ds_log_http_report_with_url(DUER_DS_LOG_HTTP_URL_PARSE_FAILED, url);
             DUER_LOGE("parseURL returned %d", res);
             res = DUER_HTTP_ERR_FAILED;
-            goto RET;
+            break;
         }
 
         p_client->scheme = DUER_SCHEME_HTTP;
@@ -1660,24 +1888,27 @@ static duer_http_result_t duer_http_connect(duer_http_client_t *p_client,
         //to connect server
         DUER_LOGD("Connecting socket to server");
 
-        ret = duer_http_socket_connect(p_client, host, port);
-
-        if (ret != DUER_HTTP_OK) {
-            duer_ds_log_http_report_with_url(DUER_DS_LOG_HTTP_SOCKET_CONN_FAILED, url);
-            DUER_LOGE("Could not connect(%d): %s:%d\n", ret, host, port);
-            res = DUER_HTTP_ERR_CONNECT;
-            goto RET;
+        res = duer_http_socket_connect(p_client, host, port);
+        if (res == DUER_CANCEL) {
+            break;
         }
 
-        DUER_LOGD("Connecting socket to server success:%d", ret);
+        if (res != DUER_HTTP_OK) {
+            duer_ds_log_http_report_with_url(DUER_DS_LOG_HTTP_SOCKET_CONN_FAILED, url);
+            DUER_LOGE("Could not connect(%d): %s:%d\n", res, host, port);
+            res = DUER_HTTP_ERR_CONNECT;
+            break;
+        }
+
+        DUER_LOGD("Connecting socket to server success:%d", res);
 
         //to send http request
         DUER_LOGD("Sending request");
-        res = duer_http_send_request(p_client, method, p_path, host, port);
+        res = duer_http_send_request(p_client, method, p_path, host, port, len, type);
 
         if (res != DUER_HTTP_OK) {
             duer_ds_log_http(DUER_DS_LOG_HTTP_REQUEST_SEND_FAILED, NULL);
-            goto RET;
+            break;
         }
 
         //to send http headers
@@ -1685,7 +1916,15 @@ static duer_http_result_t duer_http_connect(duer_http_client_t *p_client,
 
         if (res != DUER_HTTP_OK) {
             duer_ds_log_http(DUER_DS_LOG_HTTP_HEADER_SEND_FAILED, NULL);
-            goto RET;
+            break;
+        }
+
+        //sending http post data
+        if ((method == DUER_HTTP_POST || method == DUER_HTTP_PUT) && (data != NULL) && (len != 0)) {
+            res = duer_http_send(p_client, data, len);
+            if (res != DUER_HTTP_OK) {
+                break;
+            }
         }
 
         //to receive http response
@@ -1697,7 +1936,7 @@ static duer_http_result_t duer_http_connect(duer_http_client_t *p_client,
 
         if (res != DUER_HTTP_OK) {
             duer_ds_log_http(DUER_DS_LOG_HTTP_RESPONSE_RECEIVE_FAILED, NULL);
-            goto RET;
+            break;
         }
 
         //to receive http headers and pasrse it
@@ -1707,41 +1946,53 @@ static duer_http_result_t duer_http_connect(duer_http_client_t *p_client,
                                                DUER_HTTP_CHUNK_SIZE,
                                                &rev_len);
 
+        if (p_client->n_http_response_code >= DUER_HTTP_MIN_INVALID_RSP_CODE) {
+            DUER_LOGE("Response code %d", p_client->n_http_response_code);
+            duer_ds_log_http_report_err_code(DUER_DS_LOG_HTTP_RESPONSE_RECEIVE_FAILED,
+                                             p_client->n_http_response_code);
+            res = DUER_HTTP_ERR_PRTCL;
+            break;
+        }
         if (res == DUER_HTTP_REDIRECTTION) {
             DUER_LOGI("DUER_HTTP_REDIRECTTION");
+            redirect_count++;
+            duer_mutex_lock(p_client->lock);
             http_client_close_socket_connect(p_client);
+            duer_mutex_unlock(p_client->lock);
             res = duer_http_parse_redirect_location(p_client, p_path,
                                                     path_len_max, &is_relative_url);
 
             if (res != DUER_HTTP_OK) {
-                duer_ds_log_http_redirect_fail(p_path);
-                goto RET;
+                break;
             }
 
             DUER_FREE(p_path);
             p_path = NULL;
             url = p_client->p_location;
-            redirect_count++;
             DUER_LOGI("Taking %d redirections to [%s]", redirect_count, url);
             continue;
         } else if (res != DUER_HTTP_OK) {
             duer_ds_log_http(DUER_DS_LOG_HTTP_HEADER_RECEIVE_FAILED, NULL);
-            goto RET;
+            break;
         } else {
             if (p_client->get_url_cb) {
-                duer_ds_log_http_report_with_url(DUER_DS_LOG_HTTP_DOWNLOAD_URL, url);
-                p_client->get_url_cb(url);
+                p_client->get_url_cb(p_client->p_data_hdlr_ctx, url);
             }
-
             break;
         }
     }
 
-    if (redirect_count > DUER_HTTP_REDIRECTION_MAX) {
-        DUER_LOGE("Too many redirections!");
+    if (res != DUER_CANCEL && res != DUER_HTTP_OK && redirect_count > 0) {
+        duer_ds_log_http_redirect_fail(p_client->p_location);
     }
 
-RET:
+    if (redirect_count > DUER_HTTP_REDIRECTION_MAX) {
+        DUER_LOGE("Too many redirections!");
+        if (res == DUER_HTTP_OK) {
+            res = DUER_HTTP_TOO_MANY_REDIRECT;
+        }
+        duer_ds_log_http_too_many_redirect(redirect_count);
+    }
 
     if (p_path) {
         DUER_FREE(p_path);
@@ -1765,7 +2016,7 @@ duer_http_result_t duer_http_get_data(duer_http_client_t *p_client, size_t remai
 
     //to receive http chunk data
     if (p_client->n_is_chunked) {
-        DUER_LOGD("Receiving  http chunk data\n");
+        DUER_LOGD("Receiving http chunk data\n");
         res = duer_http_recv_chunk(p_client, p_client->buf, DUER_HTTP_CHUNK_SIZE - 1,
                                    remain_size_in_buf);
 
@@ -1774,7 +2025,7 @@ duer_http_result_t duer_http_get_data(duer_http_client_t *p_client, size_t remai
         }
     } else {
         //to receive http data content
-        DUER_LOGD("Receiving  http data content\n");
+        DUER_LOGD("Receiving http data content\n");
         res = duer_http_recv_content_data(p_client, p_client->buf, DUER_HTTP_CHUNK_SIZE - 1,
                                           remain_size_in_buf);
 
@@ -1794,7 +2045,9 @@ duer_http_result_t duer_http_get_data(duer_http_client_t *p_client, size_t remai
 static void duer_http_conn_keep_timer_cb(void *argument)
 {
     duer_ds_log_http_persisten_conn_timeout(((duer_http_client_t *)argument)->last_host);
+    duer_mutex_lock(((duer_http_client_t *)argument)->lock);
     http_client_close_socket_connect(argument);
+    duer_mutex_unlock(((duer_http_client_t *)argument)->lock);
 }
 
 static void duer_http_ds_log_statistic(duer_http_client_t *p_client,
@@ -1823,7 +2076,7 @@ static void duer_http_ds_log_statistic(duer_http_client_t *p_client,
 
     if (ret != DUER_HTTP_OK) {
         code = DUER_DS_LOG_HTTP_DOWNLOAD_FAILED;
-    } else if (p_client->check_stop_notify_cb && p_client->check_stop_notify_cb()) {
+    } else if (p_client->stop_flag) {
         code = DUER_DS_LOG_HTTP_DOWNLOAD_STOPPED;
     } else {
         code = DUER_DS_LOG_HTTP_DOWNLOAD_FINISHED;
@@ -1832,14 +2085,21 @@ static void duer_http_ds_log_statistic(duer_http_client_t *p_client,
     duer_ds_log_http_download_exit(code, &statistic_info);
 }
 
-duer_http_result_t duer_http_get(duer_http_client_t *p_client,
-                                 const char *url,
-                                 const size_t pos,
-                                 const int connect_keep_time)
+static duer_http_result_t duer_http_func(duer_http_client_t *p_client,
+        const char *url,
+        duer_http_method_t method,
+        const size_t pos,
+        const int connect_keep_time,
+        const char *data,
+        size_t len,
+        const char *type)
 {
     size_t         rev_len = 0;
     duer_http_result_t  ret     = DUER_HTTP_OK;
     int started_time = 0;
+    size_t connect_retry_count = 0;
+    size_t last_recv_size = 0;
+    duer_ds_log_http_code_t log_code = 0;
 
     DUER_LOGV("enrty\n");
 
@@ -1849,21 +2109,41 @@ duer_http_result_t duer_http_get(duer_http_client_t *p_client,
         return DUER_HTTP_ERR_FAILED;
     }
 
-    duer_ds_log_http_report_with_url(DUER_DS_LOG_HTTP_DOWNLOAD_STARTED, url);
-    DUER_LOGD("http get url: %s\n", url);
+    switch (method) {
+    case DUER_HTTP_GET:
+        log_code = DUER_DS_LOG_HTTP_DOWNLOAD_STARTED;
+        break;
+    case DUER_HTTP_POST:
+        log_code = DUER_DS_LOG_HTTP_POST_STARTED;
+        break;
+    case DUER_HTTP_PUT:
+    case DUER_HTTP_DELETE:
+        break;
+    default:
+        DUER_LOGE("Invalid param");
+        DUER_DS_LOG_REPORT_HTTP_PARAM_ERROR();
+        return DUER_ERR_INVALID_PARAMETER;
+    }
+
+    duer_ds_log_http_report_with_url(log_code, url);
+    DUER_LOGD("http %s url: %s\n", s_hc_request_cmd[method], url);
 
     started_time = duer_timestamp();
 
+    duer_mutex_lock(p_client->lock);
     if (p_client->connect_keep_timer) {
         duer_timer_stop(p_client->connect_keep_timer);
         duer_timer_release(p_client->connect_keep_timer);
         p_client->connect_keep_timer = NULL;
     }
+    duer_mutex_unlock(p_client->lock);
 
     p_client->data_pos = DUER_HTTP_DATA_FIRST;
     p_client->resume_retry_count = 0;
+    p_client->timeout_count = 0;
     p_client->recv_size = pos;
     p_client->upload_size = 0;
+    p_client->stop_flag = 0;
     duer_http_set_content_len(p_client, 0);
 
     p_client->buf = DUER_MALLOC(DUER_HTTP_CHUNK_SIZE);
@@ -1873,19 +2153,38 @@ duer_http_result_t duer_http_get(duer_http_client_t *p_client,
         goto RET;
     }
 
-    while (p_client->resume_retry_count <= DUER_HTTP_RESUME_COUNT_MAX) {
-        if (p_client->check_stop_notify_cb && p_client->check_stop_notify_cb()) {
+    while (p_client->resume_retry_count <= p_client->max_resume_retry_count
+           && connect_retry_count <= p_client->max_connect_retry_count) {
+        if (p_client->stop_flag) {
             DUER_LOGI("Stopped getting media data from url by stop flag!\n");
             break;
         }
 
         // create http connect
-        ret = duer_http_connect(p_client, url, DUER_HTTP_GET, &rev_len);
+        // if (duer_wifi_is_connected()) {
+        ret = duer_http_connect_and_send_req(p_client, url, method, &rev_len, data, len, type);
+        // } else {
+        //     ret = DUER_HTTP_ERR_CONNECT;
+        // }
 
         if ((ret == DUER_HTTP_ERR_CONNECT) || (ret == DUER_HTTP_ERR_TIMEOUT)) {
-            p_client->resume_retry_count++;
-            DUER_LOGI("Try to resume from break-point %d time\n", p_client->resume_retry_count);
+            if (p_client->keep_retry_cb != NULL
+                && p_client->keep_retry_cb(p_client->p_data_hdlr_ctx) != 0) {
+                p_client->resume_retry_count = 0;
+                connect_retry_count = 0;
+                DUER_LOGI("Try to resume from break-point, keep retry");
+                /* Give up CPU */
+                duer_sleep(50);
+            } else {
+                ++p_client->resume_retry_count;
+                ++connect_retry_count;
+                DUER_LOGI("Try to resume from break-point %d time\n", p_client->resume_retry_count);
+            }
+            http_client_close_socket_connect(p_client);
             continue;
+        } else if (ret == DUER_CANCEL) {
+            ret = DUER_HTTP_OK;
+            break;
         }
 
         if (ret != DUER_HTTP_OK) {
@@ -1899,14 +2198,31 @@ duer_http_result_t duer_http_get(duer_http_client_t *p_client,
             || (ret == DUER_HTTP_ERR_TIMEOUT)
             || (ret == DUER_HTTP_CLOSED)) {
             DUER_LOGW("duer http get data ret:%d", ret);
-            p_client->resume_retry_count++;
-            if (p_client->resume_retry_count <= DUER_HTTP_RESUME_COUNT_MAX) {
+            ++p_client->resume_retry_count;
+            if (p_client->recv_size == last_recv_size) {
+                ++connect_retry_count;
+            } else {
+                connect_retry_count = 0;
+            }
+            if (p_client->keep_retry_cb != NULL
+                && p_client->keep_retry_cb(p_client->p_data_hdlr_ctx) != 0) {
+                DUER_LOGI("Resume from break-point: keep retry");
+                p_client->resume_retry_count = 0;
+                connect_retry_count = 0;
+            }
+
+            if (p_client->resume_retry_count <= p_client->max_resume_retry_count
+                && connect_retry_count <= p_client->max_connect_retry_count) {
                 DUER_LOGI("Resume from break-point:retry %d time\n", p_client->resume_retry_count);
+                http_client_close_socket_connect(p_client);
             } else {
                 DUER_LOGE("Resume from break-point too many times\n");
             }
 
             continue;
+        } else {
+            connect_retry_count = 0;
+            last_recv_size = p_client->recv_size;
         }
 
         break;
@@ -1914,7 +2230,7 @@ duer_http_result_t duer_http_get(duer_http_client_t *p_client,
 
     DUER_LOGI("HTTP: %d bytes received\n", p_client->recv_size - pos);
 
-    if (p_client->recv_size == pos) {
+    if (ret == DUER_HTTP_OK && p_client->recv_size == pos) {
         duer_ds_log_http(DUER_DS_LOG_HTTP_ZERO_BYTE_DOWNLOAD, NULL);
     }
 
@@ -1931,7 +2247,8 @@ RET:
 
     duer_http_ds_log_statistic(p_client, started_time, pos, ret, url);
 
-    if ((p_client->check_stop_notify_cb && p_client->check_stop_notify_cb()) ||
+    duer_mutex_lock(p_client->lock);
+    if ((p_client->stop_flag) ||
         (connect_keep_time == 0) || (ret != DUER_HTTP_OK)) {
         http_client_close_socket_connect(p_client);
     } else {
@@ -1947,6 +2264,7 @@ RET:
             ret = DUER_HTTP_ERR_FAILED;
         }
     }
+    duer_mutex_unlock(p_client->lock);
 
     if (p_client->p_location) {
         DUER_FREE(p_client->p_location);
@@ -1967,3 +2285,38 @@ RET:
     return ret;
 }
 
+duer_http_result_t duer_http_post(duer_http_client_t *p_client,
+                                  const char *url,
+                                  const int connect_keep_time,
+                                  const char *data,
+                                  size_t len,
+                                  const char *content_type)
+{
+    return duer_http_perform(p_client, url, DUER_HTTP_POST, connect_keep_time, data, len,
+                             content_type);
+}
+
+duer_http_result_t duer_http_get(duer_http_client_t *p_client,
+                                 const char *url,
+                                 const size_t pos,
+                                 const int connect_keep_time)
+{
+    return duer_http_func(p_client, url, DUER_HTTP_GET, pos, connect_keep_time, NULL, 0, NULL);;
+}
+
+duer_http_result_t duer_http_perform(duer_http_client_t *p_client,
+                                     const char *url,
+                                     duer_http_method_t method,
+                                     const int connect_keep_time,
+                                     const char *data,
+                                     size_t len,
+                                     const char *content_type)
+{
+    if ((len > 0) && ((data == NULL) || (content_type == NULL))) {
+        DUER_DS_LOG_REPORT_HTTP_PARAM_ERROR();
+        DUER_LOGE("PARAM error");
+        return DUER_HTTP_ERR_FAILED;
+    }
+
+    return duer_http_func(p_client, url, method, 0, connect_keep_time, data, len, content_type);
+}

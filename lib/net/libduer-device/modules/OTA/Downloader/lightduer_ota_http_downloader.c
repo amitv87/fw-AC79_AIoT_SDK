@@ -22,6 +22,7 @@
 #include "lightduer_ota_downloader.h"
 #include <string.h>
 #include <stdint.h>
+#include "lightduer_lib.h"
 #include "lightduer_log.h"
 #include "lightduer_types.h"
 #include "lightduer_mutex.h"
@@ -79,6 +80,8 @@ static int init_http_downloader(duer_ota_downloader_t *downloader)
 
         ret = DUER_ERR_INVALID_PARAMETER;
 
+        duer_ota_downloader_report_err(downloader, "Argument error", ret);
+
         goto out;
     }
 
@@ -88,6 +91,11 @@ static int init_http_downloader(duer_ota_downloader_t *downloader)
 
         ret = DUER_ERR_FAILED;
 
+        duer_ota_downloader_report_err(
+            downloader,
+            "Create HTTP client failed",
+            ret);
+
         goto out;
     }
 
@@ -95,10 +103,16 @@ static int init_http_downloader(duer_ota_downloader_t *downloader)
     if (pdata == NULL) {
         DUER_LOGE("HTTP Downloader: Malloc failed");
 
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
+
+        duer_ota_downloader_report_err(
+            downloader,
+            "Malloc HTTP private data failed",
+            ret);
 
         goto out;
     }
+
     DUER_MEMSET(pdata, 0, sizeof(*pdata));
     pdata->client = client;
     downloader->private_data = (void *)pdata;
@@ -117,12 +131,23 @@ static int connect_http_server(duer_ota_downloader_t *downloader, const char *ur
         DUER_LOGE("HTTP Downloader: There is no HTTP client");
 
         ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_downloader_report_err(
+            downloader,
+            "No HTTP Client",
+            ret);
+
         goto out;
     }
 
     status =  duer_http_get(pdata->client, url, 0, 0);
     if (status != DUER_HTTP_OK) {
         DUER_LOGE("HTTP Downloader: Get URL failed");
+
+        duer_ota_downloader_report_err(
+            downloader,
+            "GET URL failed",
+            status);
 
         ret = DUER_ERR_FAILED;
     }
@@ -143,7 +168,10 @@ static int disconnect_http_server(duer_ota_downloader_t *downloader)
     return ret;
 }
 
-static int register_data_notify(duer_ota_downloader_t *downloader, data_handler handler, void *private_data)
+static int register_data_notify(
+    duer_ota_downloader_t *downloader,
+    data_handler handler,
+    void *private_data)
 {
     int ret = DUER_OK;
     struct HTTPPrivateData *pdata = NULL;
@@ -153,6 +181,11 @@ static int register_data_notify(duer_ota_downloader_t *downloader, data_handler 
 
         ret = DUER_ERR_INVALID_PARAMETER;
 
+        duer_ota_downloader_report_err(
+            downloader,
+            "Argument error",
+            ret);
+
         goto out;
     }
 
@@ -161,6 +194,12 @@ static int register_data_notify(duer_ota_downloader_t *downloader, data_handler 
         DUER_LOGE("HTTP Downloader: Uninitialized HTTP Downloader");
 
         ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_downloader_report_err(
+            downloader,
+            "Uninit HTTP Downloader",
+            ret);
+
         goto out;
     }
 
@@ -180,10 +219,15 @@ static int destroy_http_downloader(duer_ota_downloader_t *downloader)
         (struct HTTPPrivateData *)(downloader ? downloader->private_data : NULL);
 
     if (pdata == NULL) {
-#if 0	//modify by lyx
         DUER_LOGE("HTTP Downloader: There is no HTTP private data");
+
         ret = DUER_ERR_INVALID_PARAMETER;
-#endif
+
+        duer_ota_downloader_report_err(
+            downloader,
+            "No HTTP private data",
+            ret);
+
         goto out;
     }
 

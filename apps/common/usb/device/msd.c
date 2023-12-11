@@ -329,7 +329,7 @@ static u32 msd_itf_hander(struct usb_device_t *usb_device, struct usb_ctrlreques
     case USB_TYPE_CLASS:
         switch (setup->bRequest) {
         case USB_MSD_MAX_LUN:
-            msd_endpoint_init(usb_device, -1);
+            /* msd_endpoint_init(usb_device, -1); */
             tx_len = 1;
             tx_payload[0] = __get_max_msd_dev() - 1;
             usb_set_data_payload(usb_device, setup, tx_payload, tx_len);
@@ -442,6 +442,7 @@ static void stall_inep(const struct usb_device_t *usb_device)
     u32 txcsr;
 
     while (1) {
+        udelay(100);
         if (ot-- == 0) {
             break;
         }
@@ -463,6 +464,7 @@ static void stall_outep(const struct usb_device_t *usb_device)
     u32 rxcsr;
 
     while (1) {
+        udelay(100);
         if (ot-- == 0) {
             break;
         }
@@ -783,8 +785,6 @@ static void write_10(const struct usb_device_t *usb_device)
                 stall_error(usb_device, 1, MEDIUM_ERROR);
                 log_error("write disk error =%d, dev = %s", err, msd_handle[usb_id]->info.dev_name[cur_lun]);
                 break;
-            } else {
-                break;
             }
             lba += num;
             lba_num -= num;
@@ -984,7 +984,12 @@ void USB_MassStorage(const struct usb_device_t *usb_device)
 
         default:
             log_error("opcode %x", msd_handle[usb_id]->cbw.operationCode);
-            stall_error(usb_device, 0, !(msd_handle[usb_id]->cbw.bmCBWFlags & 0x80));
+            if (msd_handle[usb_id]->cbw.dCBWDataTransferLength) {
+                stall_error(usb_device, !(msd_handle[usb_id]->cbw.bmCBWFlags & 0x80), 2);
+            } else {
+                msd_handle[usb_id]->csw.bCSWStatus = 1;
+                msd_handle[usb_id]->info.bError = 2;
+            }
             break;
         }
     }

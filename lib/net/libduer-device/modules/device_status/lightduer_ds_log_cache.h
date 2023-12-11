@@ -56,4 +56,3 @@ duer_status_t duer_ds_log_cache_finalize(void);
 #endif
 
 #endif // BAIDU_DUER_LIGHTDUER_DS_LOG_CACHE_H
-

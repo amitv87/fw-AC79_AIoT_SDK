@@ -72,7 +72,7 @@ const char *duer_load_profile(const char *path)
 
     return data;
 #else
-
+    printf("get_dueros_profile===========%s\n", get_dueros_profile());
     return get_dueros_profile();
 
 #endif

@@ -46,7 +46,7 @@ int duer_register_device_info_ops(const struct DevInfoOps *ops)
         if (s_lock_dev_info == NULL) {
             DUER_LOGE("Dev Info: Create mutex failed");
 
-            return DUER_ERR_MEMORY_OVERLOW;
+            return DUER_ERR_MEMORY_OVERFLOW;
         }
     }
 
@@ -91,7 +91,7 @@ int duer_report_device_info(void)
     if (data == NULL) {
         DUER_LOGE("Dev Info: Create json object failed");
 
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
 
         goto out;
     }
@@ -100,7 +100,7 @@ int duer_report_device_info(void)
     if (device_info == NULL) {
         DUER_LOGE("Dev Info: Create json object failed");
 
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
 
         goto out;
     }

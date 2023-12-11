@@ -67,4 +67,18 @@ void *alloc_obj(bitmap_objects_t *bop);
  */
 int free_obj(bitmap_objects_t *bop, void *obj);
 
+/**
+ * lock the mutex of bitmap
+ * @bop, the address of the bitmap sructure
+ * @return, -1 fail, 0 ok
+ */
+int lock_bitmap(bitmap_objects_t *bop);
+
+/**
+ * unlock the mutex of bitmap
+ * @bop, the address of the bitmap sructure
+ * @return, -1 fail, 0 ok
+ */
+int unlock_bitmap(bitmap_objects_t *bop);
+
 #endif // BAIDU_DUER_LIBDUER_DEVICE_FRAMEWORK_UTILS_LIGHTDUER_BITMAP_H

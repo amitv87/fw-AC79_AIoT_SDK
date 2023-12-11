@@ -26,7 +26,7 @@
 #include "lightduer_net_transport.h"
 #include "lightduer_net_transport_wrapper.h"
 
-static int socket_init(void *socket_args)
+static duer_handler socket_init(void *socket_args)
 {
     duer_trans_handler *trans_handle = NULL;
     DUER_LOGV("%s", __func__);
@@ -35,29 +35,32 @@ static int socket_init(void *socket_args)
         DUER_LOGE("socket is NULL!\n");
         return 0;
     }
-    return (int)trans_handle;
+    return trans_handle;
 }
 
-static int socket_open(int socket_handle)
+static int socket_open(duer_handler socket_handle)
 {
     return 0;
 }
 
-static int socket_connect(int socket_handle, const char *host, const int port)
+static int socket_connect(
+    duer_handler socket_handle, const char *host, duer_u32_t ip, const int port,
+    duer_u32_t timeout)
 {
     duer_trans_handler *trans_handle = (duer_trans_handler *)socket_handle;
     duer_status_t rs;
     duer_trans_ptr trans = (duer_trans_ptr)socket_handle;
-    DUER_LOGI("%s", __func__);
+    DUER_LOGV("%s", __func__);
     if (!trans_handle) {
         DUER_LOGE("socket is NULL!\n");
         return -1;
     }
-    trans->addr.host = (void *)host;
+    trans->addr.host = (char *)host;
     trans->addr.host_size = DUER_STRLEN(host);
     trans->addr.port = port;
     trans->addr.type = DUER_PROTO_TCP;
-    rs = duer_trans_connect(trans_handle, &trans->addr);
+    trans->addr.ip = ip;
+    rs = duer_trans_connect_timeout(trans_handle, &trans->addr, timeout);
     if (rs < 0 && rs != DUER_INF_TRANS_IP_BY_HTTP_DNS) {
         if (rs != DUER_ERR_TRANS_WOULD_BLOCK) {
             DUER_LOGE("HTTP OPS: Connect to server failed! errno=%d", rs);
@@ -68,11 +71,11 @@ static int socket_connect(int socket_handle, const char *host, const int port)
     return rs;
 }
 
-static void socket_set_blocking(int socket_handle, int blocking)
+static void socket_set_blocking(duer_handler socket_handle, int blocking)
 {
 }
 
-static void socket_set_timeout(int socket_handle, int timeout)
+static void socket_set_timeout(duer_handler socket_handle, int timeout)
 {
     duer_trans_handler *trans_handle = (duer_trans_handler *)socket_handle;
 
@@ -83,7 +86,7 @@ static void socket_set_timeout(int socket_handle, int timeout)
     duer_trans_set_read_timeout(trans_handle, timeout);
 }
 
-static int socket_recv(int socket_handle, void *data, unsigned size)
+static int socket_recv(duer_handler socket_handle, void *data, unsigned size)
 {
     duer_trans_handler *trans_handle = (duer_trans_handler *)socket_handle;
     duer_status_t rs;
@@ -108,7 +111,7 @@ static int socket_recv(int socket_handle, void *data, unsigned size)
     return rs;
 }
 
-static int socket_send(int socket_handle, const void *data, unsigned size)
+static int socket_send(duer_handler socket_handle, const void *data, unsigned size)
 {
     duer_trans_handler *trans_handle = (duer_trans_handler *)socket_handle;
     duer_status_t rs;
@@ -126,13 +129,13 @@ static int socket_send(int socket_handle, const void *data, unsigned size)
             DUER_LOGE("HTTP OPS: Send failed %d", rs);
         }
     } else {
-        DUER_LOGI("HTTP OPS: Send succeeded");
+        DUER_LOGD("HTTP OPS: Send succeeded");
     }
 
     return rs;
 }
 
-static int socket_close(int socket_handle)
+static int socket_close(duer_handler socket_handle)
 {
     duer_trans_handler *trans_handle = (duer_trans_handler *)socket_handle;
     duer_status_t rs;
@@ -150,10 +153,9 @@ static int socket_close(int socket_handle)
     return 0;
 }
 
-static void socket_destroy(int socket_handle)
+static void socket_destroy(duer_handler socket_handle)
 {
     duer_trans_handler *trans_handle = (duer_trans_handler *)socket_handle;
-    duer_status_t rs;
     DUER_LOGV("%s", __func__);
 
     if (!trans_handle) {
@@ -214,4 +216,12 @@ init_client_err:
     client = NULL;
 out:
     return client;
+}
+
+void duer_destory_http_client(duer_http_client_t *client)
+{
+    if (client) {
+        duer_http_destroy(client);
+        DUER_FREE(client);
+    }
 }

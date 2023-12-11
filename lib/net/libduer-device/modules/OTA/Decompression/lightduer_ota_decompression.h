@@ -30,6 +30,7 @@ extern "C" {
 #endif
 
 #define NAME_LENGTH (20)
+#define ERR_MSG_LEN (60)
 
 typedef enum _duer_ota_decompression_type_s {
     ZLIB = 0,
@@ -42,7 +43,7 @@ typedef struct _duer_ota_unpacker_decom_s {
     char name[NAME_LENGTH + 1];
     duer_mutex_t lock;
     void *pdata;
-    char const *err_msg;
+    char err_msg[ERR_MSG_LEN + 1];
     int (*init)(struct _duer_ota_unpacker_decom_s *decompression, void **pdata);
     int (*unzip)(
         struct _duer_ota_unpacker_decom_s *decompression,
@@ -201,6 +202,19 @@ extern int duer_ota_unpacker_recovery_decompression(duer_ota_decompression_t *de
 extern int duer_ota_unpacker_sync_decompression(duer_ota_decompression_t *decompression);
 
 /*
+ * Report error message
+ *
+ * @param decompression: OTA Decompression
+ *              err_msg: error message
+ *             err_code: error code
+ *
+ * @return void:
+ */
+extern void duer_ota_decompression_report_err(
+    duer_ota_decompression_t *decompression,
+    char const *err_msg,
+    int err_code);
+/*
  * Get decompression error message
  *
  * @param decompression: decompression object
@@ -208,7 +222,18 @@ extern int duer_ota_unpacker_sync_decompression(duer_ota_decompression_t *decomp
  * @return: Success: error message
  *           Failed: NULL
  */
-extern char const *duer_ota_decompression_get_err_msg(duer_ota_decompression_t const *decompression);
+extern char const *duer_ota_decompression_get_err_msg(
+    duer_ota_decompression_t const *decompression);
+
+/*
+ * Check wheater the error message exists
+ *
+ * @param decompression: decompression object
+ *
+ * @return: Success: 1
+ *           Failed: -1
+ */
+extern int duer_ota_decompression_check_err_msg(duer_ota_decompression_t *decompression);
 
 #ifdef __cplusplus
 }

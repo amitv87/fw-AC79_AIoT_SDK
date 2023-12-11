@@ -156,7 +156,7 @@ duer_ota_decompression_t *duer_ota_unpacker_get_decompression(duer_ota_decompres
     int ret = DUER_OK;
     duer_ota_decompression_t *decompression = NULL;
 
-    if (type >= DECOMPRESSION_MAX) {
+    if (type < 0 || type >= DECOMPRESSION_MAX) {
         DUER_LOGE("OTA Decompression: Argument error");
 
         return NULL;
@@ -260,7 +260,14 @@ int duer_ota_unpacker_init_decompression(duer_ota_decompression_t *decompression
     if (decompression == NULL || decompression->init == NULL) {
         DUER_LOGE("OTA Decompression: Argument error");
 
-        return DUER_ERR_INVALID_PARAMETER;
+        ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_decompression_report_err(
+            decompression,
+            "Argument error",
+            ret);
+
+        return ret;
     }
 
     err = duer_mutex_lock(decompression->lock);
@@ -273,6 +280,14 @@ int duer_ota_unpacker_init_decompression(duer_ota_decompression_t *decompression
     ret = decompression->init(decompression, &decompression->pdata);
     if (ret != DUER_OK) {
         DUER_LOGE("OTA Decompression: Init decompression failed");
+
+        err = duer_ota_decompression_check_err_msg(decompression);
+        if (err < 0) {
+            duer_ota_decompression_report_err(
+                decompression,
+                "Init decompression failed",
+                ret);
+        }
     }
 
     err = duer_mutex_unlock(decompression->lock);
@@ -303,7 +318,14 @@ int duer_ota_unpacker_unzip(
         || data_size <= 0) {
         DUER_LOGE("OTA Decompression: Argument error");
 
-        return DUER_ERR_INVALID_PARAMETER;
+        ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_decompression_report_err(
+            decompression,
+            "Argument error",
+            ret);
+
+        return ret;
     }
 
     err = duer_mutex_lock(decompression->lock);
@@ -322,6 +344,14 @@ int duer_ota_unpacker_unzip(
               data_handler);
     if (ret != DUER_OK) {
         DUER_LOGE("OTA Decompression: Unzip failed");
+
+        err = duer_ota_decompression_check_err_msg(decompression);
+        if (err < 0) {
+            duer_ota_decompression_report_err(
+                decompression,
+                "Unzip failed",
+                ret);
+        }
     }
 
     err = duer_mutex_unlock(decompression->lock);
@@ -342,7 +372,14 @@ int duer_ota_unpacker_uninit_decompression(duer_ota_decompression_t *decompressi
     if (decompression == NULL || decompression->unint == NULL) {
         DUER_LOGE("OTA Decompression: Argument error");
 
-        return DUER_ERR_INVALID_PARAMETER;
+        ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_decompression_report_err(
+            decompression,
+            "Argument error",
+            ret);
+
+        return ret;
     }
 
     err = duer_mutex_lock(decompression->lock);
@@ -354,7 +391,15 @@ int duer_ota_unpacker_uninit_decompression(duer_ota_decompression_t *decompressi
 
     ret = decompression->unint(decompression, decompression->pdata);
     if (ret != DUER_OK) {
-        DUER_LOGE("OTA Decompression: Init decompression failed");
+        DUER_LOGE("OTA Decompression: Uinit decompression failed");
+
+        err = duer_ota_decompression_check_err_msg(decompression);
+        if (err < 0) {
+            duer_ota_decompression_report_err(
+                decompression,
+                "Uinit decompression failed",
+                ret);
+        }
     }
 
     err = duer_mutex_unlock(decompression->lock);
@@ -375,7 +420,14 @@ int duer_ota_unpacker_recovery_decompression(duer_ota_decompression_t *decompres
     if (decompression == NULL || decompression->recovery == NULL) {
         DUER_LOGE("OTA Decompression: Argument error");
 
-        return DUER_ERR_INVALID_PARAMETER;
+        ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_decompression_report_err(
+            decompression,
+            "Argument error",
+            ret);
+
+        return ret;
     }
 
     err = duer_mutex_lock(decompression->lock);
@@ -388,6 +440,14 @@ int duer_ota_unpacker_recovery_decompression(duer_ota_decompression_t *decompres
     ret = decompression->recovery(decompression, decompression->pdata);
     if (ret != DUER_OK) {
         DUER_LOGE("OTA Decompression: Recovery decompression failed");
+
+        err = duer_ota_decompression_check_err_msg(decompression);
+        if (err < 0) {
+            duer_ota_decompression_report_err(
+                decompression,
+                "Recovery decompression failed",
+                ret);
+        }
     }
 
     err = duer_mutex_unlock(decompression->lock);
@@ -408,7 +468,14 @@ int duer_ota_unpacker_sync_decompression(duer_ota_decompression_t *decompression
     if (decompression == NULL || decompression->sync == NULL) {
         DUER_LOGE("OTA Decompression: Argument error");
 
-        return DUER_ERR_INVALID_PARAMETER;
+        ret = DUER_ERR_INVALID_PARAMETER;
+
+        duer_ota_decompression_report_err(
+            decompression,
+            "Argument error",
+            ret);
+
+        return ret;
     }
 
     err = duer_mutex_lock(decompression->lock);
@@ -421,6 +488,14 @@ int duer_ota_unpacker_sync_decompression(duer_ota_decompression_t *decompression
     ret = decompression->sync(decompression, decompression->pdata);
     if (ret != DUER_OK) {
         DUER_LOGE("OTA Decompression: Sync decompression failed");
+
+        err = duer_ota_decompression_check_err_msg(decompression);
+        if (err < 0) {
+            duer_ota_decompression_report_err(
+                decompression,
+                "Sync decompression failed",
+                ret);
+        }
     }
 
     err = duer_mutex_unlock(decompression->lock);
@@ -433,6 +508,22 @@ int duer_ota_unpacker_sync_decompression(duer_ota_decompression_t *decompression
     return ret;
 }
 
+void duer_ota_decompression_report_err(
+    duer_ota_decompression_t *decompression,
+    char const *err_msg,
+    int err_code)
+{
+    if (decompression == NULL) {
+        DUER_LOGE("OTA Decompression: Argument error");
+
+        return;
+    }
+
+    DUER_MEMSET(decompression->err_msg, 0, sizeof(decompression->err_msg));
+
+    snprintf(decompression->err_msg, ERR_MSG_LEN, "%s%d", err_msg, err_code);
+}
+
 char const *duer_ota_decompression_get_err_msg(duer_ota_decompression_t const *decompression)
 {
 
@@ -443,4 +534,23 @@ char const *duer_ota_decompression_get_err_msg(duer_ota_decompression_t const *d
     }
 
     return decompression->err_msg;
+}
+
+int duer_ota_decompression_check_err_msg(duer_ota_decompression_t *decompression)
+{
+    size_t str_len = 0;
+
+    if (decompression == NULL) {
+        DUER_LOGE("OTA Decompression: Argument error");
+
+        return -1;
+    }
+
+    str_len = DUER_STRLEN(decompression->err_msg);
+    if (str_len > 0) {
+
+        return 1;
+    }
+
+    return -1;
 }

@@ -19,7 +19,6 @@
  * Desc: Light duer APIS.
  */
 
-#include "duerapp_config.h"
 #include <inttypes.h>
 #include "lightduer_connagent.h"
 #include "lightduer_log.h"
@@ -39,6 +38,7 @@
 #ifdef DUER_EVENT_HANDLER
 #include "lightduer_handler.h"
 #endif // DUER_EVENT_HANDLER
+#include "lightduer_ap_info.h"
 
 extern void duer_voice_initialize(void);
 extern void duer_voice_finalize(void);
@@ -160,6 +160,7 @@ static void duer_split_id_finalize()
 static void duer_engine_notify_callback(int event, int status, int what, void *object)
 {
     static duer_status_t reason_to_start = DUER_OK;
+    duer_status_t wifi_status = DUER_OK;
 
     if (status != DUER_OK
         && status != DUER_ERR_TRANS_WOULD_BLOCK
@@ -181,7 +182,6 @@ static void duer_engine_notify_callback(int event, int status, int what, void *o
         }
         if (status == DUER_OK) {
             duer_ds_log_init();
-            duer_ds_log_cache_initialize();
 #if !defined(__TARGET_TRACKER__)
             duer_voice_initialize();
 #endif
@@ -292,18 +292,26 @@ static void duer_engine_notify_callback(int event, int status, int what, void *o
         break;
     }
 
-    if (event < DUER_EVT_STOP
-        && status != DUER_OK
-        && status != DUER_ERR_TRANS_WOULD_BLOCK
-        && status != DUER_ERR_CONNECT_TIMEOUT
-        && status != DUER_ERR_HAS_STARTED
-        && status != DUER_ERR_HAS_STOPPED) {
+    if ((event < DUER_EVT_STOP
+         && status != DUER_OK
+         && status != DUER_ERR_TRANS_WOULD_BLOCK
+         && status != DUER_ERR_CONNECT_TIMEOUT
+         && status != DUER_ERR_HAS_STARTED
+         && status != DUER_ERR_HAS_STOPPED)
+        || (event == DUER_EVT_STOP)) {
         duer_ds_report_stop();
         if (reason_to_start == DUER_OK) { // only record the first stop reason
             reason_to_start = status;
+            wifi_status = duer_wifi_status_get();
+            if (wifi_status != DUER_OK && wifi_status != DUER_ERR_FAILED) {
+                reason_to_start = wifi_status;
+            }
+            DUER_LOGD("Wifi status: %d", wifi_status);
         }
         DUER_LOGE("Action failed: event: %d, status: %d", event, status);
-        duer_engine_stop(status, NULL);
+        if (event != DUER_EVT_STOP) {
+            duer_engine_stop(status, NULL);
+        }
     }
 }
 
@@ -328,6 +336,8 @@ void duer_initialize()
     if (ret != DUER_OK) {
         DUER_LOGE("report ca status register failed ret: %d", ret);
     }
+
+    duer_ds_log_cache_initialize();
 
     duer_ds_log_ca_debug(DUER_DS_LOG_CA_INIT, NULL);
 }
@@ -354,7 +364,7 @@ int duer_start(const void *data, size_t size)
     if (profile == NULL) {
         DUER_LOGE("memory alloc fail!");
         DUER_DS_LOG_CA_MEMORY_OVERFLOW();
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
     DUER_MEMCPY(profile, data, size);
     DUER_LOGD("use the profile to start engine");
@@ -524,7 +534,7 @@ int duer_data_report_async(duer_context_t *context, const baidu_json *data)
     int send_len = 0;
     int remain_len = 0;
     duer_u32_t id = 0;
-    const int MAX_SEG_LEN = 980;
+    const int MAX_SEG_LEN = 990;
     const int MAX_PAYLOAD_LEN = 900;
     char *buf = NULL;
     char *content = NULL;
@@ -540,7 +550,7 @@ int duer_data_report_async(duer_context_t *context, const baidu_json *data)
 #endif // DUER_BJSON_PRINT_WITH_ESTIMATED_SIZE
         id = duer_data_get_split_id();
         if (!content) {
-            rs = DUER_ERR_MEMORY_OVERLOW;
+            rs = DUER_ERR_MEMORY_OVERFLOW;
             break;
         }
         content_len = DUER_STRLEN(content);
@@ -557,19 +567,19 @@ int duer_data_report_async(duer_context_t *context, const baidu_json *data)
 
         buf = DUER_MALLOC(MAX_PAYLOAD_LEN + 1); // ~= 901
         if (!buf) {
-            rs = DUER_ERR_MEMORY_OVERLOW;
+            rs = DUER_ERR_MEMORY_OVERFLOW;
             break;
         }
 
         value = baidu_json_CreateObject();
         if (!value) {
-            rs = DUER_ERR_MEMORY_OVERLOW;
+            rs = DUER_ERR_MEMORY_OVERFLOW;
             break;
         }
 
         payload = baidu_json_CreateObject();
         if (!payload) {
-            rs = DUER_ERR_MEMORY_OVERLOW;
+            rs = DUER_ERR_MEMORY_OVERFLOW;
             break;
         }
         baidu_json_AddItemToObjectCS(value, "duer_blockwise", payload);

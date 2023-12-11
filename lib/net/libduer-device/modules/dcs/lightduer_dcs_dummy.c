@@ -23,6 +23,7 @@
 #include "lightduer_log.h"
 #include "lightduer_dcs_alert.h"
 #include "lightduer_ds_log_dcs.h"
+#include "lightduer_dcs_infrared_control.h"
 
 #define DUER_DCS_HANDLER_UNREALIZE(X) \
     do { \
@@ -197,3 +198,51 @@ __attribute__((weak)) void duer_dcs_bluetooth_connect_handler(duer_bool is_conne
     DUER_LOGW("Please implement this interface to connect/disconnect bluetooth");
 }
 
+__attribute__((weak)) void duer_dcs_local_player_pause_handler(void)
+{
+    DUER_LOGW("Please implement this interface to pause the local player");
+}
+
+__attribute__((weak)) void duer_dcs_local_player_resume_handler(void)
+{
+    DUER_LOGW("Please implement this interface to resume the local player");
+}
+
+__attribute__((weak)) void duer_dcs_local_player_stop_handler(void)
+{
+    DUER_LOGW("Please implement this interface to stop the local player");
+}
+
+__attribute__((weak)) void duer_dcs_infrared_send_handler(duer_ray_item_list_t *list)
+{
+    DUER_LOGW("Please implement this interface for sending infrared");
+}
+
+__attribute__((weak)) void duer_dcs_infrared_receive_handler(long timeout_ms)
+{
+    DUER_LOGW("Please implement this interface for receiving infrared");
+}
+
+__attribute__((weak)) void duer_dcs_set_indicator_handler(void)
+{
+    static duer_bool is_first_time = DUER_TRUE;
+
+    DUER_DCS_HANDLER_UNREALIZE(is_first_time);
+    DUER_LOGW("Please implement this interface for set indicator");
+}
+
+__attribute__((weak)) void duer_dcs_clear_indicator_handler(void)
+{
+    static duer_bool is_first_time = DUER_TRUE;
+
+    DUER_DCS_HANDLER_UNREALIZE(is_first_time);
+    DUER_LOGW("Please implement this interface for clear indicator");
+}
+
+__attribute__((weak)) void duer_dcs_system_invalid_bduss_handler(void)
+{
+    static duer_bool is_first_time = DUER_TRUE;
+
+    DUER_DCS_HANDLER_UNREALIZE(is_first_time);
+    DUER_LOGW("Please implement this interface for handle invalid bduss");
+}

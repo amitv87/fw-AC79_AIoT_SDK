@@ -22,7 +22,7 @@
 #include "duerapp_config.h"
 #include "lightduer_ota_updater.h"
 #include <string.h>
-#include <stdint.h>
+#include "printf.h"
 #include "baidu_json.h"
 #include "lightduer_log.h"
 #include "lightduer_lib.h"
@@ -37,9 +37,11 @@
 #include "lightduer_ota_downloader.h"
 #include "mbedtls/md5.h"
 #include "lightduer_dev_info.h"
-#include "server/ai_server.h"
 
-#define REBOOT_DELAY_TIME (3 * 1000)
+
+#define STACK_SIZE        (10 * 1024)
+#define QUEUE_LENGTH      (1)
+#define REBOOT_DELAY_TIME (10 * 1000)
 
 static duer_ota_init_ops_t const *s_ota_init_ops = NULL;
 
@@ -70,7 +72,7 @@ static int notify_package_info(duer_ota_updater_t const *updater)
     if (package_info_json == NULL) {
         DUER_LOGE("OTA Notifier: Create json object failed");
 
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
 
         goto out;
     }
@@ -79,7 +81,7 @@ static int notify_package_info(duer_ota_updater_t const *updater)
     if (os_info_json == NULL) {
         DUER_LOGE("OTA Notifier: Create json object failed");
 
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
 
         goto delete_package_json;
     }
@@ -88,7 +90,7 @@ static int notify_package_info(duer_ota_updater_t const *updater)
     if (data_json == NULL) {
         DUER_LOGE("OTA Notifier: Create json object failed");
 
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
 
         goto delete_osinfo_json;
     }
@@ -166,11 +168,9 @@ static int package_handler(void *private, char const *buf, size_t len)
             if (((int)(progress * 10) % 10) >= updater->progress) {
                 updater->progress++;
 
-                ret = duer_ota_notifier_event(updater, OTA_EVENT_DOWNLOADING, progress, NULL);
+                ret = duer_ota_notifier_event(updater, OTA_EVENT_DOWNLOADING, progress, "Downloading");
                 if (ret != DUER_OK) {
-                    DUER_LOGE("OTA Updater: Notifier OTA download progress failed ret: %d", ret);
-
-                    break;
+                    DUER_LOGW("OTA Updater: Notifier OTA download progress failed ret: %d", ret);
                 }
             }
         } else {
@@ -183,11 +183,6 @@ static int package_handler(void *private, char const *buf, size_t len)
 
         return ret;
     } while (0);
-
-    err = duer_ota_notifier_event(updater, OTA_EVENT_UNPACK_FAIL, 0, NULL);
-    if (err != DUER_OK) {
-        DUER_LOGE("OTA Updater: Notifier OTA unpack failed ret: %d", ret);
-    }
 
     return ret;
 }
@@ -267,7 +262,7 @@ static int duer_ota_create_updater(
         if (cmd == NULL) {
             DUER_LOGE("OTA Updater: Malloc cmd failed");
 
-            ret = DUER_ERR_MEMORY_OVERLOW;
+            ret = DUER_ERR_MEMORY_OVERFLOW;
 
             break;
         }
@@ -279,7 +274,7 @@ static int duer_ota_create_updater(
         if (updater == NULL) {
             DUER_LOGE("OTA Updater: Malloc updater failed");
 
-            ret = DUER_ERR_MEMORY_OVERLOW;
+            ret = DUER_ERR_MEMORY_OVERFLOW;
 
             break;
         }
@@ -293,8 +288,8 @@ static int duer_ota_create_updater(
         if (s_ota_updater_handler == NULL) {
             s_ota_updater_handler = duer_events_create(
                                         "lightduer_OTA_Updater",
-                                        DUER_OTA_TASK_STACK_SIZE,
-                                        DUER_OTA_TASK_QUEUE_LENGTH);
+                                        STACK_SIZE,
+                                        QUEUE_LENGTH);
             if (s_ota_updater_handler == NULL) {
                 DUER_LOGE("OTA Updater: Create OTA Updater failed");
 
@@ -350,21 +345,24 @@ static void ota_updater(int arg, void *ota_updater)
 {
     int i = 0;
     int ret = DUER_OK;
+    int msg_ret = 0;
     char md5_buf[33];
     size_t buf_len = 33;
+    size_t str_len = 0;
     unsigned char md5[16];
     char *p_buf = md5_buf;
-    char const *updater_err_msg = NULL;
-    char const *unpacker_err_msg = NULL;
-    duer_ota_event event = OTA_EVENT_BEGIN;
+    char const *err_msg = NULL;
+    duer_ota_event event;
     duer_downloader_protocol dp;
+    duer_ota_unpacker_mode_t unpacker_mode;
     duer_ota_updater_t *updater       = NULL;
     duer_ota_unpacker_t *unpacker     = NULL;
     duer_ota_downloader_t *downloader = NULL;
 
     if (ota_updater == NULL) {
         DUER_LOGE("OTA Updater: Argument Error");
-        return;
+
+        goto out;
     }
 
     DUER_LOGI("OTA Updater: Start OTA Update");
@@ -384,19 +382,36 @@ static void ota_updater(int arg, void *ota_updater)
 
         event = OTA_EVENT_REJECT;
 
-        updater_err_msg = "Create unpacker failed";
+        err_msg = "Create unpacker failed";
 
         goto notify_ota_event;
     }
     updater->unpacker = unpacker;
 
+    ret = duer_ota_unpacker_init_unpacker(unpacker);
+    if (ret != DUER_OK) {
+        DUER_LOGE("OTA Updater: Initialize Unpacker failed ret: %d", ret);
+
+        event = OTA_EVENT_REJECT;
+
+        msg_ret = duer_ota_unpacker_check_err_msg(unpacker);
+        if (msg_ret < 0) {
+            err_msg = "Init unpacker failed";
+
+        } else {
+            err_msg = duer_ota_unpacker_get_err_msg(unpacker);
+        }
+
+        goto notify_ota_event;
+    }
+
     dp = get_download_protocol(updater->update_cmd->url, URL_LEN);
-    if (dp >= MAX_PROTOCOL_COUNT) {
+    if (dp < 0 || dp >= MAX_PROTOCOL_COUNT) {
         DUER_LOGE("OTA Updater: Do support the download protocol");
 
         event = OTA_EVENT_REJECT;
 
-        updater_err_msg = "Do not support download protocol";
+        err_msg = "Parse download protocol failed";
 
         goto notify_ota_event;
     }
@@ -407,7 +422,7 @@ static void ota_updater(int arg, void *ota_updater)
 
         event = OTA_EVENT_REJECT;
 
-        updater_err_msg = "Get OTA downloader failed";
+        err_msg = "Get OTA downloader failed";
 
         goto notify_ota_event;
     }
@@ -419,7 +434,12 @@ static void ota_updater(int arg, void *ota_updater)
 
         event = OTA_EVENT_REJECT;
 
-        updater_err_msg = "Init OTA downloader failed";
+        ret = duer_ota_downloader_check_err_msg(downloader);
+        if (ret > 0) {
+            err_msg = duer_ota_downloader_get_err_msg(downloader);
+        } else {
+            err_msg = "Init downloader failed";
+        }
 
         goto notify_ota_event;
     }
@@ -430,16 +450,17 @@ static void ota_updater(int arg, void *ota_updater)
 
         event = OTA_EVENT_REJECT;
 
-        updater_err_msg = "Register package handler failed";
+        ret = duer_ota_downloader_check_err_msg(downloader);
+        if (ret > 0) {
+            err_msg = duer_ota_downloader_get_err_msg(downloader);
+        } else {
+            err_msg = "Register data handler failed";
+        }
 
         goto notify_ota_event;
     }
 
     DUER_LOGI("OTA Updater: URL: %s", updater->update_cmd->url);
-
-    extern void JL_duer_upgrade_notify(int event, void *arg);
-    JL_duer_upgrade_notify(AI_SERVER_EVENT_UPGRADE, NULL);
-    os_time_dly(500);
 
     mbedtls_md5_init(&updater->md5_ctx);
     mbedtls_md5_starts(&updater->md5_ctx);
@@ -449,7 +470,28 @@ static void ota_updater(int arg, void *ota_updater)
         DUER_LOGE("OTA Updater: Connetc server failed ret: %d", ret);
 
         event = OTA_EVENT_CONNECT_FAIL;
-        updater_err_msg = "Connect server failed";
+
+        ret = duer_ota_downloader_check_err_msg(downloader);
+        if (ret > 0) {
+            err_msg = duer_ota_downloader_get_err_msg(downloader);
+        } else {
+            err_msg = "Connetc server failed";
+        }
+
+        goto notify_ota_event;
+    }
+
+    unpacker_mode = duer_ota_unpacker_get_unpacker_mode(unpacker);
+    if (unpacker_mode != OTA_UPDATE_DONE) {
+
+        event = OTA_EVENT_REJECT;
+
+        ret = duer_ota_unpacker_check_err_msg(unpacker);
+        if (ret < 0) {
+            err_msg = "The mode of the unpacker is not OTA_UPDATE_DONE";
+        } else {
+            err_msg = duer_ota_unpacker_get_err_msg(unpacker);
+        }
 
         goto notify_ota_event;
     }
@@ -471,19 +513,19 @@ static void ota_updater(int arg, void *ota_updater)
 
         event = OTA_EVENT_IMAGE_INVALID;
 
-        updater_err_msg = "Checksum failed";
+        err_msg = "Package Checksum failed";
 
         goto notify_ota_event;
     }
 
-    ret = duer_ota_notifier_event(updater, OTA_EVENT_DOWNLOAD_COMPLETE, 0, NULL);
+    ret = duer_ota_notifier_event(updater, OTA_EVENT_DOWNLOAD_COMPLETE, 0, "Download complete");
     if (ret != DUER_OK) {
         DUER_LOGE("OTA Updater: Notifier OTA download complete failed ret: %d", ret);
 
-        goto notify_ota_event;
+        goto destroy_updater;
     }
 
-    ret = duer_ota_notifier_event(updater, OTA_EVENT_INSTALLED, 0, NULL);
+    ret = duer_ota_notifier_event(updater, OTA_EVENT_INSTALLED, 0, "OTA Installation is complete");
     if (ret != DUER_OK) {
         DUER_LOGE("OTA Updater: Notifier OTA install complete failed ret: %d", ret);
 
@@ -494,57 +536,44 @@ static void ota_updater(int arg, void *ota_updater)
 
     if (s_ota_init_ops->reboot != NULL) {
         if (s_ota_reboot == ENABLE_REBOOT) {
-            ret = s_ota_init_ops->reboot(updater->update_cmd->version);
+            ret = s_ota_init_ops->reboot(NULL);
             if (ret != DUER_OK) {
                 DUER_LOGE("OTA Updater: Reboot failed ret: %d", ret);
 
                 event = OTA_EVENT_INSTALLED;
 
-                updater_err_msg = "Reboot failed";
-
-                goto notify_ota_event;
+                err_msg = "Reboot failed";
             } else {
                 goto destroy_updater;
             }
         } else {
-            DUER_LOGE("OTA Updater: Disable Reboot");
+            DUER_LOGD("OTA Updater: Disable Reboot");
         }
-    } else {
-        DUER_LOGE("OTA Updater: No Unpack OPS");
-
-        event = OTA_EVENT_INSTALLED;
-
-        updater_err_msg = "Reboot failed";
-
-        goto notify_ota_event;
     }
 
     ret = notify_package_info(updater);
     if (ret != DUER_OK) {
         DUER_LOGE("OTA Updater: Notify package info failed ret: %d", ret);
+
+        event = OTA_EVENT_INSTALLED;
+
+        err_msg = "Notify package information failed";
+    } else {
+        goto destroy_updater;
     }
 
-    goto destroy_updater;
-
 notify_ota_event:
-    unpacker_err_msg = duer_ota_unpacker_get_err_msg(unpacker);
-    if (unpacker_err_msg != NULL) {
-        ret = duer_ota_notifier_event(updater, event, 0, unpacker_err_msg);
-        if (ret != DUER_OK) {
-            DUER_LOGE("OTA Updater: Notifier OTA begin failed ret: %d", ret);
-        }
-    } else {
-        ret = duer_ota_notifier_event(updater, event, 0, updater_err_msg);
-        if (ret != DUER_OK) {
-            DUER_LOGE("OTA Updater: Notifier OTA begin failed ret: %d", ret);
-        }
+    ret = duer_ota_notifier_event(updater, event, 0, err_msg);
+    if (ret != DUER_OK) {
+        DUER_LOGE("OTA Updater: Notifier OTA event failed ret: %d", ret);
     }
 destroy_updater:
     duer_ota_destroy_updater(updater);
 
-#if 0	//modify by lyx
+out:
     duer_events_destroy(s_ota_updater_handler);
-#endif
+
+    s_ota_updater_handler = NULL;
 }
 
 static int duer_analyze_update_cmd(char const *update_cmd, size_t cmd_len, duer_ota_update_command_t *ota_update_cmd)
@@ -566,7 +595,7 @@ static int duer_analyze_update_cmd(char const *update_cmd, size_t cmd_len, duer_
     if (cmd_str == NULL) {
         DUER_LOGE("OTA Updater: Malloc failed");
 
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
 
         goto out;
     }
@@ -580,7 +609,7 @@ static int duer_analyze_update_cmd(char const *update_cmd, size_t cmd_len, duer_
     if (cmd == NULL) {
         DUER_LOGE("OTA Updater: Invalid command: %s", cmd);
 
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
 
         goto free_cmd_string;
     }
@@ -686,6 +715,8 @@ int duer_init_ota(duer_ota_init_ops_t const *ops)
         return DUER_ERR_INVALID_PARAMETER;
     }
 
+    static bool first_time = true;
+
     duer_res_t res[] = {
         {
             DUER_RES_MODE_DYNAMIC,
@@ -693,13 +724,14 @@ int duer_init_ota(duer_ota_init_ops_t const *ops)
             "newfirmware",
             .res.f_res = ota_update
         },
-
     };
 
     duer_add_resources(res, sizeof(res) / sizeof(res[0]));
 
-    if (s_lock_ota_updater) {
-        return DUER_OK;
+    if (first_time) {
+        first_time = false;
+    } else {
+        return ret;
     }
 
     do {
@@ -708,7 +740,7 @@ int duer_init_ota(duer_ota_init_ops_t const *ops)
             if (s_lock_ota_updater == NULL) {
                 DUER_LOGE("OTA Updater: Create mutex failed");
 
-                ret = DUER_ERR_MEMORY_OVERLOW;
+                ret = DUER_ERR_MEMORY_OVERFLOW;
 
                 break;
             }
@@ -747,7 +779,7 @@ int duer_init_ota(duer_ota_init_ops_t const *ops)
         return ret;
     } while (0);
 
-    if (s_lock_ota_updater != NULL) {
+    if (s_lock_ota_updater  != NULL) {
         ret = duer_mutex_destroy(s_lock_ota_updater);
         if (ret != DUER_OK) {
             DUER_LOGE("OTA Updater: Destroy mutex failed ret: %d", ret);
@@ -815,7 +847,6 @@ out:
 int duer_ota_get_switch(void)
 {
     int ret;
-    int ret_lock = DUER_OK;
 
     if (s_lock_ota_updater == NULL) {
         DUER_LOGE("OTA Updater: Uninit mutex");
@@ -823,8 +854,8 @@ int duer_ota_get_switch(void)
         return DUER_ERR_FAILED;
     }
 
-    ret_lock = duer_mutex_lock(s_lock_ota_updater);
-    if (ret_lock != DUER_OK) {
+    ret = duer_mutex_lock(s_lock_ota_updater);
+    if (ret != DUER_OK) {
         DUER_LOGE("OTA Updater: Lock ota switch failed");
 
         return DUER_ERR_FAILED;
@@ -832,8 +863,8 @@ int duer_ota_get_switch(void)
 
     ret = s_ota_switch;
 
-    ret_lock = duer_mutex_unlock(s_lock_ota_updater);
-    if (ret_lock != DUER_OK) {
+    ret = duer_mutex_unlock(s_lock_ota_updater);
+    if (ret != DUER_OK) {
         DUER_LOGE("OTA Updater: Lock ota switch failed");
 
         return DUER_ERR_FAILED;
@@ -880,7 +911,6 @@ out:
 int duer_ota_get_reboot(void)
 {
     int ret;
-    int ret_lock = DUER_OK;
 
     if (s_lock_ota_updater == NULL) {
         DUER_LOGE("OTA Updater: Uninit mutex");
@@ -888,8 +918,8 @@ int duer_ota_get_reboot(void)
         return DUER_ERR_FAILED;
     }
 
-    ret_lock = duer_mutex_lock(s_lock_ota_updater);
-    if (ret_lock != DUER_OK) {
+    ret = duer_mutex_lock(s_lock_ota_updater);
+    if (ret != DUER_OK) {
         DUER_LOGE("OTA Updater: Lock ota switch failed");
 
         return DUER_ERR_FAILED;
@@ -897,8 +927,8 @@ int duer_ota_get_reboot(void)
 
     ret = s_ota_reboot;
 
-    ret_lock = duer_mutex_unlock(s_lock_ota_updater);
-    if (ret_lock != DUER_OK) {
+    ret = duer_mutex_unlock(s_lock_ota_updater);
+    if (ret != DUER_OK) {
         DUER_LOGE("OTA Updater: Lock ota switch failed");
 
         return DUER_ERR_FAILED;

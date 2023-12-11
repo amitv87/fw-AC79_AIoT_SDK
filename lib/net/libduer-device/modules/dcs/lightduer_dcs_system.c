@@ -40,10 +40,14 @@ static const char *HTTPS_PROTOCAL = "https";
 static const char *WECHAT_VERSION_KEY = "wechat_version";
 static const char *WECHAT_VERSION = "1";
 
+extern const char *duer_engine_get_uuid(void);
+
 int duer_dcs_sync_state(void)
 {
     baidu_json *event = NULL;
     baidu_json *data = NULL;
+    baidu_json *payload = NULL;
+    baidu_json *deviceInfo = NULL;
     baidu_json *client_context = NULL;
     duer_status_t ret = DUER_OK;
 
@@ -57,7 +61,7 @@ int duer_dcs_sync_state(void)
     data = baidu_json_CreateObject();
     if (data == NULL) {
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
         goto RET;
     }
 
@@ -75,6 +79,52 @@ int duer_dcs_sync_state(void)
     }
 
     baidu_json_AddItemToObjectCS(data, DCS_EVENT_KEY, event);
+
+    payload = baidu_json_GetObjectItem(event, DCS_PAYLOAD_KEY);
+    if (!payload) {
+        ret = DUER_ERR_FAILED;
+        goto RET;
+    }
+
+    // sys_info_ops_t *ops = g_sys_info.ops;
+    // ops->get_sys_info(&g_sys_info);
+
+    deviceInfo = baidu_json_CreateObject();
+    if (!deviceInfo) {
+        ret = DUER_ERR_FAILED;
+        goto RET;
+    }
+
+    baidu_json_AddItemToObjectCS(payload, "_deviceInfo", deviceInfo);
+
+    baidu_json_AddStringToObjectCS(deviceInfo, "sn", duer_engine_get_uuid());
+
+    // localAreaNetworkInfo_array = baidu_json_CreateArray();
+    // if (!localAreaNetworkInfo_array) {
+    //     ret = DUER_ERR_FAILED;
+    //     goto RET;
+    // }
+
+    // baidu_json_AddItemToObjectCS(payload, "_localAreaNetworkInfos", localAreaNetworkInfo_array);
+
+    // localAreaNetworkInfo = baidu_json_CreateObject();
+    // if (!localAreaNetworkInfo) {
+    //     ret = DUER_ERR_FAILED;
+    //     goto RET;
+    // }
+    // baidu_json_AddItemToArray(localAreaNetworkInfo_array, localAreaNetworkInfo);
+
+    // baidu_json_AddStringToObjectCS(localAreaNetworkInfo, "deviceMac", g_sys_info.mac);
+    // baidu_json_AddStringToObjectCS(localAreaNetworkInfo, "routerMac", g_sys_info.router_mac);
+
+    // char ipv4_addr[20] = {'\0'};
+    // snprintf(ipv4_addr, sizeof(ipv4_addr), "%d.%d.%d.%d",
+    //         g_sys_info.sta_ip & 0xFF,
+    //         (g_sys_info.sta_ip >> 8) & 0xFF,
+    //         (g_sys_info.sta_ip >> 16) & 0xFF,
+    //         (g_sys_info.sta_ip >> 24) & 0xFF);
+    // baidu_json_AddStringToObjectCS(localAreaNetworkInfo, "ipAddress", ipv4_addr);
+    // baidu_json_AddStringToObjectCS(localAreaNetworkInfo, "ssid", g_sys_info.ssid);
 
     ret = duer_dcs_data_report_internal(data, DUER_TRUE);
 
@@ -112,7 +162,7 @@ baidu_json *duer_get_exception_internal(const char *directive, size_t directive_
     data = baidu_json_CreateObject();
     if (data == NULL) {
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
         goto RET;
     }
 
@@ -141,7 +191,7 @@ baidu_json *duer_get_exception_internal(const char *directive, size_t directive_
     error = baidu_json_CreateObject();
     if (!error) {
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-        ret = DUER_ERR_MEMORY_OVERLOW;
+        ret = DUER_ERR_MEMORY_OVERFLOW;
         goto RET;
     }
     baidu_json_AddItemToObjectCS(payload, DCS_ERROR_KEY, error);
@@ -237,14 +287,14 @@ duer_status_t duer_dcs_capability_declare(duer_u32_t capability)
         data = baidu_json_CreateObject();
         if (data == NULL) {
             DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-            rs = DUER_ERR_MEMORY_OVERLOW;
+            rs = DUER_ERR_MEMORY_OVERFLOW;
             break;
         }
 
         iotcloud_event = baidu_json_CreateObject();
         if (iotcloud_event == NULL) {
             DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-            rs = DUER_ERR_MEMORY_OVERLOW;
+            rs = DUER_ERR_MEMORY_OVERFLOW;
             break;
         }
         baidu_json_AddItemToObjectCS(data, DCS_IOTCLOUD_EVENT_PATH, iotcloud_event);
@@ -305,7 +355,7 @@ static duer_status_t duer_exception_cb(const baidu_json *directive)
     }
 
     description = baidu_json_GetObjectItem(payload, DCS_DESCRIPTION_KEY);
-    if (!description) {
+    if (!description || !description->valuestring) {
         DUER_LOGE("Failed to get erorr description\n");
         ret = DUER_MSG_RSP_BAD_REQUEST;
         goto RET;
@@ -313,6 +363,10 @@ static duer_status_t duer_exception_cb(const baidu_json *directive)
 
     DUER_LOGE("error code: %s", error_code->valuestring);
     DUER_LOGE("error: %s", description->valuestring);
+
+    if (DUER_STRCMP(description->valuestring, "BDUSS invalid") == 0) {
+        duer_dcs_system_invalid_bduss_handler();
+    }
 
 RET:
     return ret;

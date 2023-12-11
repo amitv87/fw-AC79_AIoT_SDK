@@ -92,7 +92,7 @@ duer_status_t duer_dcache_push(const void *data, size_t size, duer_bool need_cop
 
         cache = duer_dcache_item_create(data, size, need_copy);
         if (cache == NULL) {
-            rs = DUER_ERR_MEMORY_OVERLOW;
+            rs = DUER_ERR_MEMORY_OVERFLOW;
             break;
         }
 

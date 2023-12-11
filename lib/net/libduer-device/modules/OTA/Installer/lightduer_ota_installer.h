@@ -29,6 +29,7 @@
 extern "C" {
 #endif
 
+#define ERR_MSG_LEN (60)
 #define INSTALLER_NAME_LEN 20
 
 typedef struct _duer_ota_installer_s {
@@ -38,8 +39,9 @@ typedef struct _duer_ota_installer_s {
     void *custom_data;
     // Lock the installer
     duer_mutex_t lock;
-    // Last Error message, NULL if no error
+    // Last Error message
     char const *err_msg;
+    // char err_msg[ERR_MSG_LEN + 1];
 
     /*
      * You can get module information
@@ -280,6 +282,20 @@ extern int duer_ota_installer_notify_ota_end(duer_ota_installer_t *installer);
  *              Failed:  Other
  */
 extern int duer_ota_installer_cancel_ota_update(duer_ota_installer_t *installer);
+
+/*
+ * Report error message
+ *
+ * @param installer: OTA installer
+ *          err_msg: error message
+ *         err_code: error code
+ *
+ * @return void:
+ */
+extern void duer_ota_installer_report_err(
+    duer_ota_installer_t *installer,
+    char const *err_msg,
+    int err_code);
 
 /*
  * Get error message

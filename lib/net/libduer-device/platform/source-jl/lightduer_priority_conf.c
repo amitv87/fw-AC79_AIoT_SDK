@@ -1,16 +1,35 @@
-// Copyright (2017) Baidu Inc. All rights reserved.
-//
-// File: lightduer_priority_conf.c
-// Auth: Su Hao (suhao@baidu.com)
-// Desc: Configuation the task priority.
-
-
-#include "lightduer_priority_conf.h"
+/**
+ * Copyright (2017) Baidu Inc. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * File: lightduer_priority_conf.c
+ * Auth: Su Hao (suhao@baidu.com)
+ * Desc: Configuation the task priority.
+ */
 
 #include <string.h>
+#include "lightduer_priority_conf.h"
 
 static int g_task_priorities[DUER_TASK_TOTAL] = {
+#if defined(DUER_PLATFORM_MARVELL)
+    2, 3, 2, 4, 4
+#elif defined DUER_PLATFORM_XR871
+    3, 3, 3, 3, 3
+#else
     24, 25, 24, 23, 23, 22
+#endif
 };
 
 static const char *const g_priority_tags[] = {

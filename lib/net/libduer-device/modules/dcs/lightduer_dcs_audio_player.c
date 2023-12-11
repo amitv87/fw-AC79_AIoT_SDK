@@ -32,6 +32,7 @@
 #include "lightduer_ds_log_e2e.h"
 #include "lightduer_timers.h"
 #include "lightduer_event_emitter.h"
+#include "lightduer_timestamp.h"
 
 typedef struct _play_item_t {
     char *url;
@@ -41,6 +42,7 @@ typedef struct _play_item_t {
     int report_delay;
     int report_interval;
     duer_bool is_progress_delay_elapsed;
+    char *dialog_id;
 } play_item_t;
 
 enum _play_state {
@@ -131,6 +133,7 @@ static volatile int s_play_offset;
 static duer_timer_handler s_progress_report_timer;
 static duer_timer_handler s_delay_elapse_report_timer;
 static volatile duer_bool s_is_stuttured_reported;
+static volatile uint32_t s_stutture_start_time;
 static volatile duer_bool s_is_initialized;
 
 static void duer_destroy_play_item(void *data)
@@ -153,6 +156,10 @@ static void duer_destroy_play_item(void *data)
         DUER_FREE(item->audio_item_id);
     }
 
+    if (item->dialog_id) {
+        DUER_FREE(item->dialog_id);
+    }
+
     DUER_FREE(item);
 }
 
@@ -164,9 +171,11 @@ static play_item_t *duer_create_play_item(const play_item_t *play_info)
     item = DUER_MALLOC(sizeof(play_item_t));
     if (!item) {
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-        rs = DUER_ERR_MEMORY_OVERLOW;
+        rs = DUER_ERR_MEMORY_OVERFLOW;
         goto RET;
     }
+
+    DUER_MEMSET(item, 0, sizeof(*item));
 
     item->offset = play_info->offset;
     item->report_delay = play_info->report_delay;
@@ -176,23 +185,32 @@ static play_item_t *duer_create_play_item(const play_item_t *play_info)
     item->url = duer_strdup_internal(play_info->url);
     if (!item->url) {
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-        rs = DUER_ERR_MEMORY_OVERLOW;
+        rs = DUER_ERR_MEMORY_OVERFLOW;
         goto RET;
     }
 
     item->token = duer_strdup_internal(play_info->token);
     if (!item->token) {
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-        rs = DUER_ERR_MEMORY_OVERLOW;
+        rs = DUER_ERR_MEMORY_OVERFLOW;
         goto RET;
     }
 
     item->audio_item_id = duer_strdup_internal(play_info->audio_item_id);
     if (!item->audio_item_id) {
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-        rs = DUER_ERR_MEMORY_OVERLOW;
+        rs = DUER_ERR_MEMORY_OVERFLOW;
         goto RET;
     }
+
+    if (play_info->dialog_id) {
+        item->dialog_id = duer_strdup_internal(play_info->dialog_id);
+        if (!item->dialog_id) {
+            rs = DUER_ERR_MEMORY_OVERFLOW;
+            goto RET;
+        }
+    }
+
 RET:
     if (rs != DUER_OK) {
         duer_destroy_play_item(item);
@@ -277,7 +295,7 @@ static int duer_dcs_report_play_event(duer_dcs_audio_event_t type, baidu_json *m
     if (data == NULL) {
         DUER_LOGE("Failed to create json object!");
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-        rs = DUER_ERR_MEMORY_OVERLOW;
+        rs = DUER_ERR_MEMORY_OVERFLOW;
         goto RET;
     }
 
@@ -323,6 +341,12 @@ static int duer_dcs_report_play_event(duer_dcs_audio_event_t type, baidu_json *m
 
     if (type == DCS_METADATA_EXTRACTED) {
         baidu_json_AddItemReferenceToObject(payload, DCS_METADATA_KEY, msg);
+    }
+
+    if (type == DCS_STUTTER_FINISHED) {
+        baidu_json_AddNumberToObjectCS(payload,
+                                       DCS_STUTTER_DURATION,
+                                       duer_timestamp() - s_stutture_start_time);
     }
 
     rs = duer_dcs_data_report_internal(data, DUER_FALSE);
@@ -446,9 +470,32 @@ void duer_start_audio_play_internal(void)
     duer_dcs_report_play_event(DCS_PLAY_STARTTED, NULL);
 }
 
+void duer_dcs_audio_on_started(void)
+{
+    DUER_DCS_CRITICAL_ENTER();
+
+    if (s_play_state == STOPPED) {
+        s_play_state = PLAYING;
+        duer_start_progress_report();
+        duer_dcs_report_play_event(DCS_PLAY_STARTTED, NULL);
+    }
+
+    DUER_DCS_CRITICAL_EXIT();
+}
+
 static void duer_replace_play_queue(const play_item_t *play_info)
 {
     play_item_t *item = NULL;
+
+    DUER_DCS_CRITICAL_ENTER();
+    if (s_play_state == PLAYING
+        && play_info->dialog_id
+        && duer_get_dialog_request_type() == DCS_DIALOG_PLAY_COMMAND_ISSUE) {
+        DUER_LOGI("PlayCommandIssued get DIRECTIVE Play, return");
+        DUER_DCS_CRITICAL_EXIT();
+        return;
+    }
+    DUER_DCS_CRITICAL_EXIT();
 
     if (s_play_state == PLAYING || s_play_state == PAUSED || s_play_state == BUFFER_UNDERRUN) {
         duer_stop_progress_report();
@@ -510,6 +557,8 @@ static duer_status_t duer_audio_play_cb(const baidu_json *directive)
     baidu_json *progress_report = NULL;
     baidu_json *audio_item_id = NULL;
     baidu_json *tmp = NULL;
+    baidu_json *header = NULL;
+    baidu_json *dialog_id = NULL;
     play_item_t play_item;
 
     DUER_LOGV("Enter");
@@ -546,6 +595,8 @@ static duer_status_t duer_audio_play_cb(const baidu_json *directive)
         goto RET;
     }
 
+    DUER_MEMSET(&play_item, 0, sizeof(play_item));
+
     play_item.offset = offset->valueint;
     play_item.url = url->valuestring;
     play_item.token = token->valuestring;
@@ -570,6 +621,15 @@ static duer_status_t duer_audio_play_cb(const baidu_json *directive)
         if (tmp) {
             play_item.report_interval = tmp->valueint;
         }
+    }
+
+    header = baidu_json_GetObjectItem(directive, DCS_HEADER_KEY);
+    if (header) {
+        dialog_id = baidu_json_GetObjectItem(header, DCS_DIALOG_REQUEST_ID_KEY);
+        play_item.dialog_id = dialog_id ? dialog_id->valuestring : NULL;
+    } else {
+        DUER_LOGE("get header failed");
+        play_item.dialog_id = NULL;
     }
 
     DUER_LOGD("url: %s", DUER_STRING_OUTPUT(url->valuestring));
@@ -660,9 +720,8 @@ static duer_status_t duer_audio_stop_cb(const baidu_json *directive)
     return DUER_OK;
 }
 
-void duer_dcs_audio_on_stopped(void)
+void duer_dcs_audio_on_stopped_internal(void)
 {
-    DUER_DCS_CRITICAL_ENTER();
     if (s_is_initialized) {
         if (s_play_state == PLAYING || s_play_state == PAUSED || s_play_state == BUFFER_UNDERRUN) {
             duer_stop_progress_report();
@@ -670,6 +729,12 @@ void duer_dcs_audio_on_stopped(void)
             duer_dcs_report_play_event(DCS_PLAY_STOPPED, NULL);
         }
     }
+}
+
+void duer_dcs_audio_on_stopped(void)
+{
+    DUER_DCS_CRITICAL_ENTER();
+    duer_dcs_audio_on_stopped_internal();
     DUER_DCS_CRITICAL_EXIT();
 }
 
@@ -781,7 +846,7 @@ int duer_dcs_audio_play_failed(duer_dcs_audio_error_t type, const char *msg)
     duer_stop_progress_report();
     error_msg = baidu_json_CreateObject();
     if (!error_msg) {
-        rs = DUER_ERR_MEMORY_OVERLOW;
+        rs = DUER_ERR_MEMORY_OVERFLOW;
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
         DUER_LOGE("Memory not enough");
         goto RET;
@@ -839,6 +904,7 @@ int duer_dcs_audio_on_stuttered(duer_bool is_stuttered)
 
         if (is_stuttered) {
             if (s_play_state == PLAYING) {
+                s_stutture_start_time = duer_timestamp();
                 s_play_state = BUFFER_UNDERRUN;
                 event = DCS_STUTTER_STARTED;
                 rs = duer_dcs_report_play_event(event, NULL);
@@ -849,11 +915,18 @@ int duer_dcs_audio_on_stuttered(duer_bool is_stuttered)
                 event = DCS_STUTTER_FINISHED;
                 s_is_stuttured_reported = DUER_TRUE;
                 rs = duer_dcs_report_play_event(event, NULL);
+                s_stutture_start_time = 0;
             }
         }
     } while (0);
 
     return rs;
+}
+
+
+baidu_json *duer_dcs_audio_player_info(void)
+{
+    return duer_get_playback_state_internal();
 }
 
 void duer_dcs_audio_player_init(void)
@@ -926,3 +999,4 @@ void duer_dcs_audio_player_uninitialize_internal(void)
     s_play_state = FINISHED;
     s_play_offset = 0;
 }
+

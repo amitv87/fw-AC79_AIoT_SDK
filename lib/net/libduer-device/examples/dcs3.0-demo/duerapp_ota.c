@@ -94,7 +94,7 @@ static int notify_ota_begin(duer_ota_installer_t *installer, void *custom_data)
         net_fclose(ota_handler->update_fd, 1);
         ota_handler->update_fd = NULL;
         installer->err_msg = "Malloc OTA Handler buffer failed";
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     /* JL_duer_upgrade_notify(AI_SERVER_EVENT_UPGRADE, NULL); */
@@ -130,7 +130,7 @@ static int get_module_info(
     if (ota_handler == NULL) {
         DUER_LOGE("OTA Unpack OPS: Malloc failed");
         installer->err_msg = "Malloc OTA Handler failed";
-        return DUER_ERR_MEMORY_OVERLOW;
+        return DUER_ERR_MEMORY_OVERFLOW;
     }
 
     DUER_MEMMOVE(&ota_handler->module_info, info, sizeof(*info));

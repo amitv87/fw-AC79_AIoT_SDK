@@ -51,7 +51,7 @@ static int init_local_downloader(duer_ota_downloader_t *downloader)
         if (pdata == NULL) {
             DUER_LOGE("LOCAL Downloader: Malloc failed");
 
-            ret = DUER_ERR_MEMORY_OVERLOW;
+            ret = DUER_ERR_MEMORY_OVERFLOW;
 
             break;
         }

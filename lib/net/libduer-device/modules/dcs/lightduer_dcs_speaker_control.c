@@ -42,7 +42,7 @@ static int duer_report_speaker_event(const char *name)
     data = baidu_json_CreateObject();
     if (data == NULL) {
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-        rs = DUER_ERR_MEMORY_OVERLOW;
+        rs = DUER_ERR_MEMORY_OVERFLOW;
         goto RET;
     }
 
@@ -206,6 +206,11 @@ error_out:
     }
 
     return NULL;
+}
+
+baidu_json *duer_dcs_speaker_controller_info(void)
+{
+    return duer_get_speak_control_state_internal();
 }
 
 void duer_dcs_speaker_control_init(void)

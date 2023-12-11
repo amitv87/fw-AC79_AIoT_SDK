@@ -21,13 +21,12 @@
  *       so these codes here, try to avoid the huge stack-implementation.
  * reference:
  */
-#include "duerapp_config.h"
-
 #ifdef ENABLE_LIGHTDUER_SNPRINTF
 #include "lightduer_snprintf.h"
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #ifdef isdigit
 #undef isdigit

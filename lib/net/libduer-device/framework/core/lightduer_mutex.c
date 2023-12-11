@@ -41,7 +41,7 @@ DUER_EXT_IMPL void baidu_ca_mutex_init(duer_mutex_create_f f_create,
 
 DUER_INT_IMPL duer_mutex_t duer_mutex_create()
 {
-    return s_duer_mutex_cbs.f_create ? s_duer_mutex_cbs.f_create() : 0;
+    return s_duer_mutex_cbs.f_create ? s_duer_mutex_cbs.f_create() : NULL;
 }
 
 DUER_INT_IMPL duer_status_t duer_mutex_lock(duer_mutex_t mutex)

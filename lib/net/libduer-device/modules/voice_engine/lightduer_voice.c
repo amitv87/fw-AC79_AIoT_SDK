@@ -87,6 +87,13 @@ static duer_mutex_t     s_mutex;
 static char     _data[I_BUFFER_LEN];
 static size_t   _size;
 
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+static duer_wakeup_bit _wakeup_bits = 0;
+static duer_voice_send_state s_voice_send_state = DUER_VOICE_SEND_STATE_DEFAULT;
+static duer_voice_cache_t *s_wakeup_voice_cache = NULL;
+static int s_wakeup_eof_num = 0;
+#endif//DUER_SECOND_WAKEUP_ENABLE
+
 #if !USE_OWN_SPEEX_LIB
 static duer_speex_handler     _speex = NULL;
 #endif
@@ -105,9 +112,7 @@ static duer_voice_delay_func s_voice_delay_callback = NULL;
 #define DUER_VOICE_CACHE_SIZE (20*5) // (20 * 5) * (20 ms) = 2000 ms
 #define DUER_SPEEX_ENCODE_SIZE (46) // speex enocde size
 
-static char *s_duer_voice_cache[DUER_VOICE_CACHE_SIZE] = {0};
-static int s_new = 0;
-static int s_old = 0;
+static duer_voice_cache_t *s_voice_cache = NULL;
 
 static duer_get_dialog_id_func s_dialog_id_cb;
 
@@ -169,7 +174,7 @@ static int duer_request_send_start(duer_context_t *context)
     return DUER_OK;
 }
 
-static int duer_request_send_finish(duer_context_t *context)
+static int duer_request_send_finish(duer_context_t *context, duer_ds_e2e_event_t evt)
 {
     duer_vstat_t *stat = context ? context->_param : NULL;
     duer_u32_t delay = 0;
@@ -179,11 +184,15 @@ static int duer_request_send_finish(duer_context_t *context)
         local_mutex_lock(DUER_TRUE);
         duer_cache_item_t *item = duer_qcache_pop(g_topic.cache);
         local_mutex_lock(DUER_FALSE);
+        if (context_status != DUER_CANCEL) {
+            duer_ds_e2e_event(evt);
+        }
 
         if (item == NULL || item->context._param != stat) {
             DUER_LOGE("The qcache is not matched, may be destroyed, item:%p, stat:%p", item, stat);
         } else {
             stat->_finish = duer_timestamp();
+            DUER_LOGD("finish send segment: %d\n", stat->_segment);
             delay = stat->_finish - stat->_request;
             if (context_status != DUER_CANCEL) {
                 DUER_LOGD("id: %d, segment: %d, eof: %d, request: %u, start: %u, finish: %u, "
@@ -198,8 +207,6 @@ static int duer_request_send_finish(duer_context_t *context)
             }
             if (context_status != DUER_CANCEL) {
                 duer_ds_rec_delay_info_update(stat->_request, stat->_start, stat->_finish);
-                duer_ds_e2e_event(DUER_E2E_SEND);
-
                 if (delay > s_voice_delay_threshold && s_voice_delay_callback) {
                     s_voice_delay_callback(stat->_finish - stat->_request);
                 }
@@ -227,6 +234,18 @@ static int duer_request_send_finish(duer_context_t *context)
 
     return DUER_OK;
 }
+
+static int duer_request_send_finish_callback(duer_context_t *context)
+{
+    return duer_request_send_finish(context, DUER_E2E_SEND);
+}
+
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+static int duer_request_send_wakeup_finish_callback(duer_context_t *context)
+{
+    return duer_request_send_finish(context, DUER_E2E_WAKEUP_SEND);
+}
+#endif//DUER_SECOND_WAKEUP_ENABLE
 
 void duer_add_translate_flag(baidu_json *data)
 {
@@ -266,8 +285,11 @@ void duer_reg_dialog_id_cb(duer_get_dialog_id_func cb)
     s_dialog_id_cb = cb;
 }
 
-static int duer_send_content(const void *data, size_t size, int eof)
+static int duer_send_content(const void *data, size_t size, int eof, int wakeup_bits)
 {
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+    duer_u32_t current_is_wakeup = 0;
+#endif//DUER_SECOND_WAKEUP_ENABLE
     baidu_json *voice = NULL;
     baidu_json *value = NULL;
     duer_vstat_t *stat = NULL;
@@ -284,6 +306,7 @@ static int duer_send_content(const void *data, size_t size, int eof)
     DUER_LOGV("duer_send_content ==>");
     local_mutex_lock(DUER_TRUE);
     voice_segments_num = duer_qcache_length(g_topic.cache);
+    printf("voice_segments_num  ===%d\n", voice_segments_num);
     local_mutex_lock(DUER_FALSE);
 
     if (voice_segments_num > MAX_CACHED_VOICE_SEGMENTS) {
@@ -352,6 +375,20 @@ static int duer_send_content(const void *data, size_t size, int eof)
         baidu_json_AddNumberToObjectCS(voice, "segment", g_topic._segment++);
         baidu_json_AddNumberToObjectCS(voice, "rate", g_topic._samplerate);
         baidu_json_AddNumberToObjectCS(voice, "channel", 1);
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+        current_is_wakeup = (wakeup_bits & DUER_WAKEUP_BIT) > 0;
+        if (current_is_wakeup) {
+            baidu_json_AddNumberToObjectCS(voice, "wakeup",
+                                           (wakeup_bits & DUER_WAKEUP_EOF_BIT) ? s_wakeup_eof_num : 0);
+
+            DUER_LOGD("segment: %d, wakeup: %d, wakeup_eof: %d",
+                      stat->_segment,
+                      (wakeup_bits & DUER_WAKEUP_BIT) ? 1 : 0,
+                      (wakeup_bits & DUER_WAKEUP_EOF_BIT) ? s_wakeup_eof_num : 0);
+        } else {
+            DUER_LOGD("segment: %d, is not wakeup voice.", stat->_segment);
+        }
+#endif//DUER_SECOND_WAKEUP_ENABLE
         baidu_json_AddNumberToObjectCS(voice, "eof", g_topic._eof ? 1 : 0);
         duer_add_translate_flag(voice);
         if (s_dialog_id_cb) {
@@ -380,7 +417,15 @@ static int duer_send_content(const void *data, size_t size, int eof)
 
         item->context._param = stat;
         item->context._on_report_start = duer_request_send_start;
-        item->context._on_report_finish = duer_request_send_finish;
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+        if (current_is_wakeup) {
+            item->context._on_report_finish = duer_request_send_wakeup_finish_callback;
+        } else {
+            item->context._on_report_finish = duer_request_send_finish_callback;
+        }
+#else // if second wakeup disabled.
+        item->context._on_report_finish = duer_request_send_finish_callback;
+#endif//DUER_SECOND_WAKEUP_ENABLE
         item->value = value;
         value = NULL;
 
@@ -400,9 +445,13 @@ static int duer_send_content(const void *data, size_t size, int eof)
             if (rs < DUER_OK) {
                 DUER_LOGE("send segment %d fail for topic_id:%d", g_topic._segment, g_topic._id);
                 local_mutex_lock(DUER_TRUE);
-                duer_qcache_pop(g_topic.cache);
+                duer_cache_item_t *tmp_item = duer_qcache_pop(g_topic.cache);
                 local_mutex_lock(DUER_FALSE);
                 --g_topic._segment;
+                if (tmp_item == NULL) {
+                    DUER_LOGW("qcache has been finalized!");
+                    return rs;
+                }
                 break;
             }
         }
@@ -424,26 +473,49 @@ static int duer_send_content(const void *data, size_t size, int eof)
         DUER_FREE(item);
     }
 
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+    if (current_is_wakeup) {
+        duer_ds_e2e_event(DUER_E2E_WAKEUP_SEND_ENQUEUE);
+    }
+#endif//DUER_SECOND_WAKEUP_ENABLE
+
     return rs;
 }
 
-static void duer_voice_clean_cache()
+static void duer_voice_clean_cache(duer_voice_cache_t *cache)
 {
-    for (int i = 0; i < (DUER_VOICE_CACHE_SIZE); ++i) {
-        if (s_duer_voice_cache[i]) {
-            DUER_FREE(s_duer_voice_cache[i]);
-            s_duer_voice_cache[i] = NULL;
+    int i = 0;
+
+    if (cache == NULL) {
+        DUER_LOGE("voice cache haven't initialized");
+        return;
+    }
+
+    for (i = 0; i < (cache->size); ++i) {
+        if (cache->items[i]) {
+            DUER_FREE(cache->items[i]);
+            cache->items[i] = NULL;
         }
     }
 
-    s_new = 0;
-    s_old = 0;
+    cache->tail = 0;
+    cache->head = 0;
 }
 
-static int duer_voice_save_cache(const char *buff_ps)
+static int duer_voice_save_cache(duer_voice_cache_t *cache, const char *buff_ps)
 {
+    if (cache == NULL) {
+        DUER_LOGE("voice cache haven't initialized");
+        return -1;
+    }
+
+    // check  if  the neweset covered the oldest
+    if (cache->tail == cache->head && cache->items[cache->head] != NULL) {
+        cache->head = (cache->head + 1) % cache->size;
+    }
+
     // check if memory malloc
-    if (NULL == s_duer_voice_cache[s_new]) {
+    if (NULL == cache->items[cache->tail]) {
         char *tmp = DUER_MALLOC(DUER_SPEEX_ENCODE_SIZE);
 
         if (NULL == tmp) {
@@ -451,45 +523,52 @@ static int duer_voice_save_cache(const char *buff_ps)
             return DUER_ERR_FAILED;
         }
 
-        s_duer_voice_cache[s_new] = tmp;
+        cache->items[cache->tail] = tmp;
     }
 
     // store voice
-    DUER_MEMCPY(s_duer_voice_cache[s_new], buff_ps,  DUER_SPEEX_ENCODE_SIZE);
+    DUER_MEMCPY(cache->items[cache->tail], buff_ps,  DUER_SPEEX_ENCODE_SIZE);
 
     // new_index  ++
-    s_new = (s_new + 1) % DUER_VOICE_CACHE_SIZE;
+    cache->tail = (cache->tail + 1) % cache->size;
 
-    // check  if  the neweset covered the oldest
-    if (s_new == ((s_old + 1) % DUER_VOICE_CACHE_SIZE)) {
-        s_old = (s_old + 1) % DUER_VOICE_CACHE_SIZE;
-    }
-
-    //DUER_LOGE("(%d,%d)",s_old,s_new);
+    //DUER_LOGE("(%d,%d)",cache->head,cache->tail);
     return 0;
 }
 
-static char *duer_voice_get_cache()
+static char *duer_voice_get_cache(duer_voice_cache_t *cache)
 {
-    char *old_voice = s_duer_voice_cache[s_old];
-    s_duer_voice_cache[s_old] = NULL;
+    char *old_voice = NULL;
+
+    if (cache == NULL) {
+        DUER_LOGE("voice cache haven't initialized");
+        return NULL;
+    }
+
+    old_voice = cache->items[cache->head];
+    cache->items[cache->head] = NULL;
 
     // check  if  cache empty
-    if (((s_old + 1) % DUER_VOICE_CACHE_SIZE) == s_new) {
+    if (old_voice == NULL) {
         ;
     } else {
         // old_index ++
-        s_old = (s_old + 1) % DUER_VOICE_CACHE_SIZE;
+        cache->head = (cache->head + 1) % cache->size;
     }
 
-    //DUER_LOGE("[%d,%d]",s_old,s_new);
+    //DUER_LOGE("[%d,%d]",cache->head,cache->tail);
     return old_voice;
 }
 
-static duer_bool duer_voice_not_empty()
+static duer_bool duer_voice_not_empty(duer_voice_cache_t *cache)
 {
-    //DUER_LOGE("[duer_voice_not_empty] %d %d %p %p",s_old,s_new,s_duer_voice_cache[s_old],s_duer_voice_cache[s_new]);
-    if (NULL == s_duer_voice_cache[s_old]) {
+    if (cache == NULL) {
+        DUER_LOGE("voice cache haven't initialized");
+        return DUER_FALSE;
+    }
+
+    //DUER_LOGE("[duer_voice_not_empty] %d %d %p %p",cache->head,cache->tail,cache->items[cache->head],cache->items[cache->tail]);
+    if (NULL == cache->items[cache->head]) {
         //DUER_LOGE(" empty\n");
         return DUER_FALSE;
     } else {
@@ -498,35 +577,153 @@ static duer_bool duer_voice_not_empty()
     }
 }
 
+static void duer_voice_init_cache(duer_voice_cache_t **p_cache, int size)
+{
+    if (*p_cache) {
+        if (size == (*p_cache)->size) {
+            return;
+        } else {
+            DUER_FREE((*p_cache));
+            (*p_cache) = NULL;
+        }
+    }
+
+    size_t mem_size = (sizeof(duer_voice_cache_t) + sizeof(char *) * size);
+    (*p_cache) = (duer_voice_cache_t *)DUER_MALLOC(mem_size);
+    if ((*p_cache) == NULL) {
+        DUER_LOGE("[duer_voice_init_cache] malloc fail\n");
+        return;
+    }
+
+    memset((*p_cache), 0, mem_size);
+    (*p_cache)->size = size;
+    (*p_cache)->tail = 0;
+    (*p_cache)->head = 0;
+}
+
+static void duer_voice_uninit_cache(duer_voice_cache_t **p_cache)
+{
+    DUER_FREE(*p_cache);
+    (*p_cache) = NULL;
+}
+
+static int duer_voice_cache_size(duer_voice_cache_t *cache)
+{
+    if (cache == NULL) {
+        DUER_LOGE("voice cache haven't initialized");
+        return -1;
+    }
+
+    if (cache->tail > cache->head) {
+        return cache->tail - cache->head;
+    } else {
+        return cache->tail + (cache->size - cache->head);
+    }
+}
+
 #if !USE_OWN_SPEEX_LIB
-static void duer_speex_encoded_callback_send(const void *data, size_t size)
+static void duer_speex_encoded_callback_send(const void *data, size_t size,
+        int wakeup_bits)
 {
     //DUER_LOGD("_size + size:%d, I_BUFFER_LEN:%d", _size + size, I_BUFFER_LEN);
     if (_size + size > I_BUFFER_LEN) {
-        duer_send_content(_data, _size, 0);
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+        duer_send_content(_data, _size, 0, _wakeup_bits);
+        _wakeup_bits = 0;
+#else// if second wakeup disabled
+        duer_send_content(_data, _size, 0, 0);
+#endif//DUER_SECOND_WAKEUP_ENABLE
         _size = 0;
     }
 
     DUER_MEMCPY(_data + _size, data, size);
     _size += size;
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+    _wakeup_bits = wakeup_bits;
+#endif//DUER_SECOND_WAKEUP_ENABLE
 }
 
 static void duer_speex_encoded_callback(const void *data, size_t size)
 {
-    if (g_topic._need_cache) {
-        duer_voice_save_cache(data);
-    } else {
-        while (duer_voice_not_empty()) {
-            char *voice_data = duer_voice_get_cache();
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+    static duer_u32_t old_topic_id = 0;
+    //int count = 0;
 
-            if (voice_data) {
-                duer_speex_encoded_callback_send(voice_data, DUER_SPEEX_ENCODE_SIZE);
-                DUER_FREE(voice_data);
-            }
+    if (s_voice_send_state != DUER_VOICE_SEND_STATE_DEFAULT) {
+        if (s_wakeup_voice_cache == NULL) {
+            DUER_LOGE("call duer_voice_second_wakeup_init at first!");
         }
 
-        duer_speex_encoded_callback_send(data,  size);
+        // Manipulate cached data.
+        switch (s_voice_send_state) {
+        case DUER_VOICE_SEND_STATE_WAKEUP:
+            //count = 0;
+            if (old_topic_id != g_topic._id &&
+                duer_session_is_matched(g_topic._id) == DUER_TRUE) {
+                old_topic_id = g_topic._id;
+                //DUER_LOGI("before send_wakeup_count = %d, _size: %d", count, _size);
+                while (1) {
+                    char *voice_data = NULL;
+                    duer_bool wakeup_eof = DUER_FALSE;
+                    if (duer_voice_not_empty(s_wakeup_voice_cache)) {
+                        voice_data = duer_voice_get_cache(s_wakeup_voice_cache);
+                        wakeup_eof = !duer_voice_not_empty(s_wakeup_voice_cache);
+
+                        if (voice_data) {
+                            //++count;
+                            duer_speex_encoded_callback_send(voice_data, DUER_SPEEX_ENCODE_SIZE,
+                                                             DUER_WAKEUP_BIT);
+                            DUER_FREE(voice_data);
+                        }
+                    } else {
+                        break;
+                    }
+
+                }
+                //DUER_LOGI("end send_wakeup_count = %d, _size: %d", count, _size);
+            }
+            break;
+        default:
+            break;
+        }
+
+        // Process new data.
+        if (size > 0) {
+            switch (s_voice_send_state) {
+            case DUER_VOICE_SEND_STATE_WAKEUP:
+                // set second wakeup bit.
+                duer_speex_encoded_callback_send(data,  size, DUER_WAKEUP_BIT);
+                break;
+            case DUER_VOICE_SEND_STATE_QUERY:
+                // clear wakeup bit.
+                duer_speex_encoded_callback_send(data,  size, 0);
+                break;
+            default:
+                break;
+            }
+
+            // Process caching.
+            duer_voice_save_cache(s_wakeup_voice_cache, data);
+        }
+    } else {
+#endif//DUER_SECOND_WAKEUP_ENABLE
+        if (g_topic._need_cache) {
+            duer_voice_save_cache(s_voice_cache, data);
+        } else {
+            while (duer_voice_not_empty(s_voice_cache)) {
+                char *voice_data = duer_voice_get_cache(s_voice_cache);
+
+                if (voice_data) {
+                    duer_speex_encoded_callback_send(voice_data, DUER_SPEEX_ENCODE_SIZE, 0);
+                    DUER_FREE(voice_data);
+                }
+            }
+
+            duer_speex_encoded_callback_send(data,  size, 0);
+        }
+#ifdef DUER_SECOND_WAKEUP_ENABLE
     }
+#endif//DUER_SECOND_WAKEUP_ENABLE
 }
 #endif
 
@@ -545,7 +742,7 @@ static void duer_send_original_voice(const void *data, size_t size)
             size -= left;
         }
 
-        duer_send_content(_data, _size, 0);
+        duer_send_content(_data, _size, 0, 0);
         _size = 0;
     }
 
@@ -575,8 +772,14 @@ static void duer_voice_terminate_internal(int what, void *object)
 
 static void duer_voice_start_internal(int what, void *object)
 {
-    if (duer_voice_not_empty()) {
-        duer_voice_clean_cache();
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+    if (s_wakeup_voice_cache && duer_voice_not_empty(s_wakeup_voice_cache)) {
+        duer_voice_clean_cache(s_wakeup_voice_cache);
+    }
+#endif
+
+    if (s_voice_cache && duer_voice_not_empty(s_voice_cache)) {
+        duer_voice_clean_cache(s_voice_cache);
     }
 
     duer_voice_terminate_internal(what, object);
@@ -647,10 +850,10 @@ static void duer_voice_send_internal(int what, void *object)
 
                 do {
                     if (len + I_BUFFER_LEN > what) {
-                        duer_send_content((unsigned char *)object + len, what - len, 0);
+                        duer_send_content((unsigned char *)object + len, what - len, 0, 0);
                         break;
                     } else {
-                        duer_send_content((unsigned char *)object + len, I_BUFFER_LEN, 0);
+                        duer_send_content((unsigned char *)object + len, I_BUFFER_LEN, 0, 0);
                         len += I_BUFFER_LEN;
                     }
                 } while (len < what);
@@ -672,8 +875,14 @@ static void duer_voice_cache_internal(int what, void *object)
 
 static void duer_voice_stop_internal(int what, void *object)
 {
-    if (duer_voice_not_empty()) {
-        duer_voice_clean_cache();
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+    if (s_wakeup_voice_cache && duer_voice_not_empty(s_wakeup_voice_cache)) {
+        duer_voice_clean_cache(s_wakeup_voice_cache);
+    }
+#endif
+
+    if (s_voice_cache && duer_voice_not_empty(s_voice_cache)) {
+        duer_voice_clean_cache(s_voice_cache);
     }
 
     if (duer_session_is_matched(g_topic._id) == DUER_TRUE) {
@@ -684,12 +893,12 @@ static void duer_voice_stop_internal(int what, void *object)
 #endif
         if (_size > 0 || g_topic._segment > 0) {
 #if !USE_OWN_SPEEX_LIB
-            duer_send_content(_data, _size, 1);
+            duer_send_content(_data, _size, 1, 0, 0);
 #else
             if (what >= I_BUFFER_LEN) {
-                duer_send_content((unsigned char *)object, I_BUFFER_LEN, 1);
+                duer_send_content((unsigned char *)object, I_BUFFER_LEN, 1, 0);
             } else {
-                duer_send_content((unsigned char *)object, what, 1);
+                duer_send_content((unsigned char *)object, what, 1, 0);
             }
 #endif
         }
@@ -708,6 +917,9 @@ static void duer_voice_stop_internal(int what, void *object)
 #ifdef ENABLE_DUER_STORE_VOICE
     duer_store_voice_end();
 #endif // ENABLE_DUER_STORE_VOICE
+
+    // consume the topic id, so that we can check if voice stopped.
+    duer_session_consume(g_topic._id);
 }
 
 static int duer_events_call_internal(duer_events_func func, int what, void *object)
@@ -761,7 +973,9 @@ int duer_voice_initialize(void)
         s_func_mutex = duer_mutex_create();
     }
 
-    s_voice_mode = DUER_VOICE_MODE_DEFAULT;
+    if (!s_func_mutex) {
+        duer_voice_init_cache(&s_voice_cache, DUER_VOICE_CACHE_SIZE);
+    }
 
     return DUER_OK;
 }
@@ -787,6 +1001,10 @@ void duer_voice_finalize(void)
     if (s_func_mutex) {
         duer_mutex_destroy(s_func_mutex);
         s_func_mutex = NULL;
+    }
+
+    if (s_func_mutex) {
+        duer_voice_uninit_cache(&s_voice_cache);
     }
 }
 
@@ -872,3 +1090,85 @@ int duer_voice_set_speex_quality(int quality)
     s_speex_quality = quality;
     return DUER_OK;
 }
+
+#ifdef DUER_SECOND_WAKEUP_ENABLE
+void duer_voice_truncate_wakeup_cache(int count)
+{
+    int cur_count = 0;
+    char *voice_data = NULL;
+
+    if (s_wakeup_voice_cache == NULL) {
+        DUER_LOGE("s_wakeup_voice_cache haven't initialized!");
+        return;
+    }
+
+    if (!duer_voice_not_empty(s_wakeup_voice_cache)) {
+        return;
+    }
+
+    cur_count = duer_voice_cache_size(s_wakeup_voice_cache);
+    while (cur_count > count) {
+        voice_data = duer_voice_get_cache(s_wakeup_voice_cache);
+        if (voice_data) {
+            DUER_FREE(voice_data);
+        }
+        --cur_count;
+    }
+}
+
+static void duer_voice_restart_internal(int what, void *object)
+{
+    // discard old id.
+    duer_session_consume(g_topic._id);
+
+    // Initialize the topic parameters
+    g_topic._id = duer_session_generate();
+    g_topic._segment = 0;
+    g_topic._eof = DUER_FALSE;
+
+    _size = 0;
+}
+
+static void duer_voice_send_wakeup_internal(int what, void *object)
+{
+    if (duer_session_is_matched(g_topic._id) == DUER_TRUE) {
+        s_wakeup_eof_num = what;
+        if (_size > 0) {
+            duer_send_content(_data, _size, 0, DUER_WAKEUP_BIT | DUER_WAKEUP_EOF_BIT);
+            _size = 0;
+        }
+    }
+}
+
+void duer_voice_second_wakeup_init(int cache_size)
+{
+    duer_voice_init_cache(&s_wakeup_voice_cache, cache_size);
+    DUER_LOGD("Init wakeup cache with size: %d", cache_size);
+}
+
+void duer_voice_second_wakeup_uninit()
+{
+    duer_voice_uninit_cache(&s_wakeup_voice_cache);
+}
+
+duer_bool duer_voice_is_started()
+{
+    return duer_session_is_matched(g_topic._id);
+}
+
+void duer_voice_set_send_state(duer_voice_send_state send_state)
+{
+    s_voice_send_state = send_state;
+}
+
+int duer_voice_restart(void)
+{
+    return duer_events_call_internal(duer_voice_restart_internal, 0, NULL);
+}
+
+int duer_voice_send_wakeup(int wakeup)
+{
+    return duer_events_call_internal(duer_voice_send_wakeup_internal, wakeup, NULL);
+}
+#endif//DUER_SECOND_WAKEUP_ENABLE
+

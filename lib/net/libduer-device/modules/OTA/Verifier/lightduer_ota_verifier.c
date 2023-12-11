@@ -44,36 +44,105 @@
 
 #define RSA_E   "10001"
 
+static void duer_ota_verification_report_err_msg(
+    duer_ota_verifier_t *verifier,
+    char const *err_msg,
+    int err_code)
+{
+    if (verifier == NULL) {
+        DUER_LOGE("OTA Verifier: Argument Error");
+
+        return;
+    }
+
+    DUER_MEMSET(verifier->err_msg, 0, sizeof(verifier->err_msg));
+
+    snprintf(verifier->err_msg, ERR_MSG_LEN, "%s%d", err_msg, err_code);
+}
+
+char const *duer_ota_verification_get_err_msg(duer_ota_verifier_t const *verifier)
+{
+
+    if (verifier == NULL) {
+        DUER_LOGE("OTA Verifier: Argument error");
+
+        return NULL;
+    }
+
+    return verifier->err_msg;
+}
+
+int duer_ota_verification_check_err_msg(duer_ota_verifier_t *verifier)
+{
+    size_t str_len = 0;
+
+    if (verifier == NULL) {
+        DUER_LOGE("OTA Verifier: Argument error");
+
+        return -1;
+    }
+
+    str_len = DUER_STRLEN(verifier->err_msg);
+    if (str_len > 0) {
+
+        return 1;
+    }
+
+    return -1;
+}
+
 duer_ota_verifier_t *duer_ota_verification_create_verifier(void)
 {
-    int ret = 0;
     duer_ota_verifier_t *verifier = NULL;
 
+    verifier = DUER_MALLOC(sizeof(*verifier));
+    if (verifier == NULL) {
+        DUER_LOGE("OTA Verifier: Create verifier failed");
+
+        return NULL;
+    }
+
+    DUER_MEMSET(verifier, 0, sizeof(*verifier));
+
+    return verifier;
+}
+
+int duer_ota_verification_init_verifier(duer_ota_verifier_t *verifier)
+{
+    int ret = DUER_OK;
+
+    if (verifier == NULL) {
+        DUER_LOGE("OTA Verifier: Argument Error");
+
+        return DUER_ERR_INVALID_PARAMETER;
+    }
+
     do {
-        verifier = DUER_MALLOC(sizeof(*verifier));
-        if (verifier == NULL) {
-            DUER_LOGE("OTA Verifier: Create verifier failed");
-
-            return NULL;
-        }
-
-        DUER_MEMSET(verifier, 0, sizeof(*verifier));
-
         mbedtls_sha1_init(&verifier->sha1);
         mbedtls_sha1_starts(&verifier->sha1);
 
+#ifdef MBEDTLS_V_3_4_0
+        mbedtls_rsa_init(&verifier->rsa);
+#else
         mbedtls_rsa_init(&verifier->rsa, MBEDTLS_RSA_PKCS_V15, 0);
+#endif
         verifier->rsa.len = KEY_LEN;
 
         ret = mbedtls_mpi_read_string(&verifier->rsa.N, 16, RSA_N);
         if (ret != 0) {
             DUER_LOGE("OTA Verifier: Read RSA N failed ret:%d", ret);
+
+            duer_ota_verification_report_err_msg(verifier, "Read RSA N failed ", ret);
+
             break;
         }
 
         ret = mbedtls_mpi_read_string(&verifier->rsa.E, 16, RSA_E);
         if (ret != 0) {
             DUER_LOGE("OTA Verifier: Read RSA E failed ret:%d", ret);
+
+            duer_ota_verification_report_err_msg(verifier, "Read RSA E failed ", ret);
+
             break;
         }
 
@@ -81,21 +150,19 @@ duer_ota_verifier_t *duer_ota_verification_create_verifier(void)
         if (ret != 0) {
             DUER_LOGE("OTA Verifier: Check key-pair failed");
 
+            duer_ota_verification_report_err_msg(verifier, "Check key-pair failed ", ret);
+
             break;
         }
 
-        return verifier;
+        return DUER_OK;
     } while (0);
 
     mbedtls_sha1_free(&verifier->sha1);
 
     mbedtls_rsa_free(&verifier->rsa);
 
-    if (verifier != NULL) {
-        DUER_FREE(verifier);
-    }
-
-    return NULL;
+    return DUER_ERR_FAILED;
 }
 
 void duer_ota_verification_destroy_verifier(duer_ota_verifier_t *verifier)
@@ -149,6 +216,14 @@ int duer_ota_verification_verify(duer_ota_verifier_t *verifier,
         DUER_LOGD("%.2x", sha1[i]);
     }
 
+#ifdef MBEDTLS_V_3_4_0
+    ret = mbedtls_rsa_pkcs1_verify(
+              &verifier->rsa,
+              MBEDTLS_MD_SHA1,
+              0,
+              sha1,
+              package_signature);
+#else
     ret = mbedtls_rsa_pkcs1_verify(
               &verifier->rsa,
               NULL,
@@ -158,8 +233,11 @@ int duer_ota_verification_verify(duer_ota_verifier_t *verifier,
               0,
               sha1,
               package_signature);
+#endif
     if (ret != 0) {
         DUER_LOGE(" OTA Verifier: verify failed ret:%d", ret);
+
+        duer_ota_verification_report_err_msg(verifier, "Verifiy failed ", ret);
 
         ret = DUER_ERR_FAILED;
     }

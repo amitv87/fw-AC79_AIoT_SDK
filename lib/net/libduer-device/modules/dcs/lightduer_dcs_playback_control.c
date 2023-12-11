@@ -38,8 +38,10 @@ int duer_dcs_send_play_control_cmd(duer_dcs_play_control_cmd_t cmd)
 {
     baidu_json *data = NULL;
     baidu_json *event = NULL;
+    baidu_json *header = NULL;
     baidu_json *client_context = NULL;
     int rs = DUER_OK;
+    duer_dcs_dialog_request_t dialog_type = DCS_DIALOG_NONE;
 
     if (!s_is_initialized) {
         DUER_LOGW("Voice input module has not been initialized");
@@ -60,7 +62,7 @@ int duer_dcs_send_play_control_cmd(duer_dcs_play_control_cmd_t cmd)
     if (!data) {
         DUER_LOGE("Memory not enough");
         DUER_DS_LOG_REPORT_DCS_MEMORY_ERROR();
-        rs = DUER_ERR_MEMORY_OVERLOW;
+        rs = DUER_ERR_MEMORY_OVERFLOW;
         goto RET;
     }
 
@@ -77,6 +79,15 @@ int duer_dcs_send_play_control_cmd(duer_dcs_play_control_cmd_t cmd)
         goto RET;
     }
 
+    header = baidu_json_GetObjectItem(event, DCS_HEADER_KEY);
+    if (header) {
+        if (cmd == DCS_PLAY_CMD) {
+            dialog_type = DCS_DIALOG_PLAY_COMMAND_ISSUE;
+        }
+        baidu_json_AddStringToObject(header,
+                                     DCS_DIALOG_REQUEST_ID_KEY,
+                                     duer_create_request_id_internal(dialog_type));
+    }
     baidu_json_AddItemToObjectCS(data, DCS_EVENT_KEY, event);
     duer_dcs_data_report_internal(data, DUER_TRUE);
 

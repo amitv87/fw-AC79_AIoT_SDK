@@ -17,7 +17,7 @@
 //
 // Description: The encrypted network I/O.
 //
-#include "duerapp_config.h"
+
 #include "lightduer_types.h"
 #include "lightduer_net_trans_encrypted.h"
 
@@ -31,7 +31,11 @@
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/timing.h"
 #include "mbedtls/x509_crt.h"
+#if defined(MBEDTLS_DEPRECATED_REMOVED)
+#include "mbedtls/net_sockets.h"
+#else
 #include "mbedtls/net.h"
+#endif
 #include "mbedtls/debug.h"
 
 #include "lightduer_lib.h"
@@ -87,7 +91,11 @@ DUER_LOC_IMPL duer_status_t duer_trans_mbedtls2status(int status)
     }
 
     if (rs < 0 && rs != DUER_ERR_TRANS_WOULD_BLOCK) {
-        DUER_LOGE("mbedtls error: %d(-0x%04x)", status, -status);
+        if (rs == DUER_ERR_TRANS_TIMEOUT) {
+            DUER_LOGW("mbedtls trans timeout: %d(-0x%04x)", status, -status);
+        } else {
+            DUER_LOGE("mbedtls error: %d(-0x%04x)", status, -status);
+        }
     }
 
     return rs;
@@ -122,7 +130,9 @@ DUER_LOC_IMPL int duer_trans_encrypted_wrap_recv(void *ctx, unsigned char *buf,
 {
     duer_status_t rs = DUER_ERR_FAILED;
     duer_trans_ptr trans = (duer_trans_ptr)ctx;
+    DUER_LOGV("duer_trans_encrypted_wrap_recv");
     rs = duer_trans_wrapper_recv(trans, buf, len, NULL);
+    DUER_LOGV("duer_trans_encrypted_wrap_recv: rs = %d", rs);
 
     if (rs == DUER_ERR_TRANS_WOULD_BLOCK) {
         return MBEDTLS_ERR_SSL_WANT_READ;
@@ -142,6 +152,7 @@ DUER_LOC_IMPL int duer_trans_encrypted_wrap_recv_timeout(void *ctx,
     duer_trans_ptr trans = (duer_trans_ptr)ctx;
     DUER_LOGV("duer_trans_encrypted_wrap_recv_timeout: timeout = %d", timeout);
     rs = duer_trans_wrapper_recv_timeout(trans, buf, len, timeout, NULL);
+    DUER_LOGV("duer_trans_encrypted_wrap_recv_timeout: rs = %d", rs);
 
     if (rs == DUER_ERR_TRANS_WOULD_BLOCK) {
         return MBEDTLS_ERR_SSL_WANT_READ;
@@ -253,11 +264,6 @@ DUER_LOC_IMPL duer_trans_encrypted_ptr duer_trans_get_context(duer_trans_ptr tra
      */
     mbedtls_ssl_init(&ptr->ssl);
     mbedtls_ssl_config_init(&ptr->ssl_conf);
-
-#ifdef MBEDTLS_SSL_EXPORT_KEYS
-    mbedtls_ssl_conf_export_keys_cb(&ptr->ssl_conf, mbedtls_ssl_export_keys, (void *)(&ptr->ssl_conf));
-#endif
-
     mbedtls_x509_crt_init(&ptr->cacert);
 #ifndef MBEDTLS_DRBG_ALT
     mbedtls_ctr_drbg_init(&ptr->ctr_drbg);
@@ -396,7 +402,7 @@ exit:
 }
 
 DUER_INT_IMPL duer_status_t duer_trans_encrypted_do_connect(duer_trans_ptr trans,
-        const duer_addr_t *addr)
+        const duer_addr_t *addr, duer_u32_t timeout)
 {
     duer_status_t rs = DUER_ERR_FAILED;
     duer_trans_encrypted_ptr ptr = NULL;
@@ -407,7 +413,11 @@ DUER_INT_IMPL duer_status_t duer_trans_encrypted_do_connect(duer_trans_ptr trans
         goto exit;
     }
 
-    rs = duer_trans_wrapper_connect(trans, addr);
+    if (timeout == 0) {
+        rs = duer_trans_wrapper_connect(trans, addr);
+    } else {
+        rs = duer_trans_wrapper_connect_timeout(trans, addr, timeout);
+    }
 
     if (rs == DUER_OK || rs == DUER_INF_TRANS_IP_BY_HTTP_DNS) {
         ptr->status = DUER_TRANS_ST_CONNECTED;
@@ -418,7 +428,8 @@ exit:
     return rs;
 }
 
-DUER_LOC_IMPL duer_status_t duer_trans_encrypted_do_prepare(duer_trans_ptr trans)
+DUER_LOC_IMPL duer_status_t duer_trans_encrypted_do_prepare(
+    duer_trans_ptr trans, duer_u32_t connect_timeout)
 {
     duer_status_t rs = DUER_ERR_FAILED;
     duer_trans_encrypted_ptr ptr = duer_trans_get_context(trans);
@@ -431,11 +442,12 @@ DUER_LOC_IMPL duer_status_t duer_trans_encrypted_do_prepare(duer_trans_ptr trans
 
     switch (ptr->status) {
     case DUER_TRANS_ST_DISCONNECTED:
-        rs = duer_trans_encrypted_do_connect(trans, &trans->addr); // trans->addr ? where set this
+        rs = duer_trans_encrypted_do_connect(trans, &trans->addr, connect_timeout);
         break;
 
     case DUER_TRANS_ST_CONNECTED:
         rs = duer_trans_encrypted_handshake(trans);
+        DUER_LOGI("Handshake done!!");
         break;
 
     case DUER_TRANS_ST_HANDSHAKED:
@@ -451,7 +463,8 @@ exit:
     return rs;
 }
 
-DUER_LOC_IMPL duer_status_t duer_trans_encrypted_prepare(duer_trans_ptr trans)
+DUER_LOC_IMPL duer_status_t duer_trans_encrypted_prepare(
+    duer_trans_ptr trans, duer_u32_t connect_timeout)
 {
     duer_status_t rs = DUER_ERR_FAILED;
     duer_trans_encrypted_ptr ptr = duer_trans_get_context(trans);
@@ -465,8 +478,8 @@ DUER_LOC_IMPL duer_status_t duer_trans_encrypted_prepare(duer_trans_ptr trans)
     rs = DUER_OK;
 
     while (ptr->status != DUER_TRANS_ST_HANDSHAKED && rs == DUER_OK) {
-        DUER_LOGD("encrypted status: %d", ptr->status);
-        rs = duer_trans_encrypted_do_prepare(trans);
+        DUER_LOGI("encrypted status: %d", ptr->status);
+        rs = duer_trans_encrypted_do_prepare(trans, connect_timeout);
     }
 
 exit:
@@ -487,16 +500,42 @@ DUER_INT_IMPL duer_status_t duer_trans_encrypted_connect(duer_trans_ptr trans,
     }
 
     if (ptr->status == DUER_TRANS_ST_DISCONNECTED) {
-        rs = duer_trans_encrypted_do_connect(trans, addr);
+        rs = duer_trans_encrypted_do_connect(trans, addr, 0);
 
         if (rs < DUER_OK && rs != DUER_INF_TRANS_IP_BY_HTTP_DNS) {
             goto exit;
         }
     }
 
-    rs = duer_trans_encrypted_prepare(trans);
+    rs = duer_trans_encrypted_prepare(trans, 0);
 exit:
     DUER_LOGV("<== duer_trans_encrypted_connect: rs = %d", rs);
+    return rs;
+}
+
+DUER_INT_IMPL duer_status_t duer_trans_encrypted_connect_timeout(duer_trans_ptr trans,
+        const duer_addr_t *addr, duer_u32_t timeout)
+{
+    duer_status_t rs = DUER_ERR_FAILED;
+    duer_trans_encrypted_ptr ptr = NULL;
+    DUER_LOGD("==> duer_trans_encrypted_connect_timeout: trans = %p", trans);
+    ptr = duer_trans_get_context(trans);
+
+    if (!ptr) {
+        goto exit;
+    }
+
+    if (ptr->status == DUER_TRANS_ST_DISCONNECTED) {
+        rs = duer_trans_encrypted_do_connect(trans, addr, timeout);
+
+        if (rs < DUER_OK && rs != DUER_INF_TRANS_IP_BY_HTTP_DNS) {
+            goto exit;
+        }
+    }
+
+    rs = duer_trans_encrypted_prepare(trans, timeout);
+exit:
+    DUER_LOGV("<== duer_trans_encrypted_connect_timeout: rs = %d", rs);
     return rs;
 }
 
@@ -508,7 +547,7 @@ DUER_INT_IMPL duer_status_t duer_trans_encrypted_send(duer_trans_ptr trans,
     duer_trans_encrypted_ptr ptr = trans ? (duer_trans_encrypted_ptr)trans->secure : NULL;
     int rs = DUER_ERR_FAILED;
     DUER_LOGV("==> duer_trans_encrypted_send: trans = %p, size:%d", trans, size);
-    rs = duer_trans_encrypted_prepare(trans);
+    rs = duer_trans_encrypted_prepare(trans, 0);
 
     if (rs < DUER_OK) {
         DUER_LOGW("    duer_trans_encrypted_send: prepare failed, because rs = %d", rs);
@@ -530,7 +569,7 @@ DUER_INT_IMPL duer_status_t duer_trans_encrypted_recv(duer_trans_ptr trans,
     duer_trans_encrypted_ptr ptr = trans ? (duer_trans_encrypted_ptr)trans->secure : NULL;
     int rs = DUER_ERR_FAILED;
     DUER_LOGV("==> duer_trans_encrypted_recv: trans = %p", trans);
-    rs = duer_trans_encrypted_prepare(trans);
+    rs = duer_trans_encrypted_prepare(trans, 0);
 
     if (rs < DUER_OK) {
         DUER_LOGE("    duer_trans_encrypted_recv: prepare failed, because rs = %d", rs);
@@ -577,6 +616,7 @@ DUER_INT_IMPL duer_status_t duer_trans_encrypted_close(duer_trans_ptr trans)
 #endif
             ptr->ssl_setup_flag = 0;
         }
+        ptr->status = DUER_TRANS_ST_DISCONNECTED;
     }
 
     DUER_LOGV("<== duer_trans_encrypted_close");
