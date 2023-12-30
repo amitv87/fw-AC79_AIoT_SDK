@@ -215,6 +215,7 @@ int usb_h_ep_write(const usb_dev usb_id, u8 host_ep, u16 txmaxp, u8 target_ep, c
 int usb_h_ep_write_async(const usb_dev id, u8 host_ep, u16 txmaxp, u8 target_ep, const u8 *ptr, u32 len, u32 xfer, u32 kstart);
 int usb_h_ep_read(const usb_dev usb_id, u8 host_ep, u16 rxmaxp, u8 target_ep, u8 *ptr, u32 len, u32 xfer);
 int usb_h_ep_read_async(const usb_dev id, u8 host_ep, u8 target_ep, u8 *ptr, u32 len, u32 xfer, u32 kstart);
+int usb_h_ep_burst_read_async(const usb_dev id, u8 host_ep, u8 target_ep, u32 dma_cnt, u32 *rx_len_table, u8 *ptr, u32 len, u32 xfer, u32 kstart);
 void usb_h_sie_init(const usb_dev usb_id);
 void usb_h_sie_close(const usb_dev usb_id);
 int usb_h_chirp_and_reset(const usb_dev id, u32 reset_delay, u32 timeout);
@@ -235,6 +236,8 @@ void usb_ep0_Set_ignore(const usb_dev id, u32 addr);
 void usb_recover_io_status(const usb_dev id);
 
 void usb_write_rxinterval(const usb_dev id, const u32 ep, u32 value);
+void usb_write_txinterval(const usb_dev id, const u32 ep, u32 value);
+void usb_write_fifosize(const usb_dev id, const u32 ep, u32 fifosize);
 
 
 

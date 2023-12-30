@@ -979,10 +979,9 @@ const u32 DS_VLD_CNT_THR_VAL = 72;
 const u32 DS_DET_CNT_THR1_VAL = 3;
 
 //WIFI Adaptivity
-short CHL_STATE_PWR_THR = (-60 * 8);  //n/8 dBm //干扰功率阈值;
+/*n/8 dBm 干扰功率阈值, 设置值和真实值有-20dBm的差值, 即默认值为(-80*8)时，干扰功率为-60dBm时进行规避, 最低配置值为(-127*8)*/
+short CHL_PWR_THR = (-80 * 8);
 short CHL_BUSY_CONFIG = (0xc & 0x0f); //0xe
-short CP_BUSY_CNT_THR = (80 & 0x7f);  //60
-short CP_DET_CNT_THR = (4 & 0x7f);    //20
 
 ///=======================================================//
 ///       ram adr        ctl
@@ -1281,10 +1280,9 @@ const u32 DS_VLD_CNT_THR_VAL = 80;
 const u32 DS_DET_CNT_THR1_VAL = 4;
 
 //WIFI Adaptivity
-short CHL_STATE_PWR_THR = (-60 * 8);  //n/8 dBm //干扰功率阈值;
+/*n/8 dBm 干扰功率阈值, 设置值和真实值有-20dBm的差值, 即默认值为(-80*8)时，干扰功率为-60dBm时进行规避, 最低配置值为(-127*8)*/
+short CHL_PWR_THR = (-80 * 8);
 short CHL_BUSY_CONFIG = (0xc & 0x0f); //0xe
-short CP_BUSY_CNT_THR = (80 & 0x7f);  //60
-short CP_DET_CNT_THR = (4 & 0x7f);    //20
 
 ///=======================================================//
 ///       ram adr        ctl
