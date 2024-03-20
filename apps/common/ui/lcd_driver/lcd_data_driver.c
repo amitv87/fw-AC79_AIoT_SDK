@@ -552,6 +552,7 @@ static void te_send_task(void)
 {
     u8 *out_buf_addr;
     static u8 time = 0;
+    os_sem_create(&__this.te_ready_sem, 0);
     while (1) {
         os_sem_pend(&__this.te_ready_sem, 0);
         switch (__this.data_mode) {
@@ -778,7 +779,6 @@ void picture_compose_task_init(void)
 #else
     lcd_bl_pinstate(__this.lcd_bk_on);
 #endif
-    os_sem_create(&__this.te_ready_sem, 0);
     for (u8 i = 0; i < 2; i++) {
         os_sem_create(&task[i].compose_sem, 0);
         os_sem_create(&task[i].yuv_sem, 0);
@@ -795,6 +795,90 @@ void picture_compose_task_init(void)
     task_create(picture_compose_task_1, 0, "lcd_task_1");
     task_create(te_send_task, 0, "te_task");
 }
+
+#ifdef USE_LVGL_UI_DEMO
+#include "lv_port_disp.h"
+
+extern int get_lvgl_show_finish(void);
+extern void set_lvgl_updata_len(u16 cnt);
+
+void lcd_lvgl_full_by_te(u16 xs, u16 xe, u16 ys, u16 ye, const u8 *img)
+{
+    static u8 *show_buf;
+    u8 post_time;
+    static u8 pend_flag = 1;
+    static u16 cnt = 10;
+    static u8 cnt_flag = 0;
+    static u8 time = 0;
+
+    show_buf = img;
+
+    if (pend_flag) {
+        /* os_time_dly(10);//测试用 用于区分数据包 */
+        os_sem_set(&__this.te_ready_sem, 0);
+        os_sem_pend(&__this.te_ready_sem, 0);
+    }
+
+    lcd_lvgl_full(xs, xe, ys, ye, show_buf);
+
+    post_time = os_sem_query(&__this.te_ready_sem);
+
+    if (post_time == 2) {
+        printf("There may be tearing lines");
+        if (cnt < __this.lcd_h) {
+            cnt++;
+            cnt_flag = 1;
+        }
+    }
+
+    if (get_lvgl_show_finish()) { //完成当前帧推屏
+        pend_flag = 1;//下一次需要等pend
+#ifdef LVGL_TEST_LINE_MUNB_MODE
+        time++;
+        if (time == 30) {
+            time = 0;
+            printf("[msg]>>>>>>lcd_each_update_height_cnt=%d", cnt);
+        }
+        if (cnt_flag) {
+            cnt_flag = 0;
+            printf("[msg]>>>>>>change_lcd_each_update_height_cnt=%d", cnt);
+            set_lvgl_updata_len(cnt);//需要等上一帧绘制完成才能重新配置每次的行高
+        }
+#endif
+    } else {
+        pend_flag = 0;
+    }
+}
+
+static void lvgl_TE_interrupt(void)
+{
+    os_sem_post(&__this.te_ready_sem);
+}
+
+void create_lcd_te(void)
+{
+    if (!__this.lcd_te_io || !__this.lcd_w || !__this.lcd_h || !__this.lcd_rgb565_data_size || !__this.lcd_yuv420_data_size) {
+        printf("\n [ERROR] %s -[you_need_init lcd_te_io, lcd_w, lcd_h, lcd_rgb565_data_size, lcd_yuv420_data_size ] %d\n", __FUNCTION__, __LINE__);
+    }
+#if USE_LCD_TE
+    //初始化TE中断
+    int ret = port_wakeup_reg(EVENT_IO_1, __this.lcd_te_io, EDGE_POSITIVE, lvgl_TE_interrupt);
+    /* int ret = port_wakeup_reg(EVENT_IO_1, __this.lcd_te_io, EDGE_NEGATIVE, lvgl_TE_interrupt); */
+    if (ret) {
+        printf("port_wakeup_reg success.\n");
+    } else {
+        printf("port_wakeup_reg fail.\n");
+    }
+#else
+    lcd_bl_pinstate(__this.lcd_bk_on);
+#endif
+    __this.data_mode = UI;
+    os_sem_create(&__this.te_ready_sem, 0);
+}
+#endif
+
+
+
 
 
 

@@ -600,9 +600,16 @@ extern void wifi_backoff_cfg(u8 cwmax);
 /**
  * @brief wifi_get_tbtt 获取 wifi 下一个 beacon 抵达的剩余预测时间
  *
- * @return 返回值范围 0 ~ 1600，单位为 64 us，即最小误差为 64 us
+ * @return 返回值范围 0 ~ 3FFFFF，单位为 us
  */
 extern u32 wifi_get_tbtt(void);
+
+/**
+ * @brief wifi_get_tsf 获取 wifi TSF 计数器的值
+ *
+ * @return 返回值范围 0 ~ FFFFFFFFFFFFFFFF，单位为 us
+ */
+extern u64 wifi_get_tsf(void);
 
 #endif  //_WIFI_CONNECT_H_
 

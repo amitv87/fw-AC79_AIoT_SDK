@@ -5,7 +5,7 @@
 #include "device_drive.h"
 #include "host/usb_ctrl_transfer.h"
 
-#if TCFG_HOST_WIRELESS_ENABLE
+#if TCFG_HOST_WIRELESS_ENABLE || TCFG_HOST_RNDIS_ENABLE
 
 #define LOG_TAG_CONST       USB
 #define LOG_TAG             "[net]"

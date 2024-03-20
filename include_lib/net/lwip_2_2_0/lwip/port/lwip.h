@@ -10,6 +10,17 @@ extern "C" { /* Make sure we have C-declarations in C++ programs */
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
+#if LWIP_IPV6
+typedef enum {
+    IP6_ADDR_IS_UNKNOWN,
+    IP6_ADDR_IS_GLOBAL,
+    IP6_ADDR_IS_LINK_LOCAL,
+    IP6_ADDR_IS_SITE_LOCAL,
+    IP6_ADDR_IS_UNIQUE_LOCAL,
+    IP6_ADDR_IS_IPV4_MAPPED_IPV6
+} ip6_addr_type;
+
+#endif
 
 struct netif_info {
     u32_t ip;

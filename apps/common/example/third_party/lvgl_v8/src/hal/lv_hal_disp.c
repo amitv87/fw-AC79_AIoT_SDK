@@ -158,6 +158,12 @@ void lv_disp_draw_buf_init(lv_disp_draw_buf_t *draw_buf, void *buf1, void *buf2,
     draw_buf->size    = size_in_px_cnt;
 }
 
+//重新配置lvgl每次刷新的行高大小
+void lv_disp_set_draw_buf_size(lv_disp_draw_buf_t *draw_buf, uint32_t size_in_px_cnt)
+{
+    draw_buf->size    = size_in_px_cnt;
+}
+
 /**
  * Register an initialized display driver.
  * Automatically set the first display as active.

@@ -1,6 +1,6 @@
 /**
  * @file lv_conf.h
- * Configuration file for v8.3.9
+ * Configuration file for v8.3.11
  */
 
 /*
@@ -87,10 +87,10 @@
  *====================*/
 
 /*Default display refresh period. LVG will redraw changed areas with this period time*/
-#define LV_DISP_DEF_REFR_PERIOD 1 //30      /*[ms]*/ //使用lvgl线程配置最低优先级全占据cpu的方法
+#define LV_DISP_DEF_REFR_PERIOD 1 /*[ms]*/ //已修改为使用计算所有定时事件最大公约数超时时间刷屏
 
 /*Input device read period in milliseconds*/
-#define LV_INDEV_DEF_READ_PERIOD 20 //30    /*[ms]*/
+#define LV_INDEV_DEF_READ_PERIOD 14   /*[ms]*/ //已修改为使用事件驱动方式读TP坐标
 
 /*Use a custom tick source that tells the elapsed time in milliseconds.
  *It removes the need to manually update the tick with `lv_tick_inc()`)*/
@@ -240,7 +240,7 @@
  *-----------*/
 
 /*1: Show CPU usage and FPS count*/
-#define LV_USE_PERF_MONITOR 1
+#define LV_USE_PERF_MONITOR 0
 #if LV_USE_PERF_MONITOR
 #define LV_USE_PERF_MONITOR_POS LV_ALIGN_BOTTOM_RIGHT
 #endif

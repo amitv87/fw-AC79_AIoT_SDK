@@ -18,7 +18,6 @@ static void drag_event_handler(lv_event_t *e)
     lv_obj_set_pos(obj, x, y);
 }
 
-
 /**
  * Make an object dragable.
  */

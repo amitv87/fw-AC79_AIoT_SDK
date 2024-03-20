@@ -10,6 +10,7 @@
 #include "otg.h"
 #include "usb_host.h"
 #include "usb_storage.h"
+#include "usb_host_cdc.h"
 #endif
 #ifdef CONFIG_UI_ENABLE
 #include "ui/include/lcd_drive.h"
@@ -558,6 +559,15 @@ static const struct otg_dev_data otg_data = {
     .detect_mode = OTG_HOST_MODE | OTG_SLAVE_MODE | OTG_CHARGE_MODE,
     .detect_time_interval = 50,
 };
+
+#if TCFG_HOST_CDC_ENABLE
+USB_CDC_PLATFORM_DATA_BEGIN(cdc_data)
+    .baud_rate = 460800,
+    .stop_bits = 0,
+    .parity = 0,
+    .data_bits = 8,
+USB_CDC_PLATFORM_DATA_END()
+#endif
 #endif
 //**********************************END*******************************************//
 
@@ -671,6 +681,11 @@ REGISTER_DEVICES(device_table) = { //注册模块 系统使用模块时会根据
 #if TCFG_UDISK_ENABLE
 	{ "udisk0", &mass_storage_ops, NULL },
 	{ "udisk1", &mass_storage_ops, NULL },
+#endif
+
+#if TCFG_HOST_CDC_ENABLE
+    { "cdc0", &usb_cdc_ops, (void *)&cdc_data },
+    { "cdc1", &usb_cdc_ops, (void *)&cdc_data },
 #endif
 
 #ifdef CONFIG_UI_ENABLE

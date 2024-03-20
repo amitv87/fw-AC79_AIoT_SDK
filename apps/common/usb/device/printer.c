@@ -192,7 +192,7 @@ u32 printer_register(const usb_dev usb_id)
 }
 
 
-u32 printer_release()
+u32 printer_release(const usb_dev usb_id)
 {
     if (printer_handle) {
         os_sem_del(&wake_sem, 0);

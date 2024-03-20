@@ -289,6 +289,7 @@
 #define TCFG_HOST_UVC_ENABLE                	  0   //打开USB 后拉摄像头功能，需要使能住机模式
 #define TCFG_HID_HOST_ENABLE          		      0     //HID主机功能
 #define TCFG_UDISK_ENABLE                   	  0   //U盘功能
+#define TCFG_HOST_CDC_ENABLE                      0     //打开USB CDC主机
 
 #if TCFG_HOST_UVC_ENABLE
 #define CONFIG_UVC_VIDEO2_ENABLE

@@ -107,7 +107,24 @@ u8 wifi_lowpower_mode = 1;
 u8 wifi_lowpower_mode = 0;
 #endif
 
-u8 wifi_psmode_transfer_statistics_enable = 1;	// 会统计低功耗唤醒后到休眠之前的收发包动作，以确认是否处于正常的保活状态
+/*
+ * bit[0] : 1,使能收发包统计打印动作；0,反之；
+ * bit[1] : 1,使能 SYS 唤醒到 RF 唤醒期间的补偿预留时间的打印动作；0,反之；
+ * bit[2] : 1,使能 RF 唤醒到收到 BEACON 帧的补偿预留时间的打印动作；0,反之；
+ *
+ * -------|_________|---------- : sys 休眠的时间
+ *
+ * -----------------|===|------ : SYS 唤醒到 RF 唤醒期间的补偿预留时间，需要预留 7ms 左右等待系统稳定再让 RF 唤醒;通过 power_set_sys_sleep_compensate_us 可以调节这个补偿值；
+ *
+ * ---|_________________|------ : rf 休眠的时间
+ *
+ * ---------------------|===|-- : RF 唤醒到收到 BEACON 帧的补偿预留时间，需要预留 7ms 左右等待 RF 稳定再接收数据;通过 power_set_rf_sleep_compensate_us 可以调节这个补偿值；
+ *
+ * _________________________|__ : 收到保活 beacon 的时刻
+ *
+ * bit[4] : 1,使能自动调节补偿时间功能，否则反之；实际也是调用，power_set_sys_sleep_compensate_us 和 power_set_rf_sleep_compensate_us;因此如果用户自己调用这个两个函数的话，就不要再使能这个功能！！！默认不使能
+ */
+u8 wifi_psmode_transfer_statistics_enable = (1 << 0) | (1 << 1) | (1 << 2) | (0 << 3);
 
 u8 wl_active_wait_interval_count = 0;	// 默认配置不等待
 u16 wl_custom_listen_interval = 10;		// 默认自定义的监听间隔是 10，防止没有 set 这个变量而导致异常
@@ -965,6 +982,62 @@ void wl_set_transmit_keep_awake_time(u8 time)
     wl_transmit_keep_awake_time = time;
     return;
 }
+
+/* PS MODE: wifi 模拟功耗等级自动调整策略；通过在驱动中调用 wifi_set_pwr 实现，因此不需要再自行调用 wifi_set_pwr */
+extern bool wl_ps_auto_adjust_pwr_flag;					// 默认情况下不使能
+void wl_set_ps_auto_adjust_pwr_flag(bool flag)
+{
+    wl_ps_auto_adjust_pwr_flag = flag;
+    return;
+}
+
+bool wl_get_ps_auto_adjust_pwr_flag(void)
+{
+    return wl_ps_auto_adjust_pwr_flag;
+}
+
+/* 休眠和唤醒时自动调整的功耗等级。例如休眠时功耗等级设置为0；唤醒时功耗等级设置为6。PS：wifi 功耗等级调整范围为 0~6 */
+extern u8 wl_ps_auto_adjust_sleep_pwr_level;	/* 默认为 0 */
+extern u8 wl_ps_auto_adjust_rouse_pwr_level;	/* 默认为 6 */
+extern u8 wl_ps_auto_adjust_now_pwr_level;		/* 当前 wifi 功耗等级，默认为 6 */
+void wl_set_ps_auto_adjust_sleep_pwr_level(u8 level)
+{
+    wl_ps_auto_adjust_sleep_pwr_level = level;
+    return;
+}
+
+u8 wl_get_ps_auto_adjust_sleep_pwr_level(void)
+{
+    return wl_ps_auto_adjust_sleep_pwr_level;
+}
+
+void wl_set_ps_auto_adjust_rouse_pwr_level(u8 level)
+{
+    wl_ps_auto_adjust_rouse_pwr_level = level;
+    return;
+}
+
+u8 wl_get_ps_auto_adjust_rouse_pwr_level(void)
+{
+    return wl_ps_auto_adjust_rouse_pwr_level;
+}
+
+u8 wl_get_ps_auto_adjust_now_pwr_level(void)
+{
+    return wl_ps_auto_adjust_now_pwr_level;
+}
+
+/* 打开这个宏可以自行配置休眠时的 wifi 功耗等级配置策略，例如使用每次接收到的 rssi 来调节功耗等级 */
+//#define CONFIG_AUTO_ADJUST_SLEEP_PWR_ENABLE
+#if defined CONFIG_AUTO_ADJUST_SLEEP_PWR_ENABLE
+void wl_auto_adjust_sleep_pwr_level(void)
+{
+    //printf("Router_RSSI=%d,Quality=%d \r\n", wifi_get_rssi(), wifi_get_cqi()); //侦测路由器端信号质量
+    char rssi = wifi_get_rssi();
+    wl_ps_auto_adjust_sleep_pwr_level = (-rssi) / 30;
+    //printf("level %d", wl_ps_auto_adjust_sleep_pwr_level);
+}
+#endif
 
 #if 0  //WIFI RX 中庸策略
 const u32 STF_END_CNT_THR_VAL = 179;

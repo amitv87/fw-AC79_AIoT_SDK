@@ -160,8 +160,11 @@
 #ifndef CDC_DATA_EP_OUT
 #define CDC_DATA_EP_OUT             2
 #endif
-#ifndef CDC_INTR_EP_IN
-#define CDC_INTR_EP_IN              6
+#ifndef CDC_INTR_FUSB_EP_IN
+#define CDC_INTR_FUSB_EP_IN         4
+#endif
+#ifndef CDC_INTR_HUSB_EP_IN
+#define CDC_INTR_HUSB_EP_IN         6
 #endif
 #ifndef MAXP_SIZE_CDC_BULKIN
 #define MAXP_SIZE_CDC_BULKIN        64

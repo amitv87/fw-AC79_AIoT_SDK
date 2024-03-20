@@ -136,8 +136,9 @@ static const InitCode code1[] = {
     {0x21, 1, {0x00}},//开启数据翻转模式 开源板新屏配置有点奇怪 需要翻转数据 2023-5-15  如果需要调试同一个驱动型号的屏 把该行注释掉
     {0x13, 1, {0x00}},//开始正常显示模式
     {0x35, 1, {0x00}},//开启te 0x34关TE
-    {0xB1, 2, {0x90, 0x11}}, //A0 11 60fps
+    {0xB1, 2, {0xb0, 0x22}},// bo 22 60fps
     {0x36, 1, {0xd8}},//可以控制旋转/flip/rota  //b7 y b6 x b5 v b4 l b3 rgb b2 h
+    {0x44, 2, {0x00, 0Xa0}},
     {0xC1, 1, {0x41}},
     {0XF7, 4, {0xA9, 0x51, 0x2C, 0x82}},
     {0xC1, 1, {0x41}},
@@ -148,6 +149,8 @@ static const InitCode code1[] = {
     {0xB7, 1, {0xc6}},
     {0xB6, 2, {0x02, 0x42}},
     {0xBE, 2, {0x00, 0x04}},
+    {0xE0, 15, {0x00, 0x03, 0x09, 0x08, 0x16, 0x0A, 0x3F, 0x78, 0x4C, 0x09, 0x0A, 0x08, 0x16, 0x1A, 0x0F}},
+    {0XE1, 15, {0x00, 0x16, 0x19, 0x03, 0x0F, 0x05, 0x32, 0x45, 0x46, 0x04, 0x0E, 0x0D, 0x35, 0x37, 0x0F}},
     {0xE9, 1, {0x00}},
     {0x3a, 1, {0x55}},
     {0x11, 0},//Sleep out
@@ -174,18 +177,22 @@ static void ILI9488_lvgl_Fill(u16 xs, u16 xe, u16 ys, u16 ye, u8 *img)
     u32 len = 0;
     lcd_interface_non_block_wait();
     len = (xe + 1 - xs) * (ye + 1 - ys) * 2;
-    WriteCOM(0x2A);
-    WriteDAT_8(xs >> 8);
-    WriteDAT_8(xs);
-    WriteDAT_8(xe >> 8);
-    WriteDAT_8(xe);
-    WriteCOM(0x2B);
-    WriteDAT_8(ys >> 8);
-    WriteDAT_8(ys);
-    WriteDAT_8(ye >> 8);
-    WriteDAT_8(ye);
-    WriteCOM(0x2c);
-    WriteDAT_DMA(img, len);
+    if (len) {
+        WriteCOM(0x2A);
+        WriteDAT_8(xs >> 8);
+        WriteDAT_8(xs);
+        WriteDAT_8(xe >> 8);
+        WriteDAT_8(xe);
+        WriteCOM(0x2B);
+        WriteDAT_8(ys >> 8);
+        WriteDAT_8(ys);
+        WriteDAT_8(ye >> 8);
+        WriteDAT_8(ye);
+        WriteCOM(0x2c);
+        WriteDAT_DMA(img, len);
+    } else {
+        printf("lcd_send_buf_len < 0");
+    }
 }
 
 static void ili9488_led_ctrl(u8 status)

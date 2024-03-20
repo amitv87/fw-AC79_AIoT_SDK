@@ -47,13 +47,14 @@ static lv_disp_drv_t disp_drv;                         /*Descriptor of a display
 /**********************
  *      MACROS
  **********************/
-#define THREE_FB_ACCELERATION  //利用双核双线程+3FB加速 ,防止mcu lcd刷新完还空隙闲着,某些场景能够提升1-2帧
 
 #ifdef THREE_FB_ACCELERATION
 #include "os/os_api.h"
 #include "spinlock.h"
 static OS_SEM mcu_lcd_physics_flush_sem, mcu_lcd_physics_flush_end_sem;
+#ifndef THREE_FB_ACCELERATION_BRANCH_TE
 static lv_color_t buf_3_3[MY_DISP_HOR_RES * MY_DISP_VER_RES] __attribute__((aligned(4)));            /*3th screen sized buffer*/
+#endif
 
 struct lv_fb_t {
     lv_color_t *fb;
@@ -107,15 +108,24 @@ void lv_port_disp_init(void)
     lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, NULL, MY_DISP_HOR_RES * 10);   /*Initialize the display buffer*/
 #endif
 
-#if 0
-    /* Example for 2) */
+#ifdef THREE_FB_ACCELERATION_BRANCH_TE  //带te分行刷新
     static lv_disp_draw_buf_t draw_buf_dsc_2;
-    static lv_color_t buf_2_1[MY_DISP_HOR_RES * 10] __attribute__((aligned(4)));                        /*A buffer for 10 rows*/
-    static lv_color_t buf_2_2[MY_DISP_HOR_RES * 10] __attribute__((aligned(4)));                        /*An other buffer for 10 rows*/
-    lv_disp_draw_buf_init(&draw_buf_dsc_2, buf_2_1, buf_2_2, MY_DISP_HOR_RES * 10);   /*Initialize the display buffer*/
+#ifdef LVGL_TEST_LINE_MUNB_MODE
+#define LINE 10 //需要有三帧屏buf才能测试
+    static lv_color_t buf_2_1[MY_DISP_HOR_RES * MY_DISP_VER_RES] __attribute__((aligned(4)));                        /*A buffer for 10 rows*/
+    static lv_color_t buf_2_2[MY_DISP_HOR_RES * MY_DISP_VER_RES] __attribute__((aligned(4)));                        /*An other buffer for 10 rows*/
+    static lv_color_t buf_2_3[MY_DISP_HOR_RES * MY_DISP_VER_RES] __attribute__((aligned(4)));                        /*An other buffer for 10 rows*/
+    lv_disp_draw_buf_init(&draw_buf_dsc_2, buf_2_1, buf_2_2, buf_2_3, MY_DISP_HOR_RES * LINE);   /*Initialize the display buffer*/
+#else
+#define LINE 340
+    static lv_color_t buf_2_1[MY_DISP_HOR_RES * LINE] __attribute__((aligned(4)));                        /*A buffer for 10 rows*/
+    static lv_color_t buf_2_2[MY_DISP_HOR_RES * LINE] __attribute__((aligned(4)));                        /*An other buffer for 10 rows*/
+    static lv_color_t buf_2_3[MY_DISP_HOR_RES * LINE] __attribute__((aligned(4)));                        /*An other buffer for 10 rows*/
+    lv_disp_draw_buf_init(&draw_buf_dsc_2, buf_2_1, buf_2_2, buf_2_3, MY_DISP_HOR_RES * LINE);   /*Initialize the display buffer*/
+#endif
 #endif
 
-#if 1
+#ifndef THREE_FB_ACCELERATION_BRANCH_TE  //带te分行刷新
     static lv_color_t buf_3_1[MY_DISP_HOR_RES * MY_DISP_VER_RES] __attribute__((aligned(4)));            /*A screen sized buffer*/
     static lv_color_t buf_3_2[MY_DISP_HOR_RES * MY_DISP_VER_RES] __attribute__((aligned(4)));            /*Another screen sized buffer*/
     /* Example for 3) also set disp_drv.full_refresh = 1 below*/
@@ -143,21 +153,35 @@ void lv_port_disp_init(void)
     disp_drv.flush_cb = disp_flush;
 
     /*Set a display buffer*/
+#ifdef THREE_FB_ACCELERATION_BRANCH_TE
+    disp_drv.draw_buf = &draw_buf_dsc_2;
+#else
     disp_drv.draw_buf = &draw_buf_dsc_3;
+#endif
 
     /*Required for Example 3)*/
-#ifdef THREE_FB_ACCELERATION //3FB BUG NEED FIX
+#ifdef THREE_FB_ACCELERATION
     disp_drv.full_refresh = 1; //0:局部区域重绘,适合MCU屏, 1:适合RGB屏,整帧刷
 #endif
 
     /*Finally register the driver*/
-    lv_disp_drv_register(&disp_drv);
+    lv_disp_t *disp = lv_disp_drv_register(&disp_drv);
+
+    lv_timer_del(disp->refr_timer);
+    disp->refr_timer = NULL;
 
 #ifdef THREE_FB_ACCELERATION
+#ifdef THREE_FB_ACCELERATION_BRANCH_TE
+    /* next_offline_fb 变量保存下一帧的 offline_fb 地址  */
+    next_offline_disp.fb = buf_2_3;
+    /* 调用系统API把 online_fb 的地址设置为当前 LCD 的显示显存 */
+    cur_disp.fb = buf_2_2;
+#else
     /* next_offline_fb 变量保存下一帧的 offline_fb 地址  */
     next_offline_disp.fb = buf_3_3;
     /* 调用系统API把 online_fb 的地址设置为当前 LCD 的显示显存 */
     cur_disp.fb = buf_3_2;
+#endif
 
     lcd_interface_set_non_block(0); //因为有专用线程, 因此使用阻塞方式释放cpu
     os_sem_create(&mcu_lcd_physics_flush_sem, 0);
@@ -173,6 +197,14 @@ void lv_port_disp_init(void)
 
 
 volatile bool disp_flush_enabled = true;
+volatile bool flushing_last_flag = true;
+
+void set_lvgl_updata_len(u16 cnt)
+{
+    u16 time;
+    time = MY_DISP_HOR_RES * cnt;
+    lv_disp_set_draw_buf_size(disp_drv.draw_buf, time);
+}
 
 /* Enable updating the screen (the flushing process) when disp_flush() is called by LVGL
  */
@@ -228,14 +260,24 @@ void lvgl_lcd_draw_task(void *p)
             spin_unlock(&fb_lock);
             os_sem_post(&mcu_lcd_physics_flush_end_sem);
             if (disp_drv.full_refresh == 0) {
+#ifdef THREE_FB_ACCELERATION_BRANCH_TE
+                lcd_lvgl_full_by_te(cur_disp.area.x1, cur_disp.area.x2, cur_disp.area.y1, cur_disp.area.y2, cur_disp.fb);
+#else
                 lcd_lvgl_full(cur_disp.area.x1, cur_disp.area.x2, cur_disp.area.y1, cur_disp.area.y2, cur_disp.fb);
+#endif
             } else {
-                lcd_lvgl_full(0, MY_DISP_HOR_RES, 0, MY_DISP_VER_RES, cur_disp.fb);
+                lcd_lvgl_full_by_te(0, MY_DISP_HOR_RES, 0, MY_DISP_VER_RES, cur_disp.fb);
+                /* lcd_lvgl_full(0, MY_DISP_HOR_RES, 0, MY_DISP_VER_RES, cur_disp.fb); */
             }
         }
     }
 }
 #endif
+
+int get_lvgl_show_finish(void)
+{
+    return flushing_last_flag;
+}
 
 /*Initialize your display and the required peripherals.*/
 static void disp_init(void)
@@ -253,6 +295,7 @@ static void disp_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_
         lv_disp_draw_buf_t *draw_buf = lv_disp_get_draw_buf(_lv_refr_get_disp_refreshing());
         if (draw_buf->flushing_last) {
 #if 1
+            flushing_last_flag = 1;
             static u32 time_lapse_hdl;
             static u8 fps_cnt;
             ++fps_cnt;
@@ -263,12 +306,15 @@ static void disp_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_
             }
             /*return;//仅统计软件渲染性能*/
 #endif
+        } else {
+            flushing_last_flag = 0;
         }
 
 #ifdef THREE_FB_ACCELERATION
         lv_lcd_draw_trig(area);
 #else
-        lcd_lvgl_full(area->x1, area->x2, area->y1, area->y2, color_p);
+        /* lcd_lvgl_full(area->x1, area->x2, area->y1, area->y2, color_p); */
+        lcd_lvgl_full_by_te(area->x1, area->x2, area->y1, area->y2, color_p);
 #endif
 
         /*IMPORTANT!!!

@@ -7,6 +7,7 @@
 #include "usb/device/cdc.h"
 #include "usb/device/slave_uvc.h"
 #include "usb/device/printer.h"
+#include "usb/device/cdc_rndis.h"
 #include "irq.h"
 #include "init.h"
 #include "gpio.h"
@@ -96,8 +97,13 @@ int usb_device_mode(const usb_dev usb_id, const u32 class)
 #endif
 
 #if TCFG_USB_SLAVE_PRINTER_ENABLE
-        printer_release();
+        printer_release(usb_id);
 #endif
+
+#if TCFG_USB_SLAVE_RNDIS_ENABLE
+        rndis_release(usb_id);
+#endif
+
         usb_device_hold(usb_id);
         os_time_dly(15);
 
@@ -175,6 +181,14 @@ int usb_device_mode(const usb_dev usb_id, const u32 class)
     }
 #endif
 
+#if TCFG_USB_SLAVE_RNDIS_ENABLE
+    if ((class & RNDIS_CLASS) == RNDIS_CLASS) {
+        log_info("add desc rndis");
+        usb_add_desc_config(usb_id, class_index++, rndis_desc_config);
+        rndis_register(usb_id);
+    }
+#endif
+
     usb_device_init(usb_id);
     user_setup_filter_install(usb_id2device(usb_id));
     return 0;
@@ -196,7 +210,7 @@ static int usb_ep_conflict_check(const usb_dev usb_id)
 #if TCFG_USB_SLAVE_CDC_ENABLE
         CDC_DATA_EP_IN,
 #if CDC_INTR_EP_ENABLE
-        CDC_INTR_EP_IN,
+        usb_id ? CDC_INTR_HUSB_EP_IN : CDC_INTR_FUSB_EP_IN,
 #endif
 #endif
     };

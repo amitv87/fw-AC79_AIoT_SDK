@@ -25,6 +25,10 @@ extern "C" {
 /*********************
  *      DEFINES
  *********************/
+// #define THREE_FB_ACCELERATION  //利用双核双线程+3FB加速 ,防止mcu lcd刷新完还空隙闲着,某些场景能够提升1-2帧
+/* #define THREE_FB_ACCELERATION_BRANCH_TE  //带te分行刷新 */
+
+/* #define LVGL_TEST_LINE_MUNB_MODE //用于自动检测最佳分行数量 需要最少有三帧屏buf 通过打印获取到最佳的分行数量 */
 
 /**********************
  *      TYPEDEFS

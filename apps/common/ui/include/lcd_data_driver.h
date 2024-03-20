@@ -109,6 +109,10 @@ u8 get_lcd_turn_mode(void);
 void init_TE(void (*cb)(u8 *buf, u32 buf_size));
 void picture_compose_task_init(void);
 void lcd_data_free_camera_lbuf(void);
+#ifdef USE_LVGL_UI_DEMO
+void create_lcd_te(void);
+void lcd_lvgl_full_by_te(u16 xs, u16 xe, u16 ys, u16 ye, const u8 *img);
+#endif
 
 #endif
 

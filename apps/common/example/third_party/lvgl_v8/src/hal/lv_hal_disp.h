@@ -225,6 +225,9 @@ void lv_disp_drv_init(lv_disp_drv_t *driver);
  */
 void lv_disp_draw_buf_init(lv_disp_draw_buf_t *draw_buf, void *buf1, void *buf2, void *buf3, uint32_t size_in_px_cnt);
 
+void lv_disp_set_draw_buf_size(lv_disp_draw_buf_t *draw_buf, uint32_t size_in_px_cnt);
+
+
 /**
  * Register an initialized display driver.
  * Automatically set the first display as active.
@@ -313,7 +316,6 @@ bool lv_disp_get_antialiasing(lv_disp_t *disp);
  * @return dpi of the display
  */
 lv_coord_t lv_disp_get_dpi(const lv_disp_t *disp);
-
 
 /**
  * Set the rotation of this display.

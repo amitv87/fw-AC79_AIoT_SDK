@@ -118,6 +118,10 @@ uint32_t LV_ATTRIBUTE_TIMER_HANDLER lv_timer_handler(void)
         }
     } while (LV_GC_ROOT(_lv_timer_act));
 
+    //解耦了刷新定时器，由外部事件来触发刷新，放在这里执行有利于下面统计时间更精确
+    /*if(lv_disp_get_default()->refr_timer==NULL)*/
+    _lv_disp_refr_timer(NULL);
+
     uint32_t time_till_next = LV_NO_TIMER_READY;
     next = _lv_ll_get_head(&LV_GC_ROOT(_lv_timer_ll));
     while (next) {

@@ -16,7 +16,7 @@
 #if TCFG_TOUCH_GT911_ENABLE
 
 
-#if 1
+#if 0
 #define log_info(x, ...)    printf("\n[touch]>" x " \n", ## __VA_ARGS__)
 #else
 #define log_info(...)
@@ -33,7 +33,9 @@ static OS_SEM touch_sem;
 static void my_touch_test_task(void *priv);
 static int GT911_task_init(void);
 
+#ifndef USE_LVGL_UI_DEMO
 extern int ui_touch_msg_post(struct touch_event *event);
+#endif
 
 //I2C读写命令
 #define GT911_WRCMD 			0X28     	//写命令
@@ -241,7 +243,9 @@ static void tpd_down(int x, int y)
         t.y = y;
 #endif
         log_info("----tpd_hold----x=%d, y=%d", x, y);
+#ifndef USE_LVGL_UI_DEMO
         ui_touch_msg_post(&t);
+#endif
         return;
     }
 
@@ -291,7 +295,9 @@ static void tpd_down(int x, int y)
     t.x = x;
     t.y = y;
 #endif
+#ifndef USE_LVGL_UI_DEMO
     ui_touch_msg_post(&t);
+#endif
 }
 
 static void tpd_up(int x, int y)
@@ -331,7 +337,9 @@ static void tpd_up(int x, int y)
     t.y = y;
 #endif
     log_info("----tpd_up----x=%d, y=%d", x, y);
+#ifndef USE_LVGL_UI_DEMO
     ui_touch_msg_post(&t);
+#endif
 }
 
 static void GT911_interrupt(void)

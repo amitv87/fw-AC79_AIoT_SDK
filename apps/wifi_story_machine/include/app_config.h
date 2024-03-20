@@ -285,6 +285,7 @@
 #ifdef CONFIG_AEC_ENC_ENABLE
 #define CONFIG_USB_AUDIO_AEC_ENABLE          //usb mic使能回声消除功能
 // #define CONFIG_AEC_LINEIN_CHANNEL_ENABLE     //AEC回采使用硬件通道数据
+// #define CONFIG_AEC_USE_PLAY_MUSIC_ENABLE       //播歌时需要使用AEC
 #endif
 
 #define CONFIG_ALL_ADC_CHANNEL_OPEN_ENABLE   //四路ADC硬件全开
@@ -481,6 +482,9 @@
 #ifdef CONFIG_LTE_PHY_ENABLE
 #define TCFG_HOST_WIRELESS_ENABLE           1
 #define TCFG_ADB_ENABLE                     1     //usb虚拟网卡
+#endif
+#ifndef TCFG_HOST_CDC_ENABLE
+#define TCFG_HOST_CDC_ENABLE                0     //打开USB CDC主机
 #endif
 
 #include "usb_std_class_def.h"

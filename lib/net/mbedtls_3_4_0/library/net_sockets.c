@@ -163,26 +163,43 @@ void mbedtls_net_set_timeout(mbedtls_net_context *ctx, int send_to_ms, int recv_
     ctx->send_to_ms = send_to_ms;
     ctx->recv_to_ms = recv_to_ms;
 }
+
 int mbedtls_net_connect_bind(mbedtls_net_context *ctx, int domain, int socktype, int ai_protocol, char *ipaddr, u16 port)
 {
-    struct sockaddr_in local_addr;
-    ctx->hdl = sock_reg(AF_UNSPEC, socktype, ai_protocol, ctx->cb_func, ctx->priv);
+    struct sockaddr_storage local_addr;
+    int addrlen = sizeof(local_addr);
+
+    ctx->hdl = sock_reg(domain, socktype, ai_protocol, ctx->cb_func, ctx->priv);
     if (ctx->hdl == NULL) {
         return -1;
     }
 
     sock_set_reuseaddr(ctx->hdl);
 
-    local_addr.sin_family = AF_INET;
-    local_addr.sin_port = port;
-    local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    if (domain == AF_INET) {
+        struct sockaddr_in *p = (struct sockaddr_in *)&local_addr;
+        p->sin_family = AF_INET;
+        p->sin_port = htons(port);
+        p->sin_addr.s_addr = htonl(INADDR_ANY);
+        addrlen = sizeof(struct sockaddr_in);
+    }
 
-    if (sock_bind(ctx->hdl, (struct sockaddr *)&local_addr, sizeof(struct sockaddr)) < 0) {
+#if LWIP_IPV6
+    if (domain == AF_INET6) {
+        struct sockaddr_in6 *p = (struct sockaddr_in6 *)&local_addr;
+        p->sin6_family = AF_INET6;
+        p->sin6_port = htons(port);
+        struct in6_addr inaddr_any = IN6ADDR_ANY_INIT;
+        p->sin6_addr = inaddr_any;
+        addrlen = sizeof(struct sockaddr_in6);
+    }
+#endif
+
+    if (sock_bind(ctx->hdl, (struct sockaddr *)&local_addr, addrlen) < 0) {
         sock_unreg(ctx->hdl);
         ctx->hdl = NULL;
         return -1;
     }
-
 
     if (ctx->send_to_ms) {
         sock_set_send_timeout((void *)ctx->hdl, ctx->send_to_ms);
@@ -218,14 +235,11 @@ int mbedtls_net_connect(mbedtls_net_context *ctx, const char *host,
     hints.ai_socktype = proto == MBEDTLS_NET_PROTO_UDP ? SOCK_DGRAM : SOCK_STREAM;
     hints.ai_protocol = proto == MBEDTLS_NET_PROTO_UDP ? IPPROTO_UDP : IPPROTO_TCP;
 
-
-    if (ctx->hdl == NULL) {
-
-        if ((ret = mbedtls_net_connect_bind(ctx, AF_INET, hints.ai_socktype, 0, 0, 0)) != 0) {
-            return ret;
-        }
+    if (ctx->hdl != NULL) {
+        printf("mbedtls_net_connect, ctx->hdl != NULL\n");
+        ret = MBEDTLS_ERR_NET_SOCKET_FAILED;
+        return ret;
     }
-
 
     if (getaddrinfo(host, port, &hints, &addr_list) != 0) {
         return (MBEDTLS_ERR_NET_UNKNOWN_HOST);
@@ -236,11 +250,17 @@ int mbedtls_net_connect(mbedtls_net_context *ctx, const char *host,
 
     for (cur = addr_list; cur != NULL; cur = cur->ai_next) {
 
+        if ((ret = mbedtls_net_connect_bind(ctx, cur->ai_family, cur->ai_socktype, cur->ai_protocol, 0, 0)) != 0) {
+            ret = MBEDTLS_ERR_NET_SOCKET_FAILED;
+            continue;
+        }
+
         if (sock_connect(ctx->hdl, cur->ai_addr, MSVC_INT_CAST cur->ai_addrlen) == 0) {
             ret = 0;
             break;
         }
 
+        sock_unreg(ctx->hdl);
         ret = MBEDTLS_ERR_NET_CONNECT_FAILED;
     }
 

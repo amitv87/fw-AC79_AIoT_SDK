@@ -72,6 +72,7 @@ struct usb_interface_info {
         struct aoa_device_t *aoa;
         struct audio_device_t *audio;
         struct wireless_device_t *wireless;
+        struct h_usb_cdc *cdc;
         void *p;
     } dev;
 };

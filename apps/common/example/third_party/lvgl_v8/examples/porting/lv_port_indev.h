@@ -31,6 +31,7 @@ extern "C" {
  * GLOBAL PROTOTYPES
  **********************/
 void lv_port_indev_init(void);
+void lv_indev_timer_read(void *user_data);
 
 /**********************
  *      MACROS

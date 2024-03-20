@@ -243,7 +243,7 @@ static void cdc_reset(struct usb_device_t *usb_device, u32 itf)
 #if USB_ROOT2
     usb_disable_ep(usb_id, CDC_DATA_EP_IN);
 #if CDC_INTR_EP_ENABLE
-    usb_disable_ep(usb_id, CDC_INTR_EP_IN);
+    usb_disable_ep(usb_id, usb_id ? CDC_INTR_HUSB_EP_IN : CDC_INTR_FUSB_EP_IN);
 #endif
 #else
     cdc_endpoint_init(usb_device, itf);
@@ -264,7 +264,7 @@ u32 cdc_desc_config(const usb_dev usb_id, u8 *ptr, u32 *itf)
     tptr[8 + 9 + 5 + 5 + 4 + 3] = *itf;
     tptr[8 + 9 + 5 + 5 + 4 + 4] = *itf + 1;
     //interrupt in ep
-    tptr[8 + 9 + 5 + 5 + 4 + 5 + 2] = USB_DIR_IN | CDC_INTR_EP_IN;
+    tptr[8 + 9 + 5 + 5 + 4 + 5 + 2] = USB_DIR_IN | (usb_id ? CDC_INTR_HUSB_EP_IN : CDC_INTR_FUSB_EP_IN);
     tptr[8 + 9 + 5 + 5 + 4 + 5 + 4] = MAXP_SIZE_CDC_INTRIN & 0xff;
     tptr[8 + 9 + 5 + 5 + 4 + 5 + 5] = (MAXP_SIZE_CDC_INTRIN >> 8) & 0xff;
 #if defined(CONFIG_CPU_WL82)
@@ -348,9 +348,9 @@ static void cdc_endpoint_init(struct usb_device_t *usb_device, u32 itf)
     usb_enable_ep(usb_id, CDC_DATA_EP_IN);
 
 #if CDC_INTR_EP_ENABLE
-    usb_g_ep_config(usb_id, CDC_INTR_EP_IN | USB_DIR_IN, USB_ENDPOINT_XFER_INT,
+    usb_g_ep_config(usb_id, (usb_id ? CDC_INTR_HUSB_EP_IN : CDC_INTR_FUSB_EP_IN) | USB_DIR_IN, USB_ENDPOINT_XFER_INT,
                     0, cdc_hdl[usb_id]->intr_ep_in_buffer, MAXP_SIZE_CDC_INTRIN);
-    usb_enable_ep(usb_id, CDC_INTR_EP_IN);
+    usb_enable_ep(usb_id, usb_id ? CDC_INTR_HUSB_EP_IN : CDC_INTR_FUSB_EP_IN);
 #endif
 }
 
@@ -417,7 +417,7 @@ u32 cdc_write_inir(const usb_dev usb_id, u8 *buf, u32 len)
     while (offset < len) {
         txlen = len - offset > MAXP_SIZE_CDC_INTRIN ?
                 MAXP_SIZE_CDC_INTRIN : len - offset;
-        txlen = usb_g_intr_write(usb_id, CDC_INTR_EP_IN, buf + offset, txlen);
+        txlen = usb_g_intr_write(usb_id, usb_id ? CDC_INTR_HUSB_EP_IN : CDC_INTR_FUSB_EP_IN, buf + offset, txlen);
         if (txlen == 0) {
             break;
         }
@@ -459,11 +459,11 @@ void cdc_register(const usb_dev usb_id)
         os_mutex_create(&cdc_hdl[usb_id]->mutex_data);
 
         cdc_hdl[usb_id]->bulk_ep_in_buffer = usb_alloc_ep_dmabuffer(usb_id, CDC_DATA_EP_IN | USB_DIR_IN, MAXP_SIZE_CDC_BULKIN);
-        cdc_hdl[usb_id]->bulk_ep_out_buffer = usb_alloc_ep_dmabuffer(usb_id, CDC_DATA_EP_OUT | USB_DIR_OUT, MAXP_SIZE_CDC_BULKOUT);
+        cdc_hdl[usb_id]->bulk_ep_out_buffer = usb_alloc_ep_dmabuffer(usb_id, CDC_DATA_EP_OUT | USB_DIR_OUT, MAXP_SIZE_CDC_BULKOUT * 2);
 
 #if CDC_INTR_EP_ENABLE
         os_mutex_create(&cdc_hdl[usb_id]->mutex_intr);
-        cdc_hdl[usb_id]->intr_ep_in_buffer = usb_alloc_ep_dmabuffer(usb_id, CDC_INTR_EP_IN | USB_DIR_IN, MAXP_SIZE_CDC_INTRIN);
+        cdc_hdl[usb_id]->intr_ep_in_buffer = usb_alloc_ep_dmabuffer(usb_id, (usb_id ? CDC_INTR_HUSB_EP_IN : CDC_INTR_FUSB_EP_IN) | USB_DIR_IN, MAXP_SIZE_CDC_INTRIN);
 #endif
 
     }
@@ -485,6 +485,7 @@ void cdc_release(const usb_dev usb_id)
 {
     /* log_info("%s() %d", __func__, __LINE__); */
     if (cdc_hdl[usb_id]) {
+        os_mutex_pend(&cdc_hdl[usb_id]->mutex_data, 0);
         if (cdc_hdl[usb_id]->bulk_ep_in_buffer) {
             usb_free_ep_dmabuffer(usb_id, cdc_hdl[usb_id]->bulk_ep_in_buffer);
             cdc_hdl[usb_id]->bulk_ep_in_buffer = NULL;
@@ -493,6 +494,7 @@ void cdc_release(const usb_dev usb_id)
             usb_free_ep_dmabuffer(usb_id, cdc_hdl[usb_id]->bulk_ep_out_buffer);
             cdc_hdl[usb_id]->bulk_ep_out_buffer = NULL;
         }
+        os_mutex_post(&cdc_hdl[usb_id]->mutex_data);
 #if CDC_INTR_EP_ENABLE
         if (cdc_hdl[usb_id]->intr_ep_in_buffer) {
             usb_free_ep_dmabuffer(usb_id, cdc_hdl[usb_id]->intr_ep_in_buffer);

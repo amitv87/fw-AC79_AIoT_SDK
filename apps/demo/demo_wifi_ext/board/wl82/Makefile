@@ -204,6 +204,7 @@ c_SRC_FILES := \
 	../../../../../apps/common/usb/device/printer.c \
 	../../../../../apps/common/usb/device/ram_disk_circle.c \
 	../../../../../apps/common/usb/device/ram_disk_update.c \
+	../../../../../apps/common/usb/device/rndis_connectionless.c \
 	../../../../../apps/common/usb/device/task_pc.c \
 	../../../../../apps/common/usb/device/uac.c \
 	../../../../../apps/common/usb/device/uac_stream.c \
@@ -214,9 +215,11 @@ c_SRC_FILES := \
 	../../../../../apps/common/usb/host/aoa.c \
 	../../../../../apps/common/usb/host/audio.c \
 	../../../../../apps/common/usb/host/hid.c \
+	../../../../../apps/common/usb/host/rndis_host_connectionless.c \
 	../../../../../apps/common/usb/host/usb_bulk_transfer.c \
 	../../../../../apps/common/usb/host/usb_ctrl_transfer.c \
 	../../../../../apps/common/usb/host/usb_host.c \
+	../../../../../apps/common/usb/host/usb_host_cdc.c \
 	../../../../../apps/common/usb/host/usb_storage.c \
 	../../../../../apps/common/usb/host/usb_video.c \
 	../../../../../apps/common/usb/host/usbnet.c \

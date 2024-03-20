@@ -405,6 +405,35 @@ int net_set_lan_info_ext(struct lan_setting *__lan_setting_info, u8_t lwip_netif
     return 0;
 }
 
+
+#if LWIP_IPV6
+const char *ipv6_addr_types_to_str[6] = {
+    "IP6_ADDR_IS_UNKNOWN",
+    "IP6_ADDR_IS_GLOBAL",
+    "IP6_ADDR_IS_LINK_LOCAL",
+    "IP6_ADDR_IS_SITE_LOCAL",
+    "IP6_ADDR_IS_UNIQUE_LOCAL",
+    "IP6_ADDR_IS_IPV4_MAPPED_IPV6"
+};
+
+ip6_addr_type get_ip6_addr_type(ip6_addr_t *ip6_addr)
+{
+    if (ip6_addr_isglobal(ip6_addr)) {
+        return IP6_ADDR_IS_GLOBAL;
+    } else if (ip6_addr_islinklocal(ip6_addr)) {
+        return IP6_ADDR_IS_LINK_LOCAL;
+    } else if (ip6_addr_issitelocal(ip6_addr)) {
+        return IP6_ADDR_IS_SITE_LOCAL;
+    } else if (ip6_addr_isuniquelocal(ip6_addr)) {
+        return IP6_ADDR_IS_UNIQUE_LOCAL;
+    } else if (ip6_addr_isipv4mappedipv6(ip6_addr)) {
+        return IP6_ADDR_IS_IPV4_MAPPED_IPV6;
+    }
+    return IP6_ADDR_IS_UNKNOWN;
+}
+#endif
+
+
 /**
  * @brief Display_IPAddress Display IP Address
  *
@@ -439,8 +468,11 @@ void Display_IPAddress(void)
             }
 
             if (strcmp(ip6addr_ntoa(&netif->ip6_addr[i].u_addr.ip6), "::"))
-                printf("ip6 address: %s, state = %s, valid_life_time = %d sec,  ip6_addr_pref_life = %d sec\n",
-                       ip6addr_ntoa(&netif->ip6_addr[i].u_addr.ip6), ip6_addr_state, netif->ip6_addr_valid_life[i], netif->ip6_addr_pref_life[i]);
+                printf("ip6 address: %s, type = %s\n",
+                       ip6addr_ntoa(&netif->ip6_addr[i].u_addr.ip6), ipv6_addr_types_to_str[get_ip6_addr_type(&netif->ip6_addr[i])]);
+
+            /* printf("ip6 address: %s, state = %s, valid_life_time = %d sec,  ip6_addr_pref_life = %d sec\n", */
+            /* ip6addr_ntoa(&netif->ip6_addr[i].u_addr.ip6), ip6_addr_state, netif->ip6_addr_valid_life[i], netif->ip6_addr_pref_life[i]); */
         }
 #endif
         netif = netif->next;

@@ -16,7 +16,7 @@
 #if TCFG_TOUCH_FT6236_ENABLE
 #define TEST 0
 
-#if 1
+#if 0
 #define log_info(x, ...)    printf("\n[touch]>" x " \n", ## __VA_ARGS__)
 #else
 #define log_info(...)
@@ -29,7 +29,6 @@ struct touch_hdl {
 };
 struct touch_hdl lvgl_touch_hdl;
 
-static OS_SEM touch_sem;
 static u8 touch_en = 1 ;
 
 void *get_touch_x_y(void)
@@ -37,21 +36,10 @@ void *get_touch_x_y(void)
     return &lvgl_touch_hdl;
 }
 
-void get_touch_x_y_status(u16 *x, u16 *y, u8 *status)
-{
-#if HORIZONTAL_SCREEN==1
-    *x = lvgl_touch_hdl.y;
-    *y = 320 - lvgl_touch_hdl.x;
-    if (*y > LCD_H) {
-        *y = LCD_H;
-    }
-#else
-    *x = lvgl_touch_hdl.x;
-    *y = lvgl_touch_hdl.y;
-#endif
-    *status = lvgl_touch_hdl.status;
-}
+
+#ifndef USE_LVGL_UI_DEMO
 extern int ui_touch_msg_post(struct touch_event *event);
+#endif
 
 //I2C读写命令
 #define FT6236_WRCMD 			0X70     	//写命令
@@ -121,7 +109,6 @@ static void *iic = NULL;
 #define FI_TP5_REG          0x1B       //第一个触摸点数据地址
 
 
-static u8 touch_status = 0;
 static unsigned char wrFT6236Reg(u8 regID, unsigned char regDat)
 {
     u8 ret = 1;
@@ -260,7 +247,9 @@ static void tpd_down(int x, int y)
         lvgl_touch_hdl.y = y;
         lvgl_touch_hdl.status = 1;
         if (touch_en) {
+#ifndef USE_LVGL_UI_DEMO
             ui_touch_msg_post(&t);
+#endif
         }
         return;
     }
@@ -328,7 +317,9 @@ static void tpd_down(int x, int y)
     lvgl_touch_hdl.y = y;
     lvgl_touch_hdl.status = 1;
     if (touch_en) {
+#ifndef USE_LVGL_UI_DEMO
         ui_touch_msg_post(&t);
+#endif
     }
 #if defined  USE_GUIX_UI_DEMO
     gx_jl_touch_event_process(t.x, t.y, 1);
@@ -379,7 +370,9 @@ static void tpd_up(int x, int y)
     lvgl_touch_hdl.y = y;
     lvgl_touch_hdl.status = 0;
     if (touch_en) {
+#ifndef USE_LVGL_UI_DEMO
         ui_touch_msg_post(&t);
+#endif
     }
 #if defined  USE_GUIX_UI_DEMO
     gx_jl_touch_event_process(t.x, t.y, 0);
@@ -389,21 +382,24 @@ static void tpd_up(int x, int y)
 #endif
 }
 
-static void FT6236_interrupt(void)
+
+static OS_SEM touch_sem;
+static void FT6236_touch_interrupt(void)
 {
+#if 0
+    if (os_sem_query(&touch_sem) > 1) { //调试系统是否存在触摸任务被阻挡的情况发生
+        printf("tp_touch_task blocked!\r\n");
+    }
+#endif
     os_sem_post(&touch_sem);
 }
 
-
-void FT6236_init(void)
+static void FT6236_init(void)
 {
-    static u8 status = 0;
     static int x, y;
     static u16 touch_x = 0;
     static u16 touch_y = 0;
     u8 read_data = 0;
-
-    os_sem_create(&touch_sem, 0);
 
     extern const struct ui_devices_cfg ui_cfg_data;
     static const struct ui_lcd_platform_data *pdata;
@@ -415,8 +411,6 @@ void FT6236_init(void)
 
     iic = dev_open("iic0", NULL);
     os_time_dly(10);
-    //注册中断注意触摸用的事件0 屏幕TE用的事件1
-    port_wakeup_reg(EVENT_IO_0, pdata->touch_int_pin, EDGE_NEGATIVE, FT6236_interrupt);
 
     wrFT6236Reg(FT_DEVIDE_MODE, 0);
 
@@ -435,34 +429,67 @@ void FT6236_init(void)
         log_info("[err]>>>>>FT6236 err!!!");
     }
 
-    while (1) {
-        os_sem_pend(&touch_sem, 0);
-
-        rdFT6236Reg(FT_REG_NUM_FINGER, &status);	//读取触摸点的状态   // BIT7表示有数据 ,bit0-3 表示触摸点个数
-        if (status) { //有触摸值
-            get_FT6236_xy(FT_TP1_REG, &touch_x, &touch_y);
-            tpd_down(touch_x, touch_y);//做触摸运算
-            touch_status = 1;//标记触摸按下
-        } else {
-            if (touch_status) { //这样做的目的是使得发消息做处理只有一次
-                tpd_up(touch_x, touch_y);//做触摸运算
-                os_time_dly(40);//保证两次触摸的最小时间间隔 UI有问题占时这样解决
-                os_sem_set(&touch_sem, 0);
-            }
-            touch_status = 0;//标记触摸抬起
-        }
-        status = 0;
-    }
+    //注册中断注意触摸用的事件0 屏幕TE用的事件1
+    port_wakeup_reg(EVENT_IO_0, pdata->touch_int_pin, EDGE_NEGATIVE, FT6236_touch_interrupt);
 }
 
-static void my_touch_test_task(void *priv)
+static void FT6236_get_touch_xy(void)
 {
-    FT6236_init();
+    u16 touch_x, touch_y;
+    u8 touch_status;
+    rdFT6236Reg(FT_REG_NUM_FINGER, &touch_status);	//读取触摸点的状态   // BIT7表示有数据 ,bit0-3 表示触摸点个数
+    if (touch_status) { //有触摸值
+        get_FT6236_xy(FT_TP1_REG, &touch_x, &touch_y);
+        tpd_down(touch_x, touch_y);//做触摸运算
+    } else {
+        tpd_up(touch_x, touch_y);//做触摸运算
+    }
+
+#if HORIZONTAL_SCREEN==1
+    u16 temp_x = lvgl_touch_hdl.x;
+    lvgl_touch_hdl.x = lvgl_touch_hdl.y;
+    lvgl_touch_hdl.y = 320 - temp_x;
+    if (lvgl_touch_hdl.y > LCD_H) {
+        lvgl_touch_hdl.y = LCD_H;
+    }
+#endif
+}
+
+int __attribute__((weak)) lcd_touch_interrupt_event(u16 x, u16 y, u8 status)
+{
+    return 0;
+}
+static void touch_interupt_task(void *p)
+{
+    int sem_timeout = 0;
+
+    os_sem_create(&touch_sem, 0);
+
+    while (1) {
+        os_sem_pend(&touch_sem, sem_timeout);
+
+        FT6236_get_touch_xy(); //每次都读出触摸坐标，防止延迟读取读的是旧坐标
+
+        if (lcd_touch_interrupt_event(lvgl_touch_hdl.x, lvgl_touch_hdl.y, lvgl_touch_hdl.status)) { //UI线程跑得慢，触摸事件处理不过来
+            sem_timeout = 2; //按压坐标可丢失，抬起事件不可丢失，特意延后20ms再次读取坐标推送事件
+            continue;
+        }
+
+        sem_timeout = 0;
+
+#if 0 //一般触摸脉冲周期14ms-20ms+
+        static u32 last_touch_trig_time;
+        printf("touch_interupt period = %dms\r\n", timer_get_ms() - last_touch_trig_time);
+        last_touch_trig_time = timer_get_ms();
+#endif
+    }
 }
 
 int FT6236_task_init(void)
 {
-    return thread_fork("my_touch_test_task", 29, 1024, 0, NULL, my_touch_test_task, NULL);
+    thread_fork("touch_interupt_task", 29, 1024, 0, NULL, touch_interupt_task, NULL);
+    FT6236_init();
+    return 0;
 }
 
 #endif

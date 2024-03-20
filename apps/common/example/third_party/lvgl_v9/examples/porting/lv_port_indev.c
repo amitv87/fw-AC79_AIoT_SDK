@@ -182,8 +182,8 @@ static void touchpad_init(void)
 /*Will be called by the library to read the touchpad*/
 static void touchpad_read(lv_indev_t *indev_drv, lv_indev_data_t *data)
 {
-    int32_t last_x;
-    int32_t last_y;
+    int16_t last_x;
+    int16_t last_y;
     unsigned char status;
 
     /*Save the pressed coordinates and the state*/

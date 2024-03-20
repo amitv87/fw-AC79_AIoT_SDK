@@ -351,10 +351,11 @@ static int lcd_init(void *p)
         set_lcd_bk_on(lcd_bk_on);
         set_lcd_te_pgio(lcd_pdata->te_pin);
 
+#ifndef USE_LVGL_UI_DEMO
         //申请全局lcd显示buf
         extern void malloc_lcd_buf(void);
         malloc_lcd_buf();
-
+#endif
 
         //遍历注册的设备驱动跟ID做比较判断出使用那个屏
         list_for_each_lcd_driver(lcd_dev) {
@@ -399,7 +400,11 @@ static int lcd_init(void *p)
         if (lcd_dev && lcd_dev->LCD_Init) {
             lcd_dev->LCD_Init();
             //图像合成线程初始化
+#ifdef USE_LVGL_UI_DEMO
+            create_lcd_te();
+#else
             picture_compose_task_init();
+#endif
             return 0;
         }
     }
