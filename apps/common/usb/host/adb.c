@@ -1,15 +1,14 @@
-#include "includes.h"
 #include "asm/includes.h"
-#include "system/timer.h"
 #include "device/ioctl_cmds.h"
 #include "usb/host/usb_host.h"
 #include "usb_ctrl_transfer.h"
 #include "usb_bulk_transfer.h"
-#include "device_drive.h"
 #include "adb.h"
 #include "usb_config.h"
 #include "app_config.h"
+
 #if TCFG_ADB_ENABLE
+
 #define LOG_TAG_CONST       USB
 #define LOG_TAG             "[adb]"
 #define LOG_ERROR_ENABLE
@@ -19,15 +18,12 @@
 #define LOG_CLI_ENABLE
 #include "debug.h"
 
-
 #include "adb_rsa_key.c"
 
-struct adb_device_t adb;
-
-struct device adb_device;
-void aoa_switch(struct usb_host_device *host_dev);
-static u8 *adb_bulk_ep_in_buf;
-static u8 *adb_bulk_ep_out_buf;
+struct adb_device_t adb[USB_MAX_HW_NUM];
+/* struct device adb_device; */
+static u8 *adb_bulk_ep_in_buf[USB_MAX_HW_NUM];
+static u8 *adb_bulk_ep_out_buf[USB_MAX_HW_NUM];
 
 static int set_adb_power(struct usb_host_device *host_dev, u32 value)
 {
@@ -46,26 +42,55 @@ static const struct interface_ctrl adb_ops = {
     .ioctl = NULL,
 };
 
-static const struct usb_interface_info adb_inf = {
-    .ctrl = (struct interface_ctrl *) &adb_ops,
-    .dev.adb = &adb,
+static const struct usb_interface_info adb_inf[USB_MAX_HW_NUM] = {
+    {
+        .ctrl = (struct interface_ctrl *) &adb_ops,
+        .dev.adb = &adb[0],
+    },
+#if USB_MAX_HW_NUM > 1
+    {
+        .ctrl = (struct interface_ctrl *) &adb_ops,
+        .dev.adb = &adb[1],
+    },
+#endif
+};
+
+static const struct interface_ctrl adbmtp_ops = {
+    .interface_class = USB_CLASS_STILL_IMAGE,
+    .set_power = set_adb_power,
+    .get_power = get_adb_power,
+    .ioctl = NULL,
+};
+
+static const struct usb_interface_info adbmtp_inf[USB_MAX_HW_NUM] = {
+    {
+        .ctrl = (struct interface_ctrl *) &adbmtp_ops,
+        .dev.adb = &adb[0],
+    },
+#if USB_MAX_HW_NUM > 1
+    {
+        .ctrl = (struct interface_ctrl *) &adbmtp_ops,
+        .dev.adb = &adb[1],
+    },
+#endif
 };
 
 u32 usb_adb_interface_ptp_mtp_parse(struct usb_host_device *host_dev, u8 interface_num, const u8 *pBuf)
 {
     struct usb_interface_descriptor *interface = (struct usb_interface_descriptor *)pBuf;
     pBuf += sizeof(struct usb_interface_descriptor);
-    int len = 0;
     const usb_dev usb_id = host_device2id(host_dev);
+
+    host_dev->interface_info[interface_num] = &adbmtp_inf[usb_id];
 
     for (int i = 0; i < interface->bNumEndpoints; i++) {
         struct usb_endpoint_descriptor *endpoint = (struct usb_endpoint_descriptor *)pBuf;
         if (endpoint->bDescriptorType == USB_DT_ENDPOINT) {
             if (endpoint->bmAttributes == USB_ENDPOINT_XFER_BULK) {
                 if (endpoint->bEndpointAddress & USB_DIR_IN) {
-                    adb.extr_in = endpoint->bEndpointAddress & 0xf;
+                    adb[usb_id].extr_in = endpoint->bEndpointAddress & 0xf;
                 } else {
-                    adb.extr_out = endpoint->bEndpointAddress;
+                    adb[usb_id].extr_out = endpoint->bEndpointAddress;
                 }
             }
             pBuf += USB_DT_ENDPOINT_SIZE;
@@ -73,8 +98,10 @@ u32 usb_adb_interface_ptp_mtp_parse(struct usb_host_device *host_dev, u8 interfa
             return 0;
         }
     }
-    printf("%s() %x %x\n", __func__, adb.extr_in, adb.extr_out);
-    return pBuf - (u8 *)interface ;
+
+    printf("%s() %x %x\n", __func__, adb[usb_id].extr_in, adb[usb_id].extr_out);
+
+    return pBuf - (u8 *)interface;
 }
 
 int usb_adb_parser(struct usb_host_device *host_dev, u8 interface_num, const u8 *pBuf)
@@ -84,9 +111,9 @@ int usb_adb_parser(struct usb_host_device *host_dev, u8 interface_num, const u8 
     int len = sizeof(struct usb_interface_descriptor);
     const usb_dev usb_id = host_device2id(host_dev);
 
-    adb_device.private_data = host_dev;
+    /* adb_device.private_data = host_dev; */
 
-    host_dev->interface_info[interface_num] = &adb_inf;
+    host_dev->interface_info[interface_num] = &adb_inf[usb_id];
 
     for (int endnum = 0; endnum < interface->bNumEndpoints; endnum++) {
         struct usb_endpoint_descriptor *end_desc = (struct usb_endpoint_descriptor *)pBuf;
@@ -102,36 +129,62 @@ int usb_adb_parser(struct usb_host_device *host_dev, u8 interface_num, const u8 
 
         if ((end_desc->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK) == USB_ENDPOINT_XFER_BULK) {
             if (end_desc->bEndpointAddress & USB_DIR_IN) {
-                adb.host_epin = usb_get_ep_num(usb_id, USB_DIR_IN, USB_ENDPOINT_XFER_BULK);
-                adb.target_epin = end_desc->bEndpointAddress & 0x0f;
-#if HUSB_MODE
-                adb.rxmaxp = end_desc->wMaxPacketSize;
+                adb[usb_id].host_epin = usb_get_ep_num(usb_id, USB_DIR_IN, USB_ENDPOINT_XFER_BULK);
+                adb[usb_id].target_epin = end_desc->bEndpointAddress & 0x0f;
+                adb[usb_id].rxmaxp = end_desc->wMaxPacketSize;
+                if (usb_id == 0) {
+                    adb[usb_id].rxmaxp = 64;
+                }
+#if HUSB_MODE && (FUSB_MODE == 0)
+                if (adb[usb_id].rxmaxp > 256) {
+                    adb[usb_id].rxmaxp = 256;
+                }
 #endif
-                log_debug("D(%d)->H(%d)", adb.target_epin, adb.host_epin);
+                log_debug("D(%d)->H(%d)", adb[usb_id].target_epin, adb[usb_id].host_epin);
             } else {
-                adb.host_epout = usb_get_ep_num(usb_id, USB_DIR_OUT, USB_ENDPOINT_XFER_BULK);
-                adb.target_epout = end_desc->bEndpointAddress & 0x0f;
-#if HUSB_MODE
-                adb.txmaxp = end_desc->wMaxPacketSize;
+                adb[usb_id].host_epout = usb_get_ep_num(usb_id, USB_DIR_OUT, USB_ENDPOINT_XFER_BULK);
+                adb[usb_id].target_epout = end_desc->bEndpointAddress & 0x0f;
+                adb[usb_id].txmaxp = end_desc->wMaxPacketSize;
+
+                if (usb_id == 0) {
+                    adb[usb_id].txmaxp = 64;
+                }
+#if HUSB_MODE && (FUSB_MODE == 0)
+                if (adb[usb_id].txmaxp > 256) {
+                    adb[usb_id].txmaxp = 256;
+                }
 #endif
-                log_debug("H(%d)->D(%d)",  adb.host_epout, adb.target_epout);
+                log_debug("H(%d)->D(%d)",  adb[usb_id].host_epout, adb[usb_id].target_epout);
             }
         }
     }
 
-    if (!adb_bulk_ep_in_buf) {
-        adb_bulk_ep_in_buf = usb_h_alloc_ep_buffer(usb_id, adb.host_epin | USB_DIR_IN, 64 * 2);
+    if (!adb_bulk_ep_in_buf[usb_id]) {
+        adb_bulk_ep_in_buf[usb_id] = usb_h_alloc_ep_buffer(usb_id, adb[usb_id].host_epin | USB_DIR_IN, adb[usb_id].rxmaxp * 2);
     }
-    usb_h_ep_config(usb_id, adb.host_epin | USB_DIR_IN, USB_ENDPOINT_XFER_BULK, 0, 0, adb_bulk_ep_in_buf, 64);
+    usb_h_ep_config(usb_id, adb[usb_id].host_epin | USB_DIR_IN, USB_ENDPOINT_XFER_BULK, 0, 0, adb_bulk_ep_in_buf[usb_id], adb[usb_id].rxmaxp);
 
-
-    if (!adb_bulk_ep_out_buf) {
-        adb_bulk_ep_out_buf = usb_h_alloc_ep_buffer(usb_id, adb.host_epout | USB_DIR_OUT, 64);
+    if (!adb_bulk_ep_out_buf[usb_id]) {
+        adb_bulk_ep_out_buf[usb_id] = usb_h_alloc_ep_buffer(usb_id, adb[usb_id].host_epout | USB_DIR_OUT, adb[usb_id].txmaxp);
     }
-    usb_h_ep_config(usb_id, adb.host_epout | USB_DIR_OUT, USB_ENDPOINT_XFER_BULK, 0, 0, adb_bulk_ep_out_buf, 64);
+    usb_h_ep_config(usb_id, adb[usb_id].host_epout | USB_DIR_OUT, USB_ENDPOINT_XFER_BULK, 0, 0, adb_bulk_ep_out_buf[usb_id], adb[usb_id].txmaxp);
 
     return len;
 }
+
+void adb_stop_process(const usb_dev usb_id)
+{
+    if (adb_bulk_ep_in_buf[usb_id]) {
+        usb_h_free_ep_buffer(usb_id, adb_bulk_ep_in_buf[usb_id]);
+        adb_bulk_ep_in_buf[usb_id] = NULL;
+    }
+    if (adb_bulk_ep_out_buf[usb_id]) {
+        usb_h_free_ep_buffer(usb_id, adb_bulk_ep_out_buf[usb_id]);
+        adb_bulk_ep_out_buf[usb_id] = NULL;
+    }
+}
+
+#if 0
 
 static int adb_send_packet(struct amessage *msg, const u8 *data_ptr)
 {
@@ -459,7 +512,9 @@ u32 adb_process()
 void adb_switch_aoa(u32 id)
 {
     struct usb_host_device *host_dev = adb_device.private_data;
+    extern void aoa_switch(struct usb_host_device * host_dev);
     aoa_switch(host_dev);
     /* usb_host_remount(id, 3, 30, 50, 1); */
 }
+#endif
 #endif //TCFG_ADB_ENABLE

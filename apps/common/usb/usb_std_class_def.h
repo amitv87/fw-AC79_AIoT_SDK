@@ -161,7 +161,7 @@
 #define CDC_DATA_EP_OUT             2
 #endif
 #ifndef CDC_INTR_EP_IN
-#define CDC_INTR_EP_IN              3
+#define CDC_INTR_EP_IN              6
 #endif
 #ifndef MAXP_SIZE_CDC_BULKIN
 #define MAXP_SIZE_CDC_BULKIN        64
@@ -202,6 +202,13 @@
 #define VIDEO_STATUS_TXMAXP         16
 #endif
 
+///////////PRINTER Class
+#ifndef PTR_BULK_EP_OUT
+#define PTR_BULK_EP_OUT             2
+#endif
+#ifndef PTR_BULK_EP_IN
+#define PTR_BULK_EP_IN              1
+#endif
 
 //speaker host
 #ifndef HOST_SPK_AUDIO_RATE

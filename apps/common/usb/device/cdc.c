@@ -3,6 +3,7 @@
 #include "usb/device/cdc.h"
 #include "app_config.h"
 #include "os/os_api.h"
+#include "system/includes.h"
 #include "cdc_defs.h"  //need redefine __u8, __u16, __u32
 
 #define LOG_TAG_CONST       USB
@@ -342,8 +343,8 @@ static void cdc_endpoint_init(struct usb_device_t *usb_device, u32 itf)
 
     usb_g_ep_config(usb_id, CDC_DATA_EP_OUT | USB_DIR_OUT, USB_ENDPOINT_XFER_BULK,
                     1, cdc_hdl[usb_id]->bulk_ep_out_buffer, MAXP_SIZE_CDC_BULKOUT);
-    /* usb_g_set_intr_hander(usb_id, CDC_DATA_EP_OUT | USB_DIR_OUT, cdc_intrrx); */
-    usb_g_set_intr_hander(usb_id, CDC_DATA_EP_OUT | USB_DIR_OUT, cdc_wakeup_handler);
+    /* usb_g_set_intr_hander(usb_id, CDC_DATA_EP_OUT | USB_DIR_OUT, cdc_intrrx);//添加该行代码使能cdc中断 */
+    usb_g_set_intr_hander(usb_id, CDC_DATA_EP_OUT | USB_DIR_OUT, cdc_wakeup_handler);//同步注释该行代码
     usb_enable_ep(usb_id, CDC_DATA_EP_IN);
 
 #if CDC_INTR_EP_ENABLE
@@ -506,16 +507,39 @@ void cdc_release(const usb_dev usb_id)
         cdc_hdl[usb_id] = NULL;
     }
 }
-
+static OS_SEM psem;
+static u8 rx_buf[64];
+static u8 rx_len;
 s32 usb_cdc_output_handler(void *priv, u8 *buf, u32 len)
 {
 //将收到的数据打印
     printf("len = %d, buf = %s\n", len, buf);
 
 //将收到的数据发送至终端
-    u32 ret = cdc_write_data(0, buf, len);
-    printf("tx_ret = %d\n", ret);
+    rx_len = len;
+    memcpy(rx_buf, buf, len);
+    os_sem_post(&psem);
     return 0;
 }
+void cdc_rx_test()
+{
+    os_sem_create(&psem, 0);
+    while (1) {
+        os_sem_pend(&psem, 0);
+        printf("len = %d, buf = %s\n", rx_len, rx_buf);
+        cdc_write_data(0, &rx_buf, rx_len);
+        printf("cdc_test\n");
+    }
+}
+void cdc_test_main()
+{
+    if (thread_fork("cdc_rx_test", 10, 512, 0, NULL, cdc_rx_test, NULL) != OS_NO_ERR) {
+        printf("thread fork fail\n");
+    }
+
+    return;
+}
+
+/* late_initcall(cdc_test_main); */
 
 #endif

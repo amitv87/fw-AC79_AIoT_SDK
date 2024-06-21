@@ -122,7 +122,10 @@ static u32 setup_device(struct usb_device_t *usb_device, struct usb_ctrlrequest 
                 if (usb_device->bDeviceStates == USB_DEFAULT) {
                     ret = 0;
                 } else {
-                    usb_set_data_payload(usb_device, req, user_stirng, sizeof(user_stirng));
+                    u8 *ptr = usb_set_data_payload(usb_device, req, user_stirng, sizeof(user_stirng));
+                    if (usb_id == 1) {
+                        ptr[18] = '2';
+                    }
                     ret = 1;
                 }
                 break;

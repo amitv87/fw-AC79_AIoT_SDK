@@ -1587,9 +1587,11 @@ static void usb_audio_rx_isr(struct usb_host_device *host_dev, u32 ep)
     }
     as_t = &audio->as[__this->host_spk.Cur_AlternateSetting - 1];
 
-    u32 rx_len = usb_h_ep_read_async(usb_id, ep, as_t->ep, __this->host_spk.buffer, as_t->ep_max_packet_size, USB_ENDPOINT_XFER_ISOC, 0);
+    int rx_len = usb_h_ep_read_async(usb_id, ep, as_t->ep, __this->host_spk.buffer, as_t->ep_max_packet_size, USB_ENDPOINT_XFER_ISOC, 0);
     /* printf("rx len : %d %d\n", rx_len, ep); */
-    cbuf_write(&__this->host_spk.usb_audio_spk_cbuf, __this->host_spk.buffer, rx_len);
+    if (rx_len > 0) {
+        cbuf_write(&__this->host_spk.usb_audio_spk_cbuf, __this->host_spk.buffer, rx_len);
+    }
     cbuf_write_alloc(&__this->host_spk.usb_audio_spk_cbuf, &wlen);
 
     if (wlen == 0) {

@@ -6,6 +6,7 @@
 #include "usb/scsi.h"
 #include "usb_bulk_transfer.h"
 #include "usb/host/usb_host.h"
+
 struct adb_device_t {
     u32 local_id;
     u32 remote_id;
@@ -19,11 +20,16 @@ struct adb_device_t {
 
     u8 extr_in;
     u8 extr_out;
+
+    u16 txmaxp;
+    u16 rxmaxp;
 };
+
 u32 usb_adb_interface_ptp_mtp_parse(struct usb_host_device *host_dev, u8 interface_num, const u8 *pBuf);
 int usb_adb_parser(struct usb_host_device *host_dev, u8 interface_num, const u8 *pBuf);
-u32 adb_process();
-void adb_switch_aoa(u32 id);
+u32 adb_process(const usb_dev usb_id);
+void adb_stop_process(const usb_dev usb_id);
+void adb_switch_aoa(const usb_dev usb_id);
 
 #if 1
 #define A_SYNC 0x434e5953
@@ -47,6 +53,7 @@ void adb_switch_aoa(u32 id);
 #define ADB_VERSION_MINOR 0 // Used for help/version information
 
 #else
+
 #define A_SYNC 0x53594e43
 #define A_CNXN 0x434e584e
 #define A_OPEN 0x4f50454e

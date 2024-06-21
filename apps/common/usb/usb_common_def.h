@@ -19,6 +19,7 @@
 #define     CDC_CLASS           0x00000010
 #define     UVC_CLASS           0x00000020
 #define     CUSTOM_HID_CLASS    0x00000040
+#define     PRINTER_CLASS       0x00000080
 
 #define     AUDIO_CLASS         (SPEAKER_CLASS|MIC_CLASS)
 
@@ -137,6 +138,12 @@
 #define TCFG_USB_SLAVE_UVC_ENABLE           1
 #else
 #define TCFG_USB_SLAVE_UVC_ENABLE           0
+#endif
+
+#if (USB_DEVICE_CLASS_CONFIG & PRINTER_CLASS) || (USB_DEVICE_CLASS_CONFIG_2_0 & PRINTER_CLASS)
+#define TCFG_USB_SLAVE_PRINTER_ENABLE       1
+#else
+#define TCFG_USB_SLAVE_PRINTER_ENABLE       0
 #endif
 
 #else  /* TCFG_PC_ENABLE == 0*/

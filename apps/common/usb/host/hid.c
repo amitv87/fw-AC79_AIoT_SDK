@@ -32,7 +32,7 @@ static int set_power(struct usb_host_device *host_dev, u32 value)
 {
     const usb_dev usb_id = host_device2id(host_dev);
     if (0 == value) {
-        memset(hid_device[usb_id], 0, sizeof(hid_device[usb_id]));
+        memset(&hid_device[usb_id], 0, sizeof(struct hid_device_t));
     }
     return DEV_ERR_NONE;
 }
@@ -627,9 +627,9 @@ static void hid_isr(struct usb_interface_info *usb_if, u32 ep)
     struct usb_host_device *host_dev = usb_if->dev.hid->parent;
     usb_dev usb_id = host_device2id(host_dev);
     u32 target_ep = usb_if->dev.hid->ep_pair[ep];
-    u32 rx_len = usb_h_ep_read_async(usb_id, ep, target_ep, buffer, 64, USB_ENDPOINT_XFER_INT, 0);
+    int rx_len = usb_h_ep_read_async(usb_id, ep, target_ep, buffer, 64, USB_ENDPOINT_XFER_INT, 0);
 
-    if (rx_len) {
+    if (rx_len > 0) {
         hid_route(usb_if->dev.hid, buffer);
     }
     /* put_buf(buffer, rx_len); */

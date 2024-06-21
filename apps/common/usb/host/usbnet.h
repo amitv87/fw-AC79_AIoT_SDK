@@ -21,6 +21,8 @@
 #ifndef	__LINUX_USB_RNDIS_HOST_H
 #define	__LINUX_USB_RNDIS_HOST_H
 
+#include "device/usb/host/usb_host.h"
+
 /*
  * CONTROL uses CDC "encapsulated commands" with funky notifications.
  *  - control-out:  SEND_ENCAPSULATED
@@ -265,19 +267,20 @@ struct rndis_keepalive_c {	/* IN (optionally OUT) */
 #define RNDIS_DRIVER_DATA_POLL_STATUS	1	/* poll status before control */
 
 struct wireless_device_t {
-    u8 usb_id;
-    void *parent;
     u8 host_epin;
     u8 host_epout;
+    u8 host_epin_at;
+    u8 host_epout_at;
+
+    void *parent;
     u32 epin;
     u32 epout;
     u32 rxmaxp;
     u32 txmaxp;
     u8 *epin_buf;
     u8 *epout_buf;
+    u8 *inbuf;
 
-    u8 host_epin_at;
-    u8 host_epout_at;
     u32 epin_at;
     u32 epout_at;
     u32 rxmaxp_at;
@@ -286,14 +289,17 @@ struct wireless_device_t {
     u8 *epout_buf_at;
 };
 
-typedef void(* USBNET_RX_COMPLETE_CB)(u32);
+typedef void (*USBNET_RX_COMPLETE_CB)(usb_dev usb_id, u8 *, u32);
+int usbnet_get_rxmaxp(usb_dev usb_id);
 void usbnet_set_rx_complete_cb(USBNET_RX_COMPLETE_CB cb);
-void usbnet_host_bulk_only_receive_int(void *buf, u32 len);
+void usbnet_host_bulk_only_receive_int(usb_dev usb_id);
 s32 usbnet_generic_cdc_parser(struct usb_host_device *host_dev, u8 interface_num, const u8 *pBuf);
-u32 usbnet_host_at_data_send(u8 *buf, u32 len);
+s32 usbnet_at_port_parser(struct usb_host_device *host_dev, u8 interface_num, const u8 *pBuf);
+int usbnet_host_at_data_send(usb_dev usb_id, u8 *buf, u32 len);
+int usbnet_host_bulk_only_send(usb_dev usb_id, u8 *buf, u32 len);
 void usbnet_at_port_rx_handler_register(void (*func)(u8 *buf, u32 len));
-
+void usb_net_stop_process(usb_dev usb_id);
+void usb_net_at_port_stop_process(usb_dev usb_id);
 
 #endif	/* __LINUX_USB_RNDIS_HOST_H */
-
 

@@ -510,6 +510,63 @@ void lwip_netif_set_up(u8_t lwip_netif)
 #endif
 }
 
+
+static struct netif *net_get_netif_handle(u8_t lwip_netif)
+{
+    if (lwip_netif == WIFI_NETIF) {
+        return &wireless_netif;
+    }
+#ifdef HAVE_EXT_WIRELESS_NETIF
+    else if (lwip_netif == EXT_WIFI_NETIF) {
+        return &ext_wireless_netif;
+    }
+#endif
+#ifdef HAVE_LTE_NETIF
+    else if (lwip_netif == LTE_NETIF) {
+        return &lte_netif;
+    }
+#endif
+#ifdef HAVE_ETH_WIRE_NETIF
+    else if (lwip_netif == ETH_NETIF) {
+        return &eth_netif;
+    }
+#endif
+#ifdef HAVE_BT_NETIF
+    else if (lwip_netif == BT_NETIF) {
+        return &bt_netif;
+    }
+#endif
+
+    return NULL;
+}
+
+void lwip_netif_set_down(u8_t lwip_netif)
+{
+    struct ip4_addr ipaddr;
+
+    struct netif *netif = net_get_netif_handle(lwip_netif);
+    if (netif == NULL) {
+        return;
+    }
+
+    struct lan_setting *lan_setting_info = net_get_lan_info();
+    if (!lan_setting_info) {
+        return;
+    }
+
+#ifdef HAVE_LTE_NETIF
+    if (lwip_netif == LTE_NETIF) {
+        /* dhcp_cleanup(netif); */
+        IP4_ADDR(&ipaddr, lan_setting_info->WIRELESS_IP_ADDR0, lan_setting_info->WIRELESS_IP_ADDR1, lan_setting_info->WIRELESS_IP_ADDR2, lan_setting_info->WIRELESS_IP_ADDR3);
+        dns_local_removehost(LOCAL_LTE_HOST_NAME, &ipaddr);
+        dns_local_removehost(LOCAL_LTE_HOST_NAME, &netif->ip_addr);
+    }
+#endif
+
+    netif_set_down(netif);
+}
+
+
 void __lwip_renew(unsigned short parm)
 {
     struct ip4_addr ipaddr;

@@ -1,4 +1,5 @@
 #include "includes.h"
+#include "init.h"
 #include "app_config.h"
 #include "device_drive.h"
 #include "event/device_event.h"
@@ -32,7 +33,13 @@
 
 static struct usb_host_device host_devices[USB_MAX_HW_NUM];// SEC(.usb_h_bss);
 static u8 *h_ep0_dmabuf[USB_MAX_HW_NUM];
+static OS_MUTEX usb_host_mutex;
 
+static int usb_host_mutex_init(void)
+{
+    return os_mutex_create(&usb_host_mutex);
+}
+early_initcall(usb_host_mutex_init);
 
 int host_dev_status(const struct usb_host_device *host_dev)
 {
@@ -131,7 +138,7 @@ static int _usb_msd_parser(struct usb_host_device *host_dev, u8 interface_num, c
 }
 static int _usb_apple_mfi_parser(struct usb_host_device *host_dev, u8 interface_num, const u8 *pBuf)
 {
-    log_info("find udisk @ interface %d", interface_num);
+    log_info("find apple mfi @ interface %d", interface_num);
 #if TCFG_USB_APPLE_DOCK_EN
     return   usb_apple_mfi_parser(host_dev, interface_num, pBuf);
 #else
@@ -193,8 +200,6 @@ static int _usb_uvc_parse(struct usb_host_device *host_dev, u8 interface_num, co
     return USB_DT_INTERFACE_SIZE;
 #endif
 }
-
-
 static int _usb_wireless_parser(struct usb_host_device *host_dev, u8 interface_num, const u8 *pBuf)
 {
     log_info("find wireless @ interface %d", interface_num);
@@ -204,8 +209,6 @@ static int _usb_wireless_parser(struct usb_host_device *host_dev, u8 interface_n
     return USB_DT_INTERFACE_SIZE;
 #endif
 }
-
-
 static int _usb_wireless_at_port_parser(struct usb_host_device *host_dev, u8 interface_num, const u8 *pBuf)
 {
     log_info("find wireless at_port @ interface %d", interface_num);
@@ -215,7 +218,6 @@ static int _usb_wireless_at_port_parser(struct usb_host_device *host_dev, u8 int
     return USB_DT_INTERFACE_SIZE;
 #endif
 }
-
 
 static int usb_descriptor_parser(struct usb_host_device *host_dev, const u8 *pBuf, u32 total_len, struct usb_device_descriptor *device_desc)
 {
@@ -274,7 +276,7 @@ static int usb_descriptor_parser(struct usb_host_device *host_dev, const u8 *pBu
                     have_find_valid_class = true;
                 }
             } else if (device_desc->idVendor == 0x2c7c &&
-                       (device_desc->idProduct == 0x0191 || device_desc->idProduct == 0x0125) &&
+                       (device_desc->idProduct == 0x0191 || device_desc->idProduct == 0x0125 || device_desc->idProduct == 0x6002) &&
                        interface->bInterfaceClass == 0xff &&
                        interface->bInterfaceSubClass == 0x00) {
                 i = _usb_wireless_at_port_parser(host_dev, interface_num, pBuf);
@@ -368,7 +370,8 @@ static int usb_descriptor_parser(struct usb_host_device *host_dev, const u8 *pBu
                     pBuf += i;
                 }
                 have_find_valid_class = true;
-            } else if (interface->bInterfaceClass == USB_CLASS_WIRELESS_CONTROLLER) {
+            } else if (interface->bInterfaceClass == USB_CLASS_WIRELESS_CONTROLLER
+                       || (interface->bInterfaceClass == USB_CLASS_CDC_DATA && interface->bInterfaceSubClass == 0)) {
                 i = _usb_wireless_parser(host_dev, interface_num, pBuf);
                 if (i < 0) {
                     log_error("---%s %d---, i = %d", __func__, __LINE__, i);
@@ -399,8 +402,8 @@ static int usb_descriptor_parser(struct usb_host_device *host_dev, const u8 *pBu
         }
     }
 
-
     log_debug("len %d total_len %d", len, total_len);
+
     return !have_find_valid_class;
 }
 
@@ -424,12 +427,11 @@ void usb_host_resume(const usb_dev usb_id)
     usb_h_resume(usb_id);
 }
 
-static u32 _usb_host_mount(const usb_dev usb_id, u32 retry, u32 reset_delay, u32 mount_timeout)
+static int _usb_host_mount(const usb_dev usb_id, u32 retry, u32 reset_delay, u32 mount_timeout)
 {
-    u32 ret = DEV_ERR_NONE;
+    int ret = DEV_ERR_NONE;
     struct usb_host_device *host_dev = &host_devices[usb_id];
     struct usb_private_data *private_data = &host_dev->private_data;
-
 
     for (int i = 0; i < retry; i++) {
         usb_h_sie_init(usb_id);
@@ -527,7 +529,7 @@ static int usb_event_notify(const struct usb_host_device *host_dev, u32 ev)
     const usb_dev id = host_device2id(host_dev);
     struct device_event event = {0};
     static u32 bmUsbEvent[USB_MAX_HW_NUM];
-    u8 have_post_event = 0;
+    u16 have_post_event = 0;
     u8 no_send_event = 0;
     if (ev == 0) {
         event.event = DEVICE_EVENT_IN;
@@ -660,6 +662,20 @@ static int usb_event_notify(const struct usb_host_device *host_dev, u32 ev)
                 }
                 bmUsbEvent[id] |= BIT(7);
                 break;
+
+            case USB_CLASS_STILL_IMAGE:
+                if (have_post_event & BIT(8)) {
+                    no_send_event = 1;
+                } else {
+                    have_post_event |= BIT(8);
+                }
+                if (id == 0) {
+                    event.value = (int)"adbmtp0";
+                } else {
+                    event.value = (int)"adbmtp1";
+                }
+                bmUsbEvent[id] |= BIT(8);
+                break;
 #endif
             }
 
@@ -743,12 +759,18 @@ __usb_event_out:
                         event.value = (int)"wireless1";
                     }
                     break;
-
                 case 7:
                     if (id == 0) {
                         event.value = (int)"at_port0";
                     } else {
                         event.value = (int)"at_port1";
+                    }
+                    break;
+                case 8:
+                    if (id == 0) {
+                        event.value = (int)"adbmtp0";
+                    } else {
+                        event.value = (int)"adbmtp1";
                     }
                     break;
 #endif
@@ -771,7 +793,6 @@ __usb_event_out:
     } else {
         return DEV_ERR_UNKNOW_CLASS;
     }
-
 }
 
 const char *usb_host_valid_class_to_dev(const usb_dev id, u32 usbclass)
@@ -841,7 +862,7 @@ const char *usb_host_valid_class_to_dev(const usb_dev id, u32 usbclass)
  * @return
  */
 /* --------------------------------------------------------------------------*/
-u32 usb_host_mount(const usb_dev id, u32 retry, u32 reset_delay, u32 mount_timeout)
+int usb_host_mount(const usb_dev id, u32 retry, u32 reset_delay, u32 mount_timeout)
 {
 #if USB_MAX_HW_NUM > 1
     const usb_dev usb_id = id;
@@ -849,8 +870,15 @@ u32 usb_host_mount(const usb_dev id, u32 retry, u32 reset_delay, u32 mount_timeo
     const usb_dev usb_id = 0;
 #endif
 
-    u32 ret;
+    int ret = DEV_ERR_NONE;
     struct usb_host_device *host_dev = &host_devices[usb_id];
+    struct usb_private_data *private_data = &host_dev->private_data;
+
+    os_mutex_pend(&usb_host_mutex, 0);
+
+    if (private_data->status) {
+        goto __exit_fail;
+    }
     memset(host_dev, 0, sizeof(*host_dev));
 
     host_dev->private_data.usb_id = id;
@@ -864,15 +892,22 @@ u32 usb_host_mount(const usb_dev id, u32 retry, u32 reset_delay, u32 mount_timeo
     if (ret) {
         goto __exit_fail;
     }
-    return usb_event_notify(host_dev, 0);
+
+    ret = usb_event_notify(host_dev, 0);
+
+    os_mutex_post(&usb_host_mutex);
+
+    return ret;
 
 __exit_fail:
     usb_sie_disable(usb_id);
     usb_sem_del(host_dev);
+    os_mutex_post(&usb_host_mutex);
+
     return ret;
 }
 
-static u32 _usb_host_unmount(const usb_dev usb_id)
+static int _usb_host_unmount(const usb_dev usb_id)
 {
     struct usb_host_device *host_dev = &host_devices[usb_id];
 
@@ -902,16 +937,23 @@ static u32 _usb_host_unmount(const usb_dev usb_id)
  */
 /* --------------------------------------------------------------------------*/
 /* u32 usb_host_unmount(const usb_dev usb_id, char *device_name) */
-u32 usb_host_unmount(const usb_dev id)
+int usb_host_unmount(const usb_dev id)
 {
 #if USB_MAX_HW_NUM > 1
     const usb_dev usb_id = id;
 #else
     const usb_dev usb_id = 0;
 #endif
-    u32 ret;
+    int ret = DEV_ERR_NONE;
     struct usb_host_device *host_dev = &host_devices[usb_id];
     struct device_event event = {0};
+    struct usb_private_data *private_data = &host_dev->private_data;
+
+    os_mutex_pend(&usb_host_mutex, 0);
+
+    if (private_data->status == 0) {
+        goto __exit_fail;
+    }
 
 #if (TCFG_UDISK_ENABLE && UDISK_READ_512_ASYNC_ENABLE)
     _usb_stor_async_wait_sem(host_dev);
@@ -922,23 +964,28 @@ u32 usb_host_unmount(const usb_dev id)
     }
     usb_sem_del(host_dev);
 
-    /* printf("usb_host_unmount notify >>>>>>>>>>>\n"); */
     usb_event_notify(host_dev, 2);
+
+    os_mutex_post(&usb_host_mutex);
+
     return DEV_ERR_NONE;
 
 __exit_fail:
+    os_mutex_post(&usb_host_mutex);
+
     return ret;
 }
 
-u32 usb_host_remount(const usb_dev id, u32 retry, u32 delay, u32 ot, u8 notify)
+int usb_host_remount(const usb_dev id, u32 retry, u32 delay, u32 ot, u8 notify)
 {
 #if USB_MAX_HW_NUM > 1
     const usb_dev usb_id = id;
 #else
     const usb_dev usb_id = 0;
 #endif
-    u32 ret;
-    struct device_event event;
+    int ret;
+
+    os_mutex_pend(&usb_host_mutex, 0);
 
     ret = _usb_host_unmount(usb_id);
     if (ret) {
@@ -957,9 +1004,14 @@ u32 usb_host_remount(const usb_dev id, u32 retry, u32 delay, u32 ot, u8 notify)
         struct usb_host_device *host_dev = &host_devices[usb_id];
         usb_event_notify(host_dev, 1);
     }
+
+    os_mutex_post(&usb_host_mutex);
+
     return DEV_ERR_NONE;
 
 __exit_fail:
+    os_mutex_post(&usb_host_mutex);
+
     return ret;
 }
 

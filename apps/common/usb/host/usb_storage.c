@@ -1753,6 +1753,14 @@ static int usb_stor_init(struct device *device)
         disk->dev_status = DEV_IDLE;
         /* usb_stor_force_reset(usb_id); */
         log_error("ret = %d\n", ret);
+        if (disk->udisk_ep.epin_buf) {
+            usb_h_free_ep_buffer(usb_id, disk->udisk_ep.epin_buf);
+            disk->udisk_ep.epin_buf = NULL;
+        }
+        if (disk->udisk_ep.epout_buf) {
+            usb_h_free_ep_buffer(usb_id, disk->udisk_ep.epout_buf);
+            disk->udisk_ep.epout_buf = NULL;
+        }
     } else {
         /* disk->test_unit_ready_tick = sys_timer_add(device,usb_stor_tick_handle,200); */
 #if ENABLE_DISK_HOTPLUG
@@ -2520,4 +2528,161 @@ SYS_EVENT_STATIC_HANDLER_REGISTER(udisk_test) = {
     .post_handler = NULL,
 };
 #endif
+
+
+
+void usb_scsi_set_timeout(u32 ot)
+{
+}
+u32 usb_scsi_get_timeout(void)
+{
+    return 0;
+}
+s32 usb_scsi_write(const u8 *cdb,  u8 *buffer, u32 len)
+{
+    u8 i = 0;
+    struct device *device = NULL;
+    struct usb_host_device *host_dev = NULL;
+    for (i = 0; i < USB_MAX_HW_NUM; i++) {
+        device = &udisk_device[i];
+        host_dev = device_to_usbdev(device);
+        if (host_dev) {
+            break;
+        }
+    }
+    if (i == USB_MAX_HW_NUM) {
+        log_error("usb scsi write not host dev!!\n");
+        return -1;
+    }
+    struct mass_storage *disk = host_device2disk(host_dev);
+    const u32 txmaxp = usb_stor_txmaxp(disk);
+    const u32 rxmaxp = usb_stor_rxmaxp(disk);
+
+    usb_init_cbw(device, 0, 0, 0);
+    disk->cbw.dCBWDataTransferLength = cpu_to_le32(len);
+
+    disk->cbw.bCBWLength = 0xA;
+    disk->cbw.bmCBWFlags = USB_DIR_OUT;
+
+    memcpy(&disk->cbw.operationCode, cdb, 16);
+    //cbw
+    s32 ret = usb_bulk_only_send(device,
+                                 disk->udisk_ep.host_epout,
+                                 txmaxp,
+                                 disk->udisk_ep.target_epout,
+                                 (u8 *)&disk->cbw,
+                                 sizeof(struct usb_scsi_cbw));
+
+    if (ret < 0) {
+        return ret;
+    }
+
+    //data
+    ret = usb_bulk_only_send(device,
+                             disk->udisk_ep.host_epout,
+                             txmaxp,
+                             disk->udisk_ep.target_epout,
+                             buffer,
+                             len);
+
+    if (ret < 0) {
+        return ret;
+    }
+
+    //csw
+    ret = usb_bulk_only_receive(device,
+                                disk->udisk_ep.host_epin,
+                                rxmaxp,
+                                disk->udisk_ep.target_epin,
+                                (u8 *)&disk->csw,
+                                sizeof(struct usb_scsi_csw));
+
+    if (ret != sizeof(struct usb_scsi_csw)) {
+        return ret;
+    }
+
+    if (disk->csw.bCSWStatus) {
+        return -1;
+    }
+
+    return  0;
+}
+s32 usb_scsi_read(const u8 *cdb, u8 *buffer, u32 rx_len)
+{
+    s32 ret;
+    u32 rx_cnt;
+    u8 i = 0;
+    struct device *device = NULL;
+    struct usb_host_device *host_dev = NULL;
+    for (i = 0; i < USB_MAX_HW_NUM; i++) {
+        device = &udisk_device[i];
+        host_dev = device_to_usbdev(device);
+        if (host_dev) {
+            break;
+        }
+    }
+    if (i == USB_MAX_HW_NUM) {
+        log_error("usb scsi read not host dev!!\n");
+        return -1;
+    }
+    struct mass_storage *disk = host_device2disk(host_dev);
+    const u32 txmaxp = usb_stor_txmaxp(disk);
+    const u32 rxmaxp = usb_stor_rxmaxp(disk);
+
+    usb_init_cbw(device, 0, 0, 0);
+
+    disk->cbw.dCBWDataTransferLength = cpu_to_le32(rx_len);
+    disk->cbw.bCBWLength = 0xA;
+    disk->cbw.bmCBWFlags = USB_DIR_IN;
+
+    memcpy(&disk->cbw.operationCode, cdb, 16);
+
+    //cbw
+    ret = usb_bulk_only_send(device,
+                             disk->udisk_ep.host_epout,
+                             txmaxp,
+                             disk->udisk_ep.target_epout,
+                             (u8 *)&disk->cbw,
+                             sizeof(struct usb_scsi_cbw));
+    if (ret < 0) {
+        return ret;
+    }
+
+    //data
+    ret = usb_bulk_only_receive(device,
+                                disk->udisk_ep.host_epin,
+                                rxmaxp,
+                                disk->udisk_ep.target_epin,
+                                buffer,
+                                rx_len);
+
+    if (ret < 0) {
+        return ret;
+    }
+
+    //csw
+    ret = usb_bulk_only_receive(device,
+                                disk->udisk_ep.host_epin,
+                                rxmaxp,
+                                disk->udisk_ep.target_epin,
+                                (u8 *)&disk->csw,
+                                sizeof(struct usb_scsi_csw));
+
+    if (ret == -4) {
+        ret = usb_clear_feature(host_dev, disk->udisk_ep.target_epin | USB_DIR_IN);
+
+        if (ret < 0) {
+            return ret;
+        }
+    } else if (ret != sizeof(struct usb_scsi_csw)) {
+        return ret;
+    }
+
+    if (disk->csw.bCSWStatus) {
+        /* ret = usb_stor_request_sense(device); */
+        return -9;
+    }
+
+    return 0;
+}
 #endif

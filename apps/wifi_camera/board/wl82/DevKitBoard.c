@@ -32,6 +32,11 @@
 #include "ui_api.h"
 #endif
 
+#ifdef CONFIG_LTE_PHY_ENABLE
+#include "lte_module.h"
+#endif
+
+
 // *INDENT-OFF*
 UART0_PLATFORM_DATA_BEGIN(uart0_data)
     .baudrate = 1000000,
@@ -562,6 +567,15 @@ static const struct otg_dev_data otg_data = {
 };
 #endif
 
+
+#ifdef CONFIG_LTE_PHY_ENABLE
+extern const struct device_operations lte_module_dev_ops;
+LTE_MODULE_DATA_BEGIN(lte_module_data)
+	.name = (u8 *)"usb_rndis",
+LTE_MODULE_DATA_END()
+#endif
+
+
 #if defined CONFIG_BT_ENABLE || defined CONFIG_WIFI_ENABLE
 #include "wifi/wifi_connect.h"
 const struct wifi_calibration_param wifi_calibration_param = {
@@ -665,6 +679,10 @@ REGISTER_DEVICES(device_table) = {
 #if TCFG_UDISK_ENABLE
     { "udisk0", &mass_storage_ops, NULL },
     { "udisk1", &mass_storage_ops, NULL },
+#endif
+
+#ifdef CONFIG_LTE_PHY_ENABLE
+    { "lte",  &lte_module_dev_ops, (void *) &lte_module_data},
 #endif
 };
 

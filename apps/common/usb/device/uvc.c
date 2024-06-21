@@ -1349,7 +1349,7 @@ static void uvc_g_iso_transfer(struct usb_device_t *usb_device, u32 ep)
     tx_addr = uvc_handle[usb_id]->stream_buf;
     pld_hdr[usb_id].sof_cnt = musb_read_sofframe(usb_id);
     if (!uvc_handle[usb_id]->tx_broken) {
-        if (uvc_handle[usb_id]->video_reqbuf)  {
+        if (uvc_handle[usb_id]->video_reqbuf)  {//请求uvc从机的JPEG或YUV数据帧
             len = uvc_handle[usb_id]->video_reqbuf(usb_id, &tx_addr[0x0c], UVC_PKT_SPILT * UVC_FIFO_TXMAXP - 0x0c, &IsEOFFrame);
             if (IsEOFFrame) {
                 pld_hdr[usb_id].bfh_val |= UVC_EOF;
@@ -1365,7 +1365,7 @@ static void uvc_g_iso_transfer(struct usb_device_t *usb_device, u32 ep)
     } else {
         len = uvc_handle[usb_id]->last_len;
     }
-    len2 = usb_g_iso_write(usb_id, UVC_STREAM_EP_IN, tx_addr, len);
+    len2 = usb_g_iso_write(usb_id, UVC_STREAM_EP_IN, tx_addr, len);//请求完成则发往USB
     if (len && !len2) {
         uvc_handle[usb_id]->tx_broken = 1;
         uvc_handle[usb_id]->last_len = len;
@@ -2754,7 +2754,7 @@ static u32 uvc_send_buf(void *priv, u8 *buf, u32 len)
         if (video_info->exit) {
             break;
         }
-        ret = os_sem_pend(&video_info->wait_sem, 100);
+        ret = os_sem_pend(&video_info->wait_sem, 100);//先等待USB中断来请求数据包
         if (ret) {
             video_info->reqlen = 0;
             log_error("wait uvc request err !!!\n");
@@ -2764,8 +2764,8 @@ static u32 uvc_send_buf(void *priv, u8 *buf, u32 len)
             continue;
         }
         spin_lock(&video_info->lock);
-        video_info->reqbuf = (u8 *)(buf + offset);
-        video_info->send_len = video_info->reqlen;
+        video_info->reqbuf = (u8 *)(buf + offset);//赋值数据包地址
+        video_info->send_len = video_info->reqlen;//赋值数据包大小
         if (video_info->send_len > remain) {
             video_info->send_len = remain;
         }
@@ -2775,7 +2775,7 @@ static u32 uvc_send_buf(void *priv, u8 *buf, u32 len)
             video_info->end = true;
         }
 #if UVC_REQ_BUF_IN_THREAD
-        os_sem_post(&video_info->req_sem);
+        os_sem_post(&video_info->req_sem);//发送数据包信号量
 #else
         video_info->complete = 1;
 #endif
@@ -2845,7 +2845,7 @@ static void uvc_yuv_task(void *priv)
              *step 5
              */
             dev_ioctl(dev, VIDIOC_SET_HDWARE_STATE, 0);
-            uvc_send_buf(priv, yuv.addr, yuv.size);
+            uvc_send_buf(priv, yuv.addr, yuv.size);//注册YUV回调函数
             dev_ioctl(dev, VIDIOC_SET_HDWARE_STATE, 1);
             dev_ioctl(dev, VIDIOC_CLEAR_OVERLAY, 0);
         }
@@ -2931,10 +2931,19 @@ static int uvc_video_mjpeg_open(void)
     os_sem_create(&uvc_video_info.req_sem, 0);
 
 #if UVC_FORMAT_MJPG
+#ifdef PRODUCT_NET_SERVER_ENABLE
+    if (build_camera_data_conn(uvc_send_buf, &uvc_video_info) == FALSE) {
+        free(uvc_video_info.buf);
+        os_sem_del(&uvc_video_info.wait_sem, 0);
+        os_sem_del(&uvc_video_info.req_sem, 0);
+        return -1;
+    }
+#else
     extern void set_video_rt_cb(u32(*cb)(void *, u8 *, u32), void *priv);
     extern int user_video_rec0_open(int dev);
-    set_video_rt_cb(uvc_send_buf, &uvc_video_info);
-    user_video_rec0_open(0);
+    set_video_rt_cb(uvc_send_buf, &uvc_video_info);//注册JPEG回调函数
+    user_video_rec0_open(0);//打开摄像头
+#endif
 #endif
     uvc_video_info.init = true;
     return 0;
@@ -2945,10 +2954,14 @@ static int uvc_video_mjpeg_close(void)
 #if UVC_FORMAT_MJPG
     os_sem_set(&uvc_video_info.wait_sem, 0);
     os_sem_post(&uvc_video_info.wait_sem);
+#ifdef PRODUCT_NET_SERVER_ENABLE
+    delete_camera_data_conn();
+#else
     extern void set_video_rt_cb(u32(*cb)(void *, u8 *, u32), void *priv);
     extern int user_video_rec0_close(void);
-    set_video_rt_cb(NULL, NULL);
-    user_video_rec0_close();
+    set_video_rt_cb(NULL, NULL);//设置回调函数为空
+    user_video_rec0_close();//关闭摄像头
+#endif
 #endif
     uvc_video_info.init = false;
     uvc_video_info.end = false;
@@ -3055,7 +3068,7 @@ static int uvc_video_open(int idx, int fmt, int frame_id, int fps)
 #if UVC_FORMAT_MJPG
         extern void set_video_rt_cb(u32(*cb)(void *, u8 *, u32), void *priv);
         extern int user_video_rec0_open(int dev);
-        set_video_rt_cb(uvc_send_buf, &uvc_video_info);
+        set_video_rt_cb(uvc_send_buf, &uvc_video_info);//注册JPEG回调函数
         user_video_rec0_open(0);
 #else
         ret = thread_fork("UVC_MJPEG_TASK", 8, 2048, 0, &uvc_video_info.pid, uvc_mjpeg_task, (void *)&uvc_video_info);
@@ -3257,4 +3270,15 @@ static int uvc_video_close(int idx)
 #endif
 }
 
+
+#ifdef PRODUCT_NET_SERVER_ENABLE
+void product_camera_reconnect(void)
+{
+    build_camera_data_conn(uvc_send_buf, &uvc_video_info);
+}
 #endif
+
+
+#endif
+
+

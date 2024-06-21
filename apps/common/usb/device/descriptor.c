@@ -36,7 +36,7 @@ static const u8 sDeviceDescriptor[] = { //<Device Descriptor
     0x00,       // bDeviceSubClass: none
     0x00,       // bDeviceProtocol: none
     EP0_SETUP_LEN,//EP0_LEN,      // bMaxPacketSize0: 8/64 bytes
-    'J', 'L',     // idVendor: 0x4a4c - JL
+    0x54, 0x36, // idVendor: 0x3654 - Zhuhai Jieli Technology
     'U', 'A',     // idProduct: chip id
     0x00, 0x01,     // bcdDevice: version 1.0
     0x01,       // iManufacturer: Index to string descriptor that contains the string <Your Name> in Unicode
@@ -118,19 +118,22 @@ static const u8 serial_string[] = {
     0x37, 0x00
 };
 
-void get_device_descriptor(u8 *ptr)
+void get_device_descriptor(u8 *ptr, const usb_dev usb_id)
 {
     memcpy(ptr, sDeviceDescriptor, USB_DT_DEVICE_SIZE);
     //以下为解决win7同一个ID的设备不加载驱动问题
 #if (USB_DEVICE_CLASS_CONFIG & (UVC_CLASS | AUDIO_CLASS)) == (UVC_CLASS | AUDIO_CLASS) || \
 	(USB_DEVICE_CLASS_CONFIG_2_0 && (USB_DEVICE_CLASS_CONFIG_2_0 & (UVC_CLASS | AUDIO_CLASS)) == (UVC_CLASS | AUDIO_CLASS))
     ptr[10]++;
+    ptr[10] += usb_id;
 #elif (USB_DEVICE_CLASS_CONFIG & (UVC_CLASS | SPEAKER_CLASS)) == (UVC_CLASS | SPEAKER_CLASS) || \
 	(USB_DEVICE_CLASS_CONFIG_2_0 && (USB_DEVICE_CLASS_CONFIG_2_0 & (UVC_CLASS | SPEAKER_CLASS)) == (UVC_CLASS | SPEAKER_CLASS))
     ptr[10]++;
+    ptr[10] += usb_id;
 #elif (USB_DEVICE_CLASS_CONFIG & (UVC_CLASS | MIC_CLASS)) == (UVC_CLASS | MIC_CLASS) || \
 	(USB_DEVICE_CLASS_CONFIG_2_0 && (USB_DEVICE_CLASS_CONFIG_2_0 & (UVC_CLASS | MIC_CLASS)) == (UVC_CLASS | MIC_CLASS))
     ptr[10]++;
+    ptr[10] += usb_id;
 #endif
     ptr[11] |= USB_DEVICE_CLASS_CONFIG;
 }

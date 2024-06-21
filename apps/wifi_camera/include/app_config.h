@@ -352,7 +352,8 @@
 #define TCFG_USE_SD_ADD_UI_FILE             0  //使用SD卡加载资源文件
 
 #if TCFG_LCD_ENABLE
-#define TCFG_LCD_ILI9481_ENABLE             1
+#define TCFG_LCD_ILI9488_ENABLE             1
+#define TCFG_LCD_ILI9481_ENABLE             0
 #define TCFG_LCD_HX8357_ENABLE              0
 #define TCFG_LCD_ST7789S_ENABLE			    0
 #define TCFG_LCD_ILI9341_ENABLE	        	0

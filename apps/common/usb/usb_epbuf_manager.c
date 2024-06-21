@@ -28,7 +28,7 @@ static u8 usb_dma_buf[10 * 1024] SEC(.usb_fifo) __attribute__((aligned(64)));
 #elif (defined USB_DEVICE_CLASS_CONFIG_2_0) && (USB_DEVICE_CLASS_CONFIG_2_0 != 0)
 static u8 usb_dma_buf[4 * 1024] SEC(.usb_fifo) __attribute__((aligned(64)));
 #else
-static u8 usb_dma_buf[3 * 1024] SEC(.usb_fifo) __attribute__((aligned(64)));
+static u8 usb_dma_buf[10 * 1024] SEC(.usb_fifo) __attribute__((aligned(64)));
 #endif
 static struct lbuff_head *usb_dma_lbuf = NULL;
 

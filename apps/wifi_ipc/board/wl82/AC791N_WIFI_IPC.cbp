@@ -323,6 +323,8 @@
 <Unit filename="../../../../apps/common/usb/device/hid.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/usb/device/msd.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/usb/device/msd_upgrade.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/common/usb/device/printer.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/common/usb/device/printer.h" />
 <Unit filename="../../../../apps/common/usb/device/ram_disk_circle.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/usb/device/ram_disk_update.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/usb/device/slave_uvc.h" />
@@ -350,6 +352,7 @@
 <Unit filename="../../../../apps/common/usb/host/usbnet.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/usb/host/usbnet.h" />
 <Unit filename="../../../../apps/common/usb/host/uvc_host.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/common/usb/host/uvc_jl_upgrade.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/usb/include/host/host_uvc.h" />
 <Unit filename="../../../../apps/common/usb/include/host/uvc.h" />
 <Unit filename="../../../../apps/common/usb/usb_common_def.h" />
@@ -509,6 +512,7 @@
 <Unit filename="../../../../include_lib/driver/device/usb/otg.h" />
 <Unit filename="../../../../include_lib/driver/device/usb/scsi.h" />
 <Unit filename="../../../../include_lib/driver/device/usb/usb_phy.h" />
+<Unit filename="../../../../include_lib/driver/device/usb/usb_scsi_upgrade.h" />
 <Unit filename="../../../../include_lib/driver/device/video/camera.h" />
 <Unit filename="../../../../include_lib/driver/device/video/fb.h" />
 <Unit filename="../../../../include_lib/driver/device/video/video.h" />

@@ -47,12 +47,12 @@ static void *uac_rx_priv[USB_MAX_HW_NUM];
 
 #define UAC_BUFFER_MAX		(UAC_BUFFER_SIZE * 50 / 100)
 
-static struct uac_speaker_handle *uac_speaker = NULL;
+static struct uac_speaker_handle *uac_speaker[USB_MAX_HW_NUM];
 
 #if USB_MALLOC_ENABLE
 #else
-static struct uac_speaker_handle uac_speaker_handle SEC(.uac_var);
-static u8 uac_rx_buffer[UAC_BUFFER_SIZE] ALIGNED(4) SEC(.uac_rx);
+static struct uac_speaker_handle uac_speaker_handle[USB_MAX_HW_NUM] SEC(.uac_var);
+static u8 uac_rx_buffer[USB_MAX_HW_NUM][UAC_BUFFER_SIZE] ALIGNED(4) SEC(.uac_rx);
 #endif
 
 #if 0
@@ -118,23 +118,23 @@ void uac_speaker_stream_write(const usb_dev usb_id, const u8 *obuf, u32 len)
 {
     if (speaker_stream_is_open[usb_id]) {
         //write dac
-        int wlen = cbuf_write(&uac_speaker->cbuf, (void *)obuf, len);
+        int wlen = cbuf_write(&uac_speaker[usb_id]->cbuf, (void *)obuf, len);
         if (wlen != len) {
             //putchar('W');
         }
-        //if (uac_speaker->rx_handler) {
+        //if (uac_speaker[usb_id]->rx_handler) {
         if (uac_rx_handler[usb_id]) {
-            /* if (uac_speaker->cbuf.data_len >= UAC_BUFFER_MAX) { */
+            /* if (uac_speaker[usb_id]->cbuf.data_len >= UAC_BUFFER_MAX) { */
             // 马上就要满了，赶紧取走
-            uac_speaker->need_resume = 1; //2020-12-22注:无需唤醒
+            uac_speaker[usb_id]->need_resume = 1; //2020-12-22注:无需唤醒
             /* } */
-            if (uac_speaker->need_resume) {
-                uac_speaker->need_resume = 0;
+            if (uac_speaker[usb_id]->need_resume) {
+                uac_speaker[usb_id]->need_resume = 0;
                 uac_rx_handler[usb_id](uac_rx_priv[usb_id], (void *)obuf, len);
-                //uac_speaker->rx_handler(0, (void *)obuf, len);
+                //uac_speaker[usb_id]->rx_handler(0, (void *)obuf, len);
             }
         }
-        uac_speaker->alive = 0;
+        uac_speaker[usb_id]->alive = 0;
     }
 }
 
@@ -178,30 +178,30 @@ void uac_speaker_stream_open(const usb_dev usb_id, u32 samplerate, u32 ch)
 
     log_info("%s", __func__);
 
-    if (!uac_speaker) {
+    if (!uac_speaker[usb_id]) {
 #if USB_MALLOC_ENABLE
-        uac_speaker = zalloc(sizeof(struct uac_speaker_handle));
-        if (!uac_speaker) {
+        uac_speaker[usb_id] = zalloc(sizeof(struct uac_speaker_handle));
+        if (!uac_speaker[usb_id]) {
             return;
         }
 
-        uac_speaker->buffer = malloc(UAC_BUFFER_SIZE);
-        if (!uac_speaker->buffer) {
-            free(uac_speaker);
-            uac_speaker = NULL;
+        uac_speaker[usb_id]->buffer = malloc(UAC_BUFFER_SIZE);
+        if (!uac_speaker[usb_id]->buffer) {
+            free(uac_speaker[usb_id]);
+            uac_speaker[usb_id] = NULL;
             goto __err;
         }
 #else
-        uac_speaker = &uac_speaker_handle;
-        memset(uac_speaker, 0, sizeof(struct uac_speaker_handle));
-        uac_speaker->buffer = uac_rx_buffer;
+        uac_speaker[usb_id] = &uac_speaker_handle[usb_id];
+        memset(uac_speaker[usb_id], 0, sizeof(struct uac_speaker_handle));
+        uac_speaker[usb_id]->buffer = uac_rx_buffer[usb_id];
 #endif
-        uac_speaker->channel = ch;
+        uac_speaker[usb_id]->channel = ch;
     }
 
-    //uac_speaker->rx_handler = NULL;
+    //uac_speaker[usb_id]->rx_handler = NULL;
 
-    cbuf_init(&uac_speaker->cbuf, uac_speaker->buffer, UAC_BUFFER_SIZE);
+    cbuf_init(&uac_speaker[usb_id]->cbuf, uac_speaker[usb_id]->buffer, UAC_BUFFER_SIZE);
 
     struct device_event event = {0};
     event.event = USB_AUDIO_PLAY_OPEN;
@@ -230,14 +230,14 @@ void uac_speaker_stream_close(const usb_dev usb_id)
     speaker_stream_is_open[usb_id] = 0;
     spin_unlock(&uac_lock);
 
-    if (uac_speaker) {
+    if (uac_speaker[usb_id]) {
 #if USB_MALLOC_ENABLE
-        if (uac_speaker->buffer) {
-            free(uac_speaker->buffer);
+        if (uac_speaker[usb_id]->buffer) {
+            free(uac_speaker[usb_id]->buffer);
         }
-        free(uac_speaker);
+        free(uac_speaker[usb_id]);
 #endif
-        uac_speaker = NULL;
+        uac_speaker[usb_id] = NULL;
     }
 
     struct device_event event = {0};
@@ -272,7 +272,7 @@ void uac_mute_volume(const usb_dev usb_id, u32 type, u32 l_vol, u32 r_vol)
     switch (type) {
     case MIC_FEATURE_UNIT_ID: //MIC
         if (mic_stream_is_open[usb_id] == 0) {
-            return ;
+            return;
         }
         if (l_vol == last_mic_vol) {
             return;

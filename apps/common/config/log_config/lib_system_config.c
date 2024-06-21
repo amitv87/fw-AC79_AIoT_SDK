@@ -46,6 +46,14 @@ const int VIRFAT_FLASH_ENABLE = 0;
 const int FILT_0SIZE_ENABLE = 1; //是否过滤0大小文件
 const int FILE_TIME_HIDDEN_ENABLE = 0;  //是否隐藏文件时间
 const int FILE_AUTO_RENAME_NUM = 1;//自动重命名文件数量配置 配置数*8192
+const int FILE_TIME_USER_DEFINE_ENABLE = 0; //用户自行通过fat_set_datetime_info设置文件系统的时间
+const int FATFS_TIMESORT_TURN_ENABLE = 0; //时排序翻转，由默认从小到大变成从大到小
+const int FATFS_TIMESORT_NUM = 128; //按时间排序,记录文件数量
+const int FATFS_SUPPORT_OVERSECTOR_RW = 1; //是否支持超过一个sector向设备拿数
+const int FATFS_RW_MAX_CACHE = 32 * 1024; //设置读写申请的最大cache大小，小于512会被默认不生效
+const int FATFS_SUPPORT_WRITE_SAVE_MEANTIME = 0; //每次写同步目录项使能，会降低连续写速度。未fclose文件掉电场景使用
+const int FATFS_SUPPORT_WRITE_CUTOFF = 0; //支持fseek截断文件，打开后fseek后指针位置决定文件大小
+const int FATFS_GET_SPACE_USE_RAM = 0; //获取剩余容量使用大Buf缓存, 必须512倍数
 
 //================================================//
 //                  dev使用异步读使能             //

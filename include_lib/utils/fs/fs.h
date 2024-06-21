@@ -111,9 +111,9 @@ struct vfs_operations;
 struct vfs_devinfo {
     void *fd;
     u32 sector_size;
+    u32 fatbase;
+    u32 database;
     void *private_data;
-    u32 block_start;
-    u32 block_end;
 };
 /// \endcond
 
@@ -199,6 +199,9 @@ struct vfscan {
     struct vfs_devinfo *dev;		/*!< 设备信息 */
     struct vfs_partition *part;		/*!< 分区信息 */
     char filt_dir[12];				/*!< 设置文件夹过滤 */
+    char fasten_num[8];
+    char *fasten_buf;
+    char *d_save;
 };
 
 /// \cond DO_NOT_DOCUMENT
@@ -278,22 +281,6 @@ struct imount *mount(const char *dev_name, const char *path, const char *fs_type
                      int cache_num, void *dev_arg);
 
 /**
- * @brief 支持自定义偏移量的挂载设备虚拟文件系统
- *
- * @param dev_name 设备名称
- * @param path 挂载点路径
- * @param fs_type 文件系统类型(支持"fat" "devfs" "ramfs" "sdfile")
- * @param cache_num  文件系统缓存
- * @param dev_arg 设备参数指针
- * @param block_offset 自定义引导扇区的起始block块偏移量(低32位),结束block块偏移量(高32位,取0默认设置为介质的最后block)
- *
- * @return 指向挂载点结构体的指针
- * @return NULL 挂载失败
- */
-struct imount *mount_ext(const char *dev_name, const char *path, const char *fs_type,
-                         int cache_num, void *dev_arg, u64 block_offset);
-
-/**
  * @brief 卸载设备虚拟文件系统
  *
  * @param path 挂载点路径
@@ -304,7 +291,7 @@ struct imount *mount_ext(const char *dev_name, const char *path, const char *fs_
 int unmount(const char *path);
 
 /**
- * @brief 支持自定义偏移量的格式化驱动器
+ * @brief 格式化驱动器
  *
  * @param path 需要格式化的根目录
  * @param fs_type 文件系统类型
@@ -314,19 +301,6 @@ int unmount(const char *path);
  * @return other: 格式化失败
  */
 int f_format(const char *path, const char *fs_type, u32 clust_size);
-
-/**
- * @brief 格式化驱动器
- *
- * @param path 需要格式化的根目录
- * @param fs_type 文件系统类型
- * @param clust_size 簇大小,簇为0时默认为卡本身簇大小
- * @param block_offset 自定义引导扇区的起始block块偏移量(低32位),结束block块偏移量(高32位,取0默认设置为介质的最后block)
- *
- * @return 0: 格式化成功
- * @return other: 格式化失败
- */
-int f_format_ext(const char *path, const char *fs_type, u32 clust_size, u64 block_offset);
 
 /**
  * @brief 刷新文件缓存数据（一般使用在fclose后某些数据还没有及时写进SD卡，需要主动刷新一下缓存区）

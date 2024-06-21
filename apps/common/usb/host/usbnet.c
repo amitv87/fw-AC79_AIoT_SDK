@@ -7,17 +7,19 @@
 
 #if TCFG_HOST_WIRELESS_ENABLE
 
-/* #define __LOG_LEVEL  __LOG_DEBUG */
-#define netif_dbg(fmt,arg...)
-
-#define log_info(x, ...)     printf("[USBNET] " x " ", ## __VA_ARGS__)
+#define LOG_TAG_CONST       USB
+#define LOG_TAG             "[net]"
+#define LOG_ERROR_ENABLE
+#define LOG_DEBUG_ENABLE
+#define LOG_INFO_ENABLE
+/* #define LOG_DUMP_ENABLE */
+#define LOG_CLI_ENABLE
+#include "debug.h"
 
 #define	EL3RST		(40)	/* Level 3 reset */
 #define ETH_ALEN    (6)
 /* #define	ETIMEDOUT	(238)	[> Connection timed out <] */
 
-static u32 usb_recv_len = 0;
-static u8 *usb_recv_buf = NULL;
 static USBNET_RX_COMPLETE_CB usbnet_rx_complete_cb = NULL;
 
 static void keepalive_period_task(void *priv);
@@ -33,7 +35,7 @@ static int get_power(struct usb_host_device *host_dev, u32 value)
     return DEV_ERR_NONE;
 }
 
-static struct wireless_device_t wireless_dev = {0};
+static struct wireless_device_t wireless_dev[USB_MAX_HW_NUM];
 
 static const struct interface_ctrl wireless_ctrl = {
     .interface_class = USB_CLASS_WIRELESS_CONTROLLER,
@@ -49,14 +51,30 @@ static const struct interface_ctrl at_port_ctrl = {
     .ioctl = NULL,
 };
 
-static const struct usb_interface_info wireless_inf = {
-    .ctrl = (struct interface_ctrl *) &wireless_ctrl,
-    .dev.wireless = &wireless_dev,
+static const struct usb_interface_info wireless_inf[USB_MAX_HW_NUM] = {
+    {
+        .ctrl = (struct interface_ctrl *) &wireless_ctrl,
+        .dev.wireless = &wireless_dev[0],
+    },
+#if USB_MAX_HW_NUM > 1
+    {
+        .ctrl = (struct interface_ctrl *) &wireless_ctrl,
+        .dev.wireless = &wireless_dev[1],
+    }
+#endif
 };
 
-static const struct usb_interface_info at_port_inf = {
-    .ctrl = (struct interface_ctrl *) &at_port_ctrl,
-    .dev.wireless = &wireless_dev,
+static const struct usb_interface_info at_port_inf[USB_MAX_HW_NUM] = {
+    {
+        .ctrl = (struct interface_ctrl *) &at_port_ctrl,
+        .dev.wireless = &wireless_dev[0],
+    },
+#if USB_MAX_HW_NUM > 1
+    {
+        .ctrl = (struct interface_ctrl *) &at_port_ctrl,
+        .dev.wireless = &wireless_dev[1],
+    }
+#endif
 };
 
 
@@ -66,9 +84,33 @@ void __attribute__((weak)) copy_usbnet_mac_addr(u8 *mac)
 }
 
 
-void __attribute__((weak)) copy_usbnet_endpoint(struct usb_endpoint_descriptor *endpoint, u8 type, u32 i, u32 len)
+void usb_net_stop_process(usb_dev usb_id)
 {
-    return;
+    if (wireless_dev[usb_id].epin_buf) {
+        usb_h_free_ep_buffer(usb_id, wireless_dev[usb_id].epin_buf);
+        wireless_dev[usb_id].epin_buf = NULL;
+    }
+    if (wireless_dev[usb_id].epout_buf) {
+        usb_h_free_ep_buffer(usb_id, wireless_dev[usb_id].epout_buf);
+        wireless_dev[usb_id].epout_buf = NULL;
+    }
+    if (wireless_dev[usb_id].inbuf) {
+        free(wireless_dev[usb_id].inbuf);
+        wireless_dev[usb_id].inbuf = NULL;
+    }
+}
+
+
+void usb_net_at_port_stop_process(usb_dev usb_id)
+{
+    if (wireless_dev[usb_id].epin_buf_at) {
+        usb_h_free_ep_buffer(usb_id, wireless_dev[usb_id].epin_buf_at);
+        wireless_dev[usb_id].epin_buf_at = NULL;
+    }
+    if (wireless_dev[usb_id].epout_buf_at) {
+        usb_h_free_ep_buffer(usb_id, wireless_dev[usb_id].epout_buf_at);
+        wireless_dev[usb_id].epout_buf_at = NULL;
+    }
 }
 
 
@@ -80,22 +122,15 @@ int is_wireless_rndis(struct usb_interface_descriptor *desc)
 }
 
 
-u32 usbnet_host_bulk_only_send(u8 *buf, u32 len)
+int usbnet_host_bulk_only_send(usb_dev usb_id, u8 *buf, u32 len)
 {
-    u32 ret = usb_h_bulk_write(wireless_dev.usb_id, wireless_dev.host_epout, wireless_dev.txmaxp, wireless_dev.epout, buf, len);
-    /* log_info(">>>%s, ret = %d\n", __FUNCTION__, ret); */
-    /* put_buf(buf, len); */
-    return ret;
+    return usb_h_bulk_write(usb_id, wireless_dev[usb_id].host_epout, wireless_dev[usb_id].txmaxp, wireless_dev[usb_id].epout, buf, len);
 }
 
 
-u32 usbnet_host_at_data_send(u8 *buf, u32 len)
+int usbnet_host_at_data_send(usb_dev usb_id, u8 *buf, u32 len)
 {
-    /* printf("usb%d lte tx hep %d tep %d \nat_cmd: %s\n", wireless_dev.usb_id, wireless_dev.host_epin_at, wireless_dev.epout_at, (char *)buf); */
-    u32 ret = usb_h_bulk_write(wireless_dev.usb_id, wireless_dev.host_epout_at, wireless_dev.txmaxp_at, wireless_dev.epout_at, buf, len);
-    /* log_info(">>>%s, ret = %d\n", __FUNCTION__, ret); */
-    /* put_buf(buf, len); */
-    return ret;
+    return usb_h_bulk_write(usb_id, wireless_dev[usb_id].host_epout_at, wireless_dev[usb_id].txmaxp_at, wireless_dev[usb_id].epout_at, buf, len);
 }
 
 
@@ -104,34 +139,37 @@ void usbnet_set_rx_complete_cb(USBNET_RX_COMPLETE_CB cb)
     usbnet_rx_complete_cb = cb;
 }
 
-
-void usbnet_host_bulk_only_receive_int(void *buf, u32 len)
+int usbnet_get_rxmaxp(usb_dev usb_id)
 {
-    usb_recv_buf = buf;
-    usb_recv_len = len;
+    return wireless_dev[usb_id].rxmaxp;
+}
+
+void usbnet_host_bulk_only_receive_int(usb_dev usb_id)
+{
+    if (wireless_dev[usb_id].inbuf) {
+        //触发传输由上层决定，否则buffer会有改写的风险
+        usb_h_ep_read_async(usb_id, wireless_dev[usb_id].host_epin, wireless_dev[usb_id].epin, NULL, 0, USB_ENDPOINT_XFER_BULK, 1);
+    }
 }
 
 
 static void usbnet_rx_isr(struct usb_host_device *host_dev, u32 ep)
 {
-    u32 rx_len = 0;
+    int rx_len = 0;
     usb_dev usb_id = host_device2id(host_dev);
-    u32 target_ep = wireless_dev.epin;
+    u32 target_ep = wireless_dev[usb_id].epin;
 
-    if (!usb_recv_buf || !usb_recv_len) {
+    if (!wireless_dev[usb_id].inbuf) {
         return;
     }
 
-    rx_len = usb_h_ep_read_async(usb_id, ep, target_ep, usb_recv_buf, usb_recv_len, USB_ENDPOINT_XFER_INT, 0);
-    if (rx_len && usbnet_rx_complete_cb) {
-        /* printf("------------------111----------------\n"); */
-        /* printf("rx_len = %d, usb_recv_len = %d", rx_len, usb_recv_len); */
-        /* put_buf(usb_recv_buf, rx_len); */
-        /* printf("------------------222----------------\n"); */
-        usbnet_rx_complete_cb(rx_len);
+    rx_len = usb_h_ep_read_async(usb_id, ep, target_ep, wireless_dev[usb_id].inbuf, wireless_dev[usb_id].rxmaxp, USB_ENDPOINT_XFER_BULK, 0);
+    if (rx_len > 0 && usbnet_rx_complete_cb) {
+        usbnet_rx_complete_cb(usb_id, wireless_dev[usb_id].inbuf, rx_len);
     }
-
-    usb_h_ep_read_async(usb_id, ep, target_ep, usb_recv_buf, usb_recv_len, USB_ENDPOINT_XFER_INT, 1);
+    if (rx_len == 0 || !usbnet_rx_complete_cb) {
+        usb_h_ep_read_async(usb_id, ep, target_ep, NULL, 0, USB_ENDPOINT_XFER_BULK, 1);
+    }
 }
 
 
@@ -143,17 +181,15 @@ void usbnet_at_port_rx_handler_register(void (*func)(u8 *buf, u32 len))
 
 static void usbnet_at_port_rx_isr(struct usb_host_device *host_dev, u32 ep)
 {
-    /* printf("%s() %d\n", __func__, __LINE__); */
-    u32 rx_len = 0;
+    int rx_len = 0;
     usb_dev usb_id = host_device2id(host_dev);
-    u32 target_ep = wireless_dev.epin_at;
+    u32 target_ep = wireless_dev[usb_id].epin_at;
     u8 usb_recv_buf[64];
-    u8 usb_recv_len = 64;
+    u8 usb_recv_len = sizeof(usb_recv_buf);
 
     /* printf("usb%d lte rx hep %d %d tep %d \n", usb_id, ep, wireless_dev.host_epin_at, target_ep); */
     rx_len = usb_h_ep_read_async(usb_id, ep, target_ep, usb_recv_buf, usb_recv_len, USB_ENDPOINT_XFER_BULK, 0);
-    if (rx_len) {
-        /* printf("%s\n", usb_recv_buf); */
+    if (rx_len > 0) {
         if (usbnet_at_port_rx_handler) {
             usbnet_at_port_rx_handler(usb_recv_buf, rx_len);
         }
@@ -163,16 +199,14 @@ static void usbnet_at_port_rx_isr(struct usb_host_device *host_dev, u32 ep)
 }
 
 
-
 s32 usbnet_at_port_parser(struct usb_host_device *host_dev, u8 interface_num, const u8 *pBuf)
 {
     s32 len = 0;
-    const u8 *buf;
     u8 rx_interval = 0;
     const usb_dev usb_id = host_device2id(host_dev);
     struct usb_endpoint_descriptor *end_desc = NULL;
     struct usb_interface_descriptor *interface = NULL;
-    host_dev->interface_info[interface_num] = &at_port_inf;
+    host_dev->interface_info[interface_num] = &at_port_inf[usb_id];
 
     u32 cur_len;
     u32 cur_type;
@@ -247,37 +281,53 @@ s32 usbnet_at_port_parser(struct usb_host_device *host_dev, u8 interface_num, co
 
             if ((end_desc->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK) == USB_ENDPOINT_XFER_BULK) {
                 if (end_desc->bEndpointAddress & USB_DIR_IN) {
-                    if (end_desc->bEndpointAddress != 0x84) {  //4G模块有好几个接形式一样的interface-endpoint接口，固定取AT COM端点
+                    if (end_desc->bEndpointAddress != 0x84 && \
+                        end_desc->bEndpointAddress != 0x86) {  //4G模块有好几个接形式一样的interface-endpoint接口，固定取AT COM端点
                         goto __parser_next;
                     }
-                    wireless_dev.host_epin_at = usb_get_ep_num(usb_id, USB_DIR_IN, USB_ENDPOINT_XFER_BULK);
-                    wireless_dev.epin_at   = end_desc->bEndpointAddress & 0x0f;
-                    wireless_dev.rxmaxp_at = end_desc->wMaxPacketSize;
+                    wireless_dev[usb_id].host_epin_at = usb_get_ep_num(usb_id, USB_DIR_IN, USB_ENDPOINT_XFER_BULK);
+                    wireless_dev[usb_id].epin_at   = end_desc->bEndpointAddress & 0x0f;
+                    wireless_dev[usb_id].rxmaxp_at = end_desc->wMaxPacketSize;
                     rx_interval = end_desc->bInterval;
-                    printf("^^^IN : end_desc->wMaxPacketSize = %d, end_desc->bInterval = %d\n", end_desc->wMaxPacketSize, end_desc->bInterval);
-
-                    usb_h_set_ep_isr(host_dev, wireless_dev.host_epin_at | USB_DIR_IN, usbnet_at_port_rx_isr, host_dev);
-                    if (!wireless_dev.epin_buf_at) {
-                        wireless_dev.epin_buf_at = usb_h_alloc_ep_buffer(usb_id, wireless_dev.host_epin_at | USB_DIR_IN, wireless_dev.rxmaxp_at * 2);
+                    log_info("AT IN : id = %d, host_epin_at = %d, epin_at = %d, rxmaxp_at = %d", usb_id, wireless_dev[usb_id].host_epin_at, wireless_dev[usb_id].epin_at, wireless_dev[usb_id].rxmaxp_at);
+                    if (usb_id == 0) {
+                        wireless_dev[usb_id].rxmaxp_at = 64;
                     }
-                    usb_write_rxfuncaddr(usb_id, wireless_dev.host_epin_at, host_dev->private_data.devnum);
-                    usb_h_ep_config(usb_id, wireless_dev.host_epin_at | USB_DIR_IN, USB_ENDPOINT_XFER_BULK, 1, rx_interval, wireless_dev.epin_buf_at, wireless_dev.rxmaxp_at);
+#if HUSB_MODE && (FUSB_MODE == 0)
+                    if (wireless_dev[usb_id].rxmaxp_at > 512) {
+                        wireless_dev[usb_id].rxmaxp_at = 512;
+                    }
+#endif
+                    usb_h_set_ep_isr(host_dev, wireless_dev[usb_id].host_epin_at | USB_DIR_IN, usbnet_at_port_rx_isr, host_dev);
+                    if (!wireless_dev[usb_id].epin_buf_at) {
+                        wireless_dev[usb_id].epin_buf_at = usb_h_alloc_ep_buffer(usb_id, wireless_dev[usb_id].host_epin_at | USB_DIR_IN, wireless_dev[usb_id].rxmaxp_at * 2);
+                    }
+                    usb_write_rxfuncaddr(usb_id, wireless_dev[usb_id].host_epin_at, host_dev->private_data.devnum);
+                    usb_h_ep_config(usb_id, wireless_dev[usb_id].host_epin_at | USB_DIR_IN, USB_ENDPOINT_XFER_BULK, 1, rx_interval, wireless_dev[usb_id].epin_buf_at, wireless_dev[usb_id].rxmaxp_at);
 
-                    usb_h_ep_read_async(usb_id, wireless_dev.host_epin_at, wireless_dev.epin_at, NULL, 0, USB_ENDPOINT_XFER_BULK, 1);
+                    usb_h_ep_read_async(usb_id, wireless_dev[usb_id].host_epin_at, wireless_dev[usb_id].epin_at, NULL, 0, USB_ENDPOINT_XFER_BULK, 1);
                 } else {
-                    if (end_desc->bEndpointAddress != 0x03) {  //4G模块有好几个接形式一样的interface-endpoint接口，固定取AT COM端点
+                    if (end_desc->bEndpointAddress != 0x03 && \
+                        end_desc->bEndpointAddress != 0x0F) {  //4G模块有好几个接形式一样的interface-endpoint接口，固定取AT COM端点
                         goto __parser_next;
                     }
-                    wireless_dev.host_epout_at = usb_get_ep_num(usb_id, USB_DIR_OUT, USB_ENDPOINT_XFER_BULK);
-                    wireless_dev.epout_at  = end_desc->bEndpointAddress & 0x0f;
-                    wireless_dev.txmaxp_at = end_desc->wMaxPacketSize;
-                    printf("^^^OUT : end_desc->wMaxPacketSize = %d\n", end_desc->wMaxPacketSize);
-
-                    if (!wireless_dev.epout_buf_at) {
-                        wireless_dev.epout_buf_at = usb_h_alloc_ep_buffer(usb_id, wireless_dev.host_epout_at | USB_DIR_OUT, wireless_dev.txmaxp_at);
+                    wireless_dev[usb_id].host_epout_at = usb_get_ep_num(usb_id, USB_DIR_OUT, USB_ENDPOINT_XFER_BULK);
+                    wireless_dev[usb_id].epout_at  = end_desc->bEndpointAddress & 0x0f;
+                    wireless_dev[usb_id].txmaxp_at = end_desc->wMaxPacketSize;
+                    log_info("AT OUT : id = %d, host_epout_at = %d, epout_at = %d, txmaxp_at = %d", usb_id, wireless_dev[usb_id].host_epout_at, wireless_dev[usb_id].epout_at, wireless_dev[usb_id].txmaxp_at);
+                    if (usb_id == 0) {
+                        wireless_dev[usb_id].txmaxp_at = 64;
                     }
-                    usb_write_txfuncaddr(usb_id, wireless_dev.host_epout_at, host_dev->private_data.devnum);
-                    usb_h_ep_config(usb_id, wireless_dev.host_epout_at | USB_DIR_OUT, USB_ENDPOINT_XFER_BULK, 0, 0, wireless_dev.epout_buf_at, wireless_dev.txmaxp_at);
+#if HUSB_MODE && (FUSB_MODE == 0)
+                    if (wireless_dev[usb_id].txmaxp_at > 512) {
+                        wireless_dev[usb_id].txmaxp_at = 512;
+                    }
+#endif
+                    if (!wireless_dev[usb_id].epout_buf_at) {
+                        wireless_dev[usb_id].epout_buf_at = usb_h_alloc_ep_buffer(usb_id, wireless_dev[usb_id].host_epout_at | USB_DIR_OUT, wireless_dev[usb_id].txmaxp_at);
+                    }
+                    usb_write_txfuncaddr(usb_id, wireless_dev[usb_id].host_epout_at, host_dev->private_data.devnum);
+                    usb_h_ep_config(usb_id, wireless_dev[usb_id].host_epout_at | USB_DIR_OUT, USB_ENDPOINT_XFER_BULK, 0, 0, wireless_dev[usb_id].epout_buf_at, wireless_dev[usb_id].txmaxp_at);
                 }
             }
         } else if (cur_type == USB_DT_CS_ENDPOINT) {
@@ -288,6 +338,7 @@ s32 usbnet_at_port_parser(struct usb_host_device *host_dev, u8 interface_num, co
 __parser_next:
         len += cur_len;
     }
+
     return len;
 }
 
@@ -298,16 +349,20 @@ s32 usbnet_generic_cdc_parser(struct usb_host_device *host_dev, u8 interface_num
     u8 loop = 1;
     u8 rx_interval = 0;
     const usb_dev usb_id = host_device2id(host_dev);
-    host_dev->interface_info[interface_num] = &wireless_inf;
+    host_dev->interface_info[interface_num] = &wireless_inf[usb_id];
     struct usb_interface_descriptor *interface = (struct usb_interface_descriptor *)pBuf;
-    wireless_inf.dev.wireless->parent = host_dev;
+    wireless_inf[usb_id].dev.wireless->parent = host_dev;
     struct usb_endpoint_descriptor *end_desc = NULL;
-
-    pBuf += sizeof(struct usb_interface_descriptor);
     const u8 *buf = pBuf;
-    wireless_dev.usb_id = usb_id;
 
-    puts("usb_cdc_parser \n");
+    if (interface->bInterfaceClass == USB_CLASS_CDC_DATA) {
+        log_info("usb_cdc_parser");
+        len += sizeof(struct usb_interface_descriptor);
+        goto __set_config;
+    }
+
+    len += sizeof(struct usb_interface_descriptor);
+    buf += sizeof(struct usb_interface_descriptor);
 
     while (loop) {
         if (buf[1] != USB_DT_CS_INTERFACE) {
@@ -341,7 +396,8 @@ s32 usbnet_generic_cdc_parser(struct usb_host_device *host_dev, u8 interface_num
                 len += USB_DT_ENDPOINT_SIZE;
                 len += USB_DT_INTERFACE_SIZE;
 
-                for (char endnum = 0; endnum < 2; endnum++) {
+__set_config:
+                for (int endnum = 0; endnum < 2; endnum++) {
                     end_desc = (struct usb_endpoint_descriptor *)(pBuf + len);
 
                     if (end_desc->bDescriptorType != USB_DT_ENDPOINT ||
@@ -352,35 +408,56 @@ s32 usbnet_generic_cdc_parser(struct usb_host_device *host_dev, u8 interface_num
 
                     if ((end_desc->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK) == USB_ENDPOINT_XFER_BULK) {
                         if (end_desc->bEndpointAddress & USB_DIR_IN) {
-                            wireless_dev.host_epin = usb_get_ep_num(usb_id, USB_DIR_IN, USB_ENDPOINT_XFER_BULK);
-                            wireless_dev.epin   = end_desc->bEndpointAddress & 0x0f;
-                            wireless_dev.rxmaxp = end_desc->wMaxPacketSize;
+                            wireless_dev[usb_id].host_epin = usb_get_ep_num(usb_id, USB_DIR_IN, USB_ENDPOINT_XFER_BULK);
+                            wireless_dev[usb_id].epin   = end_desc->bEndpointAddress & 0x0f;
+                            wireless_dev[usb_id].rxmaxp = end_desc->wMaxPacketSize;
+                            if (usb_id == 0) {
+                                wireless_dev[usb_id].rxmaxp = 64;
+                            }
+#if HUSB_MODE && (FUSB_MODE == 0)
+                            if (wireless_dev[usb_id].rxmaxp > 512) {
+                                wireless_dev[usb_id].rxmaxp = 512;
+                            }
+#endif
                             rx_interval = end_desc->bInterval;
-                            printf("^^^IN : end_desc->wMaxPacketSize = %d, end_desc->bInterval = %d\n", end_desc->wMaxPacketSize, end_desc->bInterval);
+                            log_info("CDC IN : id = %d, host_epin = %d, epin = %d, rxmaxp = %d", usb_id, wireless_dev[usb_id].host_epin, wireless_dev[usb_id].epin, wireless_dev[usb_id].rxmaxp);
                         } else {
-                            wireless_dev.host_epout = usb_get_ep_num(usb_id, USB_DIR_OUT, USB_ENDPOINT_XFER_BULK);
-                            wireless_dev.epout  = end_desc->bEndpointAddress & 0x0f;
-                            wireless_dev.txmaxp = end_desc->wMaxPacketSize;
-                            printf("^^^OUT : end_desc->wMaxPacketSize = %d\n", end_desc->wMaxPacketSize);
+                            wireless_dev[usb_id].host_epout = usb_get_ep_num(usb_id, USB_DIR_OUT, USB_ENDPOINT_XFER_BULK);
+                            wireless_dev[usb_id].epout  = end_desc->bEndpointAddress & 0x0f;
+                            wireless_dev[usb_id].txmaxp = end_desc->wMaxPacketSize;
+                            if (usb_id == 0) {
+                                wireless_dev[usb_id].txmaxp = 64;
+                            }
+#if HUSB_MODE && (FUSB_MODE == 0)
+                            if (wireless_dev[usb_id].txmaxp > 512) {
+                                wireless_dev[usb_id].txmaxp = 512;
+                            }
+#endif
+                            log_info("CDC OUT2 : id = %d, host_epout = %d, epout = %d, txmaxp = %d", usb_id, wireless_dev[usb_id].host_epout, wireless_dev[usb_id].epout, wireless_dev[usb_id].txmaxp);
                         }
                     }
                 }
 
-                usb_h_set_ep_isr(host_dev, wireless_dev.host_epin | USB_DIR_IN, usbnet_rx_isr, host_dev);
-                if (!wireless_dev.epin_buf) {
-                    wireless_dev.epin_buf = usb_h_alloc_ep_buffer(usb_id, wireless_dev.host_epin | USB_DIR_IN, 64 * 2);
+                usb_h_set_ep_isr(host_dev, wireless_dev[usb_id].host_epin | USB_DIR_IN, usbnet_rx_isr, host_dev);
+                if (!wireless_dev[usb_id].epin_buf) {
+                    wireless_dev[usb_id].epin_buf = usb_h_alloc_ep_buffer(usb_id, wireless_dev[usb_id].host_epin | USB_DIR_IN, wireless_dev[usb_id].rxmaxp * 2);
                 }
-                usb_h_ep_config(usb_id, wireless_dev.host_epin | USB_DIR_IN, USB_ENDPOINT_XFER_BULK, 1, rx_interval, wireless_dev.epin_buf, 64);
-
-                if (!wireless_dev.epout_buf) {
-                    wireless_dev.epout_buf = usb_h_alloc_ep_buffer(usb_id, wireless_dev.host_epout | USB_DIR_OUT, 64);
+                if (!wireless_dev[usb_id].inbuf) {
+                    wireless_dev[usb_id].inbuf = malloc(wireless_dev[usb_id].rxmaxp);
                 }
-                usb_h_ep_config(usb_id, wireless_dev.host_epout | USB_DIR_OUT, USB_ENDPOINT_XFER_BULK, 0, 0, wireless_dev.epout_buf, 64);
+                usb_write_rxfuncaddr(usb_id, wireless_dev[usb_id].host_epin, host_dev->private_data.devnum);
+                usb_h_ep_config(usb_id, wireless_dev[usb_id].host_epin | USB_DIR_IN, USB_ENDPOINT_XFER_BULK, 1, rx_interval, wireless_dev[usb_id].epin_buf, wireless_dev[usb_id].rxmaxp);
 
-                usb_h_ep_read_async(usb_id, wireless_dev.host_epin, wireless_dev.epin, NULL, 0, USB_ENDPOINT_XFER_BULK, 1);
+                if (!wireless_dev[usb_id].epout_buf) {
+                    wireless_dev[usb_id].epout_buf = usb_h_alloc_ep_buffer(usb_id, wireless_dev[usb_id].host_epout | USB_DIR_OUT, wireless_dev[usb_id].txmaxp);
+                }
+                usb_write_txfuncaddr(usb_id, wireless_dev[usb_id].host_epout, host_dev->private_data.devnum);
+                usb_h_ep_config(usb_id, wireless_dev[usb_id].host_epout | USB_DIR_OUT, USB_ENDPOINT_XFER_BULK, 0, 0, wireless_dev[usb_id].epout_buf, wireless_dev[usb_id].txmaxp);
+
+                /* usb_h_ep_read_async(usb_id, wireless_dev[usb_id].host_epin, wireless_dev[usb_id].epin, NULL, 0, USB_ENDPOINT_XFER_BULK, 1); */
             }
             return len;
-            break;
+        /* break; */
 
         case USB_CDC_ETHERNET_TYPE:
             break;
@@ -395,6 +472,7 @@ next_desc:
         len += buf[0];	/* bLength */
         buf += buf[0];
     }
+
     return len;
 }
 
@@ -411,7 +489,6 @@ next_desc:
  */
 int rndis_command(struct usb_host_device *device, struct rndis_msg_hdr *buf, int buflen)
 {
-
     int			master_ifnum;
     int			retval;
     int			partial;
@@ -453,7 +530,6 @@ int rndis_command(struct usb_host_device *device, struct rndis_msg_hdr *buf, int
                                  0, master_ifnum,
                                  buf, buflen);
 
-
         if (likely(retval == 0)) {
             msg_len = le32_to_cpu(buf->msg_len);
             request_id = (u32) buf->request_id;
@@ -465,7 +541,7 @@ int rndis_command(struct usb_host_device *device, struct rndis_msg_hdr *buf, int
                     if (unlikely(rsp == RNDIS_MSG_RESET_C)) {
                         return 0;
                     } else if (unlikely(rsp == RNDIS_MSG_KEEPALIVE_C)) {
-                        log_info("RNDIS_MSG_KEEPALIVE_C\n");
+                        log_info("RNDIS_MSG_KEEPALIVE_C");
                         return 0;
                     }
 
@@ -476,13 +552,13 @@ int rndis_command(struct usb_host_device *device, struct rndis_msg_hdr *buf, int
                     return -EL3RST;
                 }
                 log_info(
-                    "rndis reply id %d expected %d\n",
+                    "rndis reply id %d expected %d",
                     request_id, xid);
                 /* then likely retry */
             } else switch (buf->msg_type) {
                 case RNDIS_MSG_INDICATE:	/* fault/event */
                     //rndis_msg_indicate(dev, (void *)buf, buflen);
-                    log_info("RNDIS_MSG_INDICATE\n");
+                    log_info("RNDIS_MSG_INDICATE");
                     /* put_buf(buf, buflen); */
                     break;
                 case RNDIS_MSG_KEEPALIVE: {	/* ping */
@@ -499,23 +575,23 @@ int rndis_command(struct usb_host_device *device, struct rndis_msg_hdr *buf, int
                                             );
                     if (unlikely(retval < 0))
                         log_info(
-                            "rndis keepalive err %d\n",
+                            "rndis keepalive err %d",
                             retval);
                 }
                 break;
                 default:
                     log_info(
-                        "unexpected rndis msg %08x len %d\n",
+                        "unexpected rndis msg %08x len %d",
                         le32_to_cpu(buf->msg_type), msg_len);
+                    break;
                 }
         } else {
             /* device probably issued a protocol stall; ignore */
-            log_info(
-                "rndis response error, code %d\n", retval);
+            log_error("rndis response error, code %d\n", retval);
         }
         msleep(20);
     }
-    log_info("rndis response timeout\n");
+    log_error("rndis response timeout\n");
     return -ETIMEDOUT;
 }
 
@@ -560,11 +636,10 @@ static int rndis_query(struct usb_host_device *device,
 
     /* put_buf((u8*)u.header,u.header->msg_len); */
 
-
     retval = rndis_command(device, u.header, CONTROL_BUFFER_SIZE);
     if (unlikely(retval < 0)) {
-        log_info("RNDIS_MSG_QUERY(0x%08x) failed, %d\n",
-                 oid, retval);
+        log_error("RNDIS_MSG_QUERY(0x%08x) failed, %d\n",
+                  oid, retval);
         return retval;
     }
 
@@ -585,9 +660,9 @@ static int rndis_query(struct usb_host_device *device,
     return retval;
 
 response_error:
-    log_info("RNDIS_MSG_QUERY(0x%08x) "
-             "invalid response - off %d len %d\n",
-             oid, off, len);
+    log_error("RNDIS_MSG_QUERY(0x%08x) "
+              "invalid response - off %d len %d\n",
+              oid, off, len);
     return -EDOM;
 }
 
@@ -622,8 +697,6 @@ int generic_rndis_bind(struct usb_host_device *device, int flags)
 
     //retval = usbnet_generic_cdc_bind(dev, intf);
 
-
-
     u.init->msg_type = RNDIS_MSG_INIT;
     u.init->msg_len = cpu_to_le32(sizeof * u.init);
     u.init->major_version = cpu_to_le32(1);
@@ -634,7 +707,7 @@ int generic_rndis_bind(struct usb_host_device *device, int flags)
 
     if (unlikely(retval < 0)) {
         /* it might not even be an RNDIS device!! */
-        log_info("RNDIS init failed, %d\n", retval);
+        log_error("RNDIS init failed, %d\n", retval);
         goto fail_and_release;
     }
     log_info("RNDIS_MSG_INIT_C:\r\n \
@@ -693,7 +766,7 @@ int generic_rndis_bind(struct usb_host_device *device, int flags)
     retval = rndis_query(device, u.buf, OID_GEN_PHYSICAL_MEDIUM,
                          0, (void **) &phym, &reply_len);
 
-    log_info("QUERY->OID_GEN_PHYSICAL_MEDIUM, retval = %d, phym = %x\n", retval, *phym);
+    log_info("QUERY->OID_GEN_PHYSICAL_MEDIUM, retval = %d, phym = %x", retval, *phym);
 
     if (retval != 0 || !phym) {
         /* OID is optional so don't fail here. */
@@ -702,27 +775,21 @@ int generic_rndis_bind(struct usb_host_device *device, int flags)
     }
     if ((flags & FLAG_RNDIS_PHYM_WIRELESS) &&
         *phym != RNDIS_PHYSICAL_MEDIUM_WIRELESS_LAN) {
-        netif_dbg(dev, probe, dev->net,
-                  "driver requires wireless physical medium, but device is not\n");
-        log_info("driver requires wireless physical medium, but device is not\n");
+        log_error("driver requires wireless physical medium, but device is not\n");
         retval = -ENODEV;
         goto halt_fail_and_release;
     }
     if ((flags & FLAG_RNDIS_PHYM_NOT_WIRELESS) &&
         *phym == RNDIS_PHYSICAL_MEDIUM_WIRELESS_LAN) {
-        netif_dbg(dev, probe, dev->net,
-                  "driver requires non-wireless physical medium, but device is wireless.\n");
-        log_info("driver requires non-wireless physical medium, but device is wireless\n");
+        log_error("driver requires non-wireless physical medium, but device is wireless\n");
         retval = -ENODEV;
         goto halt_fail_and_release;
     }
 
-////////////////////////////////////////////////
-
     reply_len = sizeof * phym;
     retval = rndis_query(device, u.buf, OID_GEN_MEDIA_CONNECT_STATUS,
                          0, (void **)&conn_status, &reply_len);
-    log_info("QUERY->OID_GEN_MEDIA_CONNECT_STATUS, retval = %d, conn_status = %x\n", retval, *conn_status);
+    log_info("QUERY->OID_GEN_MEDIA_CONNECT_STATUS, retval = %d, conn_status = %x", retval, *conn_status);
 
 
     reply_len = ETH_ALEN;
@@ -730,10 +797,7 @@ int generic_rndis_bind(struct usb_host_device *device, int flags)
                          48, (void **) &bp, &reply_len);
 
     log_info("QUERY->OID_802_3_CURRENT_ADDRESS, retval = %d: \
-              addr = [%X:%X:%X:%X:%X:%X]\r\n", retval, bp[0], bp[1], bp[2], bp[3], bp[4], bp[5]);
-
-////////////////////////////////////////////////
-
+              addr = [%X:%X:%X:%X:%X:%X]", retval, bp[0], bp[1], bp[2], bp[3], bp[4], bp[5]);
 
     /* Get designated host ethernet address */
     reply_len = ETH_ALEN;
@@ -741,11 +805,11 @@ int generic_rndis_bind(struct usb_host_device *device, int flags)
                          48, (void **) &bp, &reply_len);
 
     if (unlikely(retval < 0)) {
-        log_info("rndis get ethaddr, %d\n", retval);
+        log_error("rndis get ethaddr, %d\n", retval);
         goto halt_fail_and_release;
     }
     log_info("QUERY->OID_802_3_PERMANENT_ADDRESS: \
-              addr = [%X:%X:%X:%X:%X:%X]\r\n", bp[0], bp[1], bp[2], bp[3], bp[4], bp[5]);
+              addr = [%X:%X:%X:%X:%X:%X]", bp[0], bp[1], bp[2], bp[3], bp[4], bp[5]);
     copy_usbnet_mac_addr(bp);
 
 #if 0
@@ -786,8 +850,7 @@ int generic_rndis_bind(struct usb_host_device *device, int flags)
     *(__le32 *)(u.buf + sizeof * u.set) = cpu_to_le32(0x03);
     /* put_buf(u.set, 4 + sizeof * u.set); */
     retval = rndis_command(device, u.header, CONTROL_BUFFER_SIZE);
-    log_info("SET->RNDIS_DEFAULT_FILTER, 0x03:  retval = %d\n", retval);
-
+    log_info("SET->RNDIS_DEFAULT_FILTER, 0x03:  retval = %d", retval);
 
     u8 val[6] = {0x33, 0x33, 0x00, 0x00, 0x00, 0x01};
     memset(u.set, 0, sizeof * u.set);
@@ -799,8 +862,7 @@ int generic_rndis_bind(struct usb_host_device *device, int flags)
     memcpy((__le32 *)(u.buf + sizeof * u.set), val, 6);
     /* put_buf(u.set, 6 + sizeof * u.set); */
     retval = rndis_command(device, u.header, CONTROL_BUFFER_SIZE);
-    log_info("SET->OID_802_3_MULTICAST_LIST:  retval = %d\n", retval);
-
+    log_info("SET->OID_802_3_MULTICAST_LIST:  retval = %d", retval);
 
     memset(u.set, 0, sizeof * u.set);
     u.set->msg_type = RNDIS_MSG_SET;
@@ -811,8 +873,7 @@ int generic_rndis_bind(struct usb_host_device *device, int flags)
     *(__le32 *)(u.buf + sizeof * u.set) = cpu_to_le32(0x07);
     /* put_buf(u.set, 4 + sizeof * u.set); */
     retval = rndis_command(device, u.header, CONTROL_BUFFER_SIZE);
-    log_info("SET->RNDIS_DEFAULT_FILTER, 0x07:  retval = %d\n", retval);
-
+    log_info("SET->RNDIS_DEFAULT_FILTER, 0x07:  retval = %d", retval);
 
     memset(u.set, 0, sizeof * u.set);
     u.set->msg_type = RNDIS_MSG_SET;
@@ -823,15 +884,14 @@ int generic_rndis_bind(struct usb_host_device *device, int flags)
     *(__le32 *)(u.buf + sizeof * u.set) = cpu_to_le32(0x0f);
     /* put_buf(u.set, 4 + sizeof * u.set); */
     retval = rndis_command(device, u.header, CONTROL_BUFFER_SIZE);
-    log_info("SET->RNDIS_DEFAULT_FILTER, 0x0f:  retval = %d\n", retval);
-
-
+    log_info("SET->RNDIS_DEFAULT_FILTER, 0x0f:  retval = %d", retval);
 #endif
+
     memset(u.alive, 0, sizeof * u.alive);
     u.alive->msg_type = RNDIS_MSG_KEEPALIVE;
     u.alive->msg_len = cpu_to_le32(sizeof * u.alive);
     retval = rndis_command(device, u.header, CONTROL_BUFFER_SIZE);
-    log_info("SET->RNDIS_MSG_KEEPALIVE, retval = %d\n", retval);
+    log_info("SET->RNDIS_MSG_KEEPALIVE, retval = %d", retval);
 
     /* thread_fork("keepalive_period_task", 6, 512, 0, NULL, keepalive_period_task, NULL); */
     ////////////////////////////////////////////////////////
@@ -839,6 +899,7 @@ int generic_rndis_bind(struct usb_host_device *device, int flags)
     retval = 0;
 
     free(u.buf);
+
     return retval;
 
 halt_fail_and_release:
@@ -856,7 +917,7 @@ fail:
     return retval;
 }
 
-
+#if 0
 static void keepalive_period_task(void *priv)
 {
     int retval = 0;
@@ -880,5 +941,7 @@ static void keepalive_period_task(void *priv)
         os_time_dly(100);
     }
 }
+#endif
 
 #endif
+

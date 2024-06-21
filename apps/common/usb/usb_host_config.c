@@ -24,6 +24,9 @@
 #elif TCFG_HID_HOST_ENABLE || TCFG_HOST_AUDIO_ENABLE
 #define     MAX_HOST_EP_RX  4
 #define     MAX_HOST_EP_TX  4
+#elif TCFG_HOST_WIRELESS_ENABLE
+#define     MAX_HOST_EP_RX  3
+#define     MAX_HOST_EP_TX  3
 #else
 #define     MAX_HOST_EP_RX  2
 #define     MAX_HOST_EP_TX  2   //ep0 & ep1(msd)

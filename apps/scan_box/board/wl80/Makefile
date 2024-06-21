@@ -22,21 +22,15 @@ AR    := llvm-ar.exe
 MKDIR := mkdir_win -p
 RM    := rm -rf
 
-SYS_LIB_DIR := \
-	C:/JL/pi32/pi32v2-lib/r3 \
-
-
-SYS_INC_DIR := \
-	C:/JL/pi32/pi32v2-include \
-
-
+SYS_LIB_DIR := C:/JL/pi32/pi32v2-lib/r3
+SYS_INC_DIR := C:/JL/pi32/pi32v2-include
 EXT_CFLAGS  := # Windows 下不需要 -D__SHELL__
 export PATH:=$(TOOL_DIR);$(PATH)
 
 ## 后处理脚本
 FIXBAT          := ..\..\..\..\tools\utils\fixbat.exe # 用于处理 utf8->gbk 编码问题
-POST_SCRIPT     := ..\..\..\..\cpu\wl80\tools\download.bat
-RUN_POST_SCRIPT := $(POST_SCRIPT)
+POST_SCRIPT     := ../../../../cpu/wl80/tools/download.bat
+RUN_POST_SCRIPT := ..\..\..\..\cpu\wl80\tools\download.bat
 else
 # Linux 下工具链位置
 TOOL_DIR := /opt/jieli/pi32v2/bin
@@ -247,6 +241,7 @@ c_SRC_FILES := \
 	../../../../apps/common/usb/device/hid.c \
 	../../../../apps/common/usb/device/msd.c \
 	../../../../apps/common/usb/device/msd_upgrade.c \
+	../../../../apps/common/usb/device/printer.c \
 	../../../../apps/common/usb/device/ram_disk_circle.c \
 	../../../../apps/common/usb/device/ram_disk_update.c \
 	../../../../apps/common/usb/device/task_pc.c \
@@ -266,6 +261,7 @@ c_SRC_FILES := \
 	../../../../apps/common/usb/host/usb_video.c \
 	../../../../apps/common/usb/host/usbnet.c \
 	../../../../apps/common/usb/host/uvc_host.c \
+	../../../../apps/common/usb/host/uvc_jl_upgrade.c \
 	../../../../apps/common/usb/usb_config.c \
 	../../../../apps/common/usb/usb_epbuf_manager.c \
 	../../../../apps/common/usb/usb_host_config.c \

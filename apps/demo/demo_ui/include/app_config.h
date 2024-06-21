@@ -90,7 +90,8 @@
 #define TCFG_USE_SD_ADD_UI_FILE             0  //使用SD卡加载资源文件
 
 #if CONFIG_BOARD_7916A
-#define TCFG_LCD_ST7789S_ENABLE			    1
+#define TCFG_LCD_ILI9488_ENABLE			    1
+#define TCFG_LCD_ST7789S_ENABLE			    0
 #define TCFG_LCD_ST7789V_ENABLE			    0
 #define TCFG_LCD_ST7735S_ENABLE			    0
 #define TCFG_LCD_480x272_8BITS			    0
