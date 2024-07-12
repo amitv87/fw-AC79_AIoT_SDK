@@ -14,11 +14,19 @@
 #include "lv_port_fs.h"
 #include "../../lvgl.h"
 #include "fs/fs.h"
-#include "character_coding.h"
+#include "generic/typedef.h"
 
 /*********************
  *      DEFINES
  *********************/
+#define FPGA_TEST 0
+
+#if FPGA_TEST
+#define CONFIG_BIN_PATH "storage/sd0/C/" //SD卡
+char buffer[1024 * 50] = {0};
+#else
+#define CONFIG_IMG_BIN_PATH "mnt/sdfile/res/" //flash资源路径
+#endif
 
 /**********************
  *      TYPEDEFS
@@ -56,6 +64,119 @@ static lv_fs_res_t fs_dir_close(lv_fs_drv_t *drv, void *rddir_p);
 /**********************
  *   GLOBAL FUNCTIONS
  **********************/
+#if FPGA_TEST
+lv_res_t lv_get_img_dsc_bin(const char *src, lv_img_dsc_t *bin_dsc)
+{
+    char route[128] = CONFIG_BIN_PATH;
+    strcat(route, src);
+    FILE *profile_fp = fopen(route, "r");
+    if (profile_fp == NULL) {
+        puts("user_get_sd_file ERROR!!!\r\n");
+        return LV_RES_INV;
+    }
+    fseek(profile_fp, 20, SEEK_SET);
+    fread(bin_dsc, 1, sizeof(lv_img_dsc_t), profile_fp);
+    fseek(profile_fp, 32, SEEK_SET);
+    int bytesRead = fread(buffer, sizeof(char), sizeof(buffer), profile_fp);
+    bin_dsc->data = buffer;//data赋值
+    printf("h = %d", bin_dsc->header.h);
+    printf("w = %d", bin_dsc->header.w);
+    printf("cf = %d", bin_dsc->header.cf);
+    printf("reserved = %d", bin_dsc->header.reserved);
+    fclose(profile_fp);
+    return LV_RES_OK;
+}
+//JLBinResource
+lv_res_t lv_get_JLBinResource(const char *src, JLBinResource *bin_res)
+{
+    char route[128] = CONFIG_BIN_PATH;
+    strcat(route, src);
+    FILE *profile_fp = fopen(route, "r");
+    if (profile_fp == NULL) {
+        puts("user_get_sd_file ERROR!!!\r\n");
+        return LV_RES_INV;
+    }
+    fread(bin_res, 1, sizeof(JLBinResource), profile_fp);
+    fclose(profile_fp);
+    printf("jl_header.res_type = %d", bin_res->jl_header.res_type);
+    printf("jl_header.res_compress = %d", bin_res->jl_header.res_compress);
+    printf("jl_header.res_crc = %d", bin_res->jl_header.res_crc);
+    printf("jl_header.res_size = %d", bin_res->jl_header.res_size);
+    printf("jl_header.res_nop = %d", bin_res->jl_header.nop);
+    return LV_RES_OK;
+}
+
+lv_res_t lv_get_type_bin(const char *src, JL_get_type *type)
+{
+    char route[128] = CONFIG_BIN_PATH;
+    strcat(route, src);
+    FILE *profile_fp = fopen(route, "r");
+    if (profile_fp == NULL) {
+        puts("user_get_sd_file ERROR!!!\r\n");
+        return LV_RES_INV;
+    }
+    fread(type, 1, sizeof(JL_get_type), profile_fp);
+    printf("first_byte = %d", type->first_byte);
+    printf("first_byte = %d", type->second_byte);
+    fclose(profile_fp);
+    return LV_RES_OK;
+}
+#else
+
+//get lv_img_dsc_t
+lv_res_t lv_get_img_dsc_bin(const char *src, lv_img_dsc_t *bin_dsc)
+{
+    char route[128] = CONFIG_IMG_BIN_PATH;
+    strcat(route, src);
+    u32 addr;
+    FILE *profile_fp = fopen(route, "r");
+    if (profile_fp == NULL) {
+        puts("user_get_flash_addr ERROR!!!\r\n");
+        return LV_RES_INV;
+    }
+    struct vfs_attr file_attr;
+    fget_attrs(profile_fp, &file_attr);
+    addr = file_attr.sclust;
+    fclose(profile_fp);
+    memcpy(bin_dsc, addr + sizeof(JLBinResource), sizeof(lv_img_dsc_t));
+    bin_dsc->data = (addr + (bin_dsc->data));
+    return LV_RES_OK;
+}
+lv_res_t lv_get_JLBinResource(const char *src, JLBinResource *bin_res)
+{
+    char route[128] = CONFIG_IMG_BIN_PATH;
+    strcat(route, src);
+    u32 addr;
+    FILE *profile_fp = fopen(route, "r");
+    if (profile_fp == NULL) {
+        puts("user_get_flash_addr ERROR!!!\r\n");
+        return LV_RES_INV;
+    }
+    struct vfs_attr file_attr;
+    fget_attrs(profile_fp, &file_attr);
+    addr = file_attr.sclust;
+    fclose(profile_fp);
+    memcpy(bin_res, addr, sizeof(JLBinResource));
+    return LV_RES_OK;
+}
+lv_res_t lv_get_type_bin(const char *src, JL_get_type *type)
+{
+    char route[128] = CONFIG_IMG_BIN_PATH;
+    strcat(route, src);
+    u32 addr;
+    FILE *profile_fp = fopen(route, "r");
+    if (profile_fp == NULL) {
+        puts("user_get_flash_addr ERROR!!!\r\n");
+        return LV_RES_INV;
+    }
+    struct vfs_attr file_attr;
+    fget_attrs(profile_fp, &file_attr);
+    addr = file_attr.sclust;
+    fclose(profile_fp);
+    memcpy(type, addr, sizeof(JL_get_type));
+    return LV_RES_OK;
+}
+#endif
 
 void lv_port_fs_init(void)
 {
@@ -133,7 +254,7 @@ static void *fs_open(lv_fs_drv_t *drv, const char *path, lv_fs_mode_t mode)
     file = fopen(path, "r");
 #endif
     if (file == NULL) {
-        printf("%s, open [%s][%s] fail! \r\n", __FUNCTION__, _path, fmode);
+        printf("%s, open [%s][%s] fail! \r\n", __FUNCTION__, path, fmode);
         return NULL;
     }
     return file;

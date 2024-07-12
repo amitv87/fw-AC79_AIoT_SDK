@@ -101,12 +101,9 @@ void lv_file_explorer_set_quick_access_path(lv_obj_t *obj, lv_file_explorer_dir_
     case LV_EXPLORER_DOCS_DIR:
         dir_str = &(explorer->docs_dir);
         break;
-    //case LV_EXPLORER_MNT_DIR:
-    //    dir_str = &(explorer->home_dir);
-    //    break;
-    //case LV_EXPLORER_FS_DIR:
-    //    dir_str = &(explorer->home_dir);
-    //    break;
+    case LV_EXPLORER_FS_DIR:
+        dir_str = &(explorer->fs_dir);
+        break;
 
     default:
         return;
@@ -150,6 +147,17 @@ void lv_file_explorer_set_quick_access_state(lv_obj_t *obj, bool state)
     }
 
     lv_event_send(explorer->quick_access_ctrl_btn, LV_EVENT_VALUE_CHANGED, NULL);
+}
+
+void lv_file_explorer_set_list_width_pct(lv_obj_t *obj, lv_coord_t w)
+{
+    LV_ASSERT_OBJ(obj, MY_CLASS);
+
+    lv_file_explorer_t *explorer = (lv_file_explorer_t *)obj;
+
+    explorer->list_w_pct = w;
+    lv_obj_set_width(explorer->quick_access_area, LV_PCT(w));
+    lv_obj_set_width(explorer->brower_area, LV_PCT(100 - w));
 }
 #endif
 
@@ -258,6 +266,7 @@ static void lv_file_explorer_constructor(const lv_obj_class_t *class_p, lv_obj_t
     explorer->pictures_dir = NULL;
     explorer->music_dir = NULL;
     explorer->docs_dir = NULL;
+    explorer->fs_dir = NULL;
 #endif
 
     lv_memset_00(explorer->cur_path, sizeof(explorer->cur_path));
@@ -272,6 +281,7 @@ static void lv_file_explorer_constructor(const lv_obj_class_t *class_p, lv_obj_t
 #if LV_FILE_EXPLORER_QUICK_ACCESS
     // 左侧快速访问栏区域
     explorer->quick_access_area = lv_obj_create(explorer->cont);
+    explorer->list_w_pct = FILE_EXPLORER_QUICK_ACCESS_AREA_WIDTH;
     lv_obj_set_size(explorer->quick_access_area, LV_PCT(FILE_EXPLORER_QUICK_ACCESS_AREA_WIDTH), LV_PCT(100));
     lv_obj_set_flex_flow(explorer->quick_access_area, LV_FLEX_FLOW_COLUMN);
 #endif
@@ -287,7 +297,7 @@ static void lv_file_explorer_constructor(const lv_obj_class_t *class_p, lv_obj_t
 
     // 展示在文件浏览列表之上的区域(head)
     explorer->head_area = lv_obj_create(explorer->brower_area);
-    lv_obj_set_size(explorer->head_area, LV_PCT(100), LV_PCT(12));
+    lv_obj_set_size(explorer->head_area, LV_PCT(100), LV_PCT(14));
     lv_obj_clear_flag(explorer->head_area, LV_OBJ_FLAG_SCROLLABLE);
 
 #if LV_FILE_EXPLORER_QUICK_ACCESS
@@ -308,8 +318,6 @@ static void lv_file_explorer_constructor(const lv_obj_class_t *class_p, lv_obj_t
     lv_obj_set_style_bg_color(lv_list_add_text(explorer->list_device, "DEVICE"), lv_palette_main(LV_PALETTE_ORANGE), 0);
 
     btn = lv_list_add_btn(explorer->list_device, NULL, LV_SYMBOL_DRIVE " File System");
-    lv_obj_add_event_cb(btn, quick_access_event_handler, LV_EVENT_CLICKED, obj);
-    btn = lv_list_add_btn(explorer->list_device, NULL, LV_SYMBOL_DRIVE " Mnt");
     lv_obj_add_event_cb(btn, quick_access_event_handler, LV_EVENT_CLICKED, obj);
 
     // 列表2
@@ -336,7 +344,7 @@ static void lv_file_explorer_constructor(const lv_obj_class_t *class_p, lv_obj_t
 
     // 目录内容展示列表
     explorer->file_list = lv_table_create(explorer->brower_area);
-    lv_obj_set_size(explorer->file_list, LV_PCT(100), LV_PCT(84));
+    lv_obj_set_size(explorer->file_list, LV_PCT(100), LV_PCT(86));
     lv_table_set_col_width(explorer->file_list, 0, LV_PCT(100));
     lv_table_set_col_cnt(explorer->file_list, 1);
     lv_obj_add_event_cb(explorer->file_list, brower_file_event_handler, LV_EVENT_ALL, obj);
@@ -483,19 +491,7 @@ static void quick_access_event_handler(lv_event_t *e)
         } else if ((strcmp(label_text, LV_SYMBOL_FILE "  Documents") == 0)) {
             path = &(explorer->docs_dir);
         } else if ((strcmp(label_text, LV_SYMBOL_DRIVE " File System") == 0)) {
-#if LV_USE_FS_WIN32
-            path = NULL;
-#else
-            char *tmp_str = "/";
-            path = &tmp_str;
-#endif
-        } else if ((strcmp(label_text, LV_SYMBOL_DRIVE " Mnt") == 0)) {
-#if LV_USE_FS_WIN32
-            path = NULL;
-#else
-            char *tmp_str = "/mnt";
-            path = &tmp_str;
-#endif
+            path = &(explorer->fs_dir);
         }
 
         if (path != NULL) {
@@ -518,7 +514,8 @@ static void quick_access_ctrl_btn_event_handler(lv_event_t *e)
             lv_obj_set_size(explorer->brower_area, LV_PCT(100), LV_PCT(100));
         } else {
             lv_obj_clear_flag(explorer->quick_access_area, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_set_size(explorer->brower_area, LV_PCT(FILE_EXPLORER_BROWER_AREA_WIDTH), LV_PCT(100));
+            // lv_obj_set_size(explorer->brower_area, LV_PCT(FILE_EXPLORER_BROWER_AREA_WIDTH), LV_PCT(100));
+            lv_obj_set_size(explorer->brower_area, LV_PCT(100 - explorer->list_w_pct), LV_PCT(100));
         }
     }
 }

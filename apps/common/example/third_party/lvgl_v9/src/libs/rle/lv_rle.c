@@ -61,7 +61,11 @@ uint32_t lv_rle_decompress(const uint8_t *input,
 
             wr_len += bytes;
             if (wr_len > output_buff_len) {
-                return 0;
+                if (wr_len > output_buff_len + blk_size) {
+                    return 0;    /* Error */
+                }
+                lv_memcpy(output, input, output_buff_len - (wr_len - bytes));
+                return output_buff_len;
             }
 
             lv_memcpy(output, input, bytes);
@@ -75,7 +79,16 @@ uint32_t lv_rle_decompress(const uint8_t *input,
 
             wr_len += blk_size * ctrl_byte;
             if (wr_len > output_buff_len) {
-                return 0;
+                if (wr_len > output_buff_len + blk_size) {
+                    return 0;    /* Error happened */
+                }
+
+                /* Skip the last pixel, which could overflow output buffer.*/
+                for (uint32_t i = 0; i < ctrl_byte - 1; i++) {
+                    lv_memcpy(output, input, blk_size);
+                    output += blk_size;
+                }
+                return output_buff_len;
             }
 
             if (blk_size == 1) {

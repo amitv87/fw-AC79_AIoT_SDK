@@ -1001,7 +1001,6 @@ static void next_click_event_cb(lv_event_t *e)
     }
 }
 
-
 static void timer_cb(lv_timer_t *t)
 {
     LV_UNUSED(t);
@@ -1016,7 +1015,6 @@ static void spectrum_end_cb(lv_anim_t *a)
     _lv_demo_music_album_next(true);
 }
 
-
 static void stop_start_anim_timer_cb(lv_timer_t *t)
 {
     LV_UNUSED(t);
@@ -1030,4 +1028,3 @@ static void album_fade_anim_cb(void *var, int32_t v)
     lv_obj_set_style_img_opa(var, v, 0);
 }
 #endif /*LV_USE_DEMO_MUSIC*/
-

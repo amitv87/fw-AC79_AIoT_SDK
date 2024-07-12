@@ -39,8 +39,10 @@
 //                                  FCC测试相关配置                                //
 //*********************************************************************************//
 //#define RF_FCC_TEST_ENABLE//使能RF_FCC测试，详细配置见"apps/common/rf_fcc_tool/include/rf_fcc_main.h"
-
-
+//#define CONFIG_WIFI_ADAPTIVITY_ENABLE 1//使能wifi自适应测试
+#if CONFIG_WIFI_ADAPTIVITY_ENABLE
+#define RF_FCC_IN_NORNAL_WORK
+#endif
 
 
 #define CONFIG_DEBUG_ENABLE                     /* 打印开关 */

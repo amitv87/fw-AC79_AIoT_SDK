@@ -245,6 +245,19 @@ int os_taskq_pend(const char *fmt, int *argv, int argc);
 
 /* ----------------------------------------------------------------------------*/
 /**
+ * @brief 接收任务队列消息，无限等待
+ * @param[in]  fmt: "taskq"
+ * @param[in]  argv: 可用消息数组
+ * @param[in]  argc: 可用消息个数
+ * @param[in]  tick: 超时tick个数
+ * @return OS_TASKQ: 成功
+ * @return OS_Q_EMPTY: 任务消息队列为空
+ */
+/* ----------------------------------------------------------------------------*/
+int os_taskq_pend_timeout(const char *fmt, int *argv, int argc, int tick);
+
+/* ----------------------------------------------------------------------------*/
+/**
  * @brief 发送任务队列普通消息
  * @param[in]  name: 消息队列所属任务名
  * @param[in]  argc: 消息个数

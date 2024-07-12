@@ -12,6 +12,8 @@
 #include "../misc/lv_ll.h"
 #include "../misc/lv_gc.h"
 
+#include "lv_port_fs.h"
+
 /*********************
  *      DEFINES
  *********************/
@@ -94,6 +96,13 @@ lv_res_t lv_img_decoder_get_info(const void *src, lv_img_header_t *header)
         if (img_dsc->data == NULL) {
             return LV_RES_INV;
         }
+    } else if (src_type == LV_IMG_SRC_BIN) {
+        lv_img_dsc_t src_dsc;
+        lv_get_img_dsc_bin(src, &src_dsc);//
+        const lv_img_dsc_t *img_dsc = &src_dsc;
+        if (img_dsc->data == NULL) {
+            return LV_RES_INV;
+        }
     }
 
     lv_res_t res = LV_RES_INV;
@@ -113,6 +122,7 @@ lv_res_t lv_img_decoder_get_info(const void *src, lv_img_header_t *header)
 lv_res_t lv_img_decoder_open(lv_img_decoder_dsc_t *dsc, const void *src, lv_color_t color, int32_t frame_id)
 {
     lv_memset_00(dsc, sizeof(lv_img_decoder_dsc_t));
+    lv_img_dsc_t src_dsc;
 
     if (src == NULL) {
         return LV_RES_INV;
@@ -120,6 +130,12 @@ lv_res_t lv_img_decoder_open(lv_img_decoder_dsc_t *dsc, const void *src, lv_colo
     lv_img_src_t src_type = lv_img_src_get_type(src);
     if (src_type == LV_IMG_SRC_VARIABLE) {
         const lv_img_dsc_t *img_dsc = src;
+        if (img_dsc->data == NULL) {
+            return LV_RES_INV;
+        }
+    } else if (src_type == LV_IMG_SRC_BIN) {
+        lv_get_img_dsc_bin(src, &src_dsc);
+        const lv_img_dsc_t *img_dsc = &src_dsc;
         if (img_dsc->data == NULL) {
             return LV_RES_INV;
         }
@@ -138,6 +154,8 @@ lv_res_t lv_img_decoder_open(lv_img_decoder_dsc_t *dsc, const void *src, lv_colo
             return LV_RES_INV;
         }
         strcpy((char *)dsc->src, src);
+    } else if (dsc->src_type == LV_IMG_SRC_BIN) {
+        dsc->src = &src_dsc;
     } else {
         dsc->src = src;
     }
@@ -306,6 +324,15 @@ lv_res_t lv_img_decoder_built_in_info(lv_img_decoder_t *decoder, const void *src
         header->w  = ((lv_img_dsc_t *)src)->header.w;
         header->h  = ((lv_img_dsc_t *)src)->header.h;
         header->cf = ((lv_img_dsc_t *)src)->header.cf;
+    } else if (src_type == LV_IMG_SRC_BIN) {
+        lv_img_dsc_t src_dsc;
+        lv_get_img_dsc_bin(src, &src_dsc);
+        if (src_dsc.header.cf < CF_BUILT_IN_FIRST || src_dsc.header.cf > CF_BUILT_IN_LAST) {
+            return LV_RES_INV;
+        }
+        header->w  = src_dsc.header.w;
+        header->h  = src_dsc.header.h;
+        header->cf = src_dsc.header.cf;
     } else if (src_type == LV_IMG_SRC_FILE) {
         /*Support only "*.bin" files*/
         if (strcmp(lv_fs_get_ext(src), "bin")) {
@@ -383,6 +410,10 @@ lv_res_t lv_img_decoder_built_in_open(lv_img_decoder_t *decoder, lv_img_decoder_
         if (((lv_img_dsc_t *)dsc->src)->data == NULL) {
             return LV_RES_INV;
         }
+    } else if (dsc->src_type == LV_IMG_SRC_BIN) {
+        if (((lv_img_dsc_t *)dsc->src)->data == NULL) {
+            return LV_RES_INV;
+        }
     }
 
     lv_img_cf_t cf = dsc->header.cf;
@@ -391,6 +422,9 @@ lv_res_t lv_img_decoder_built_in_open(lv_img_decoder_t *decoder, lv_img_decoder_
         if (dsc->src_type == LV_IMG_SRC_VARIABLE) {
             /*In case of uncompressed formats the image stored in the ROM/RAM.
              *So simply give its pointer*/
+            dsc->img_data = ((lv_img_dsc_t *)dsc->src)->data;
+            return LV_RES_OK;
+        } else if (dsc->src_type == LV_IMG_SRC_BIN) {
             dsc->img_data = ((lv_img_dsc_t *)dsc->src)->data;
             return LV_RES_OK;
         } else {
@@ -419,6 +453,9 @@ lv_res_t lv_img_decoder_built_in_open(lv_img_decoder_t *decoder, lv_img_decoder_
         if (dsc->src_type == LV_IMG_SRC_VARIABLE) {
             /*In case of uncompressed formats the image stored in the ROM/RAM.
              *So simply give its pointer*/
+            dsc->img_data = ((lv_img_dsc_t *)dsc->src)->data;
+            return LV_RES_OK;
+        } else if (dsc->src_type == LV_IMG_SRC_BIN) {
             dsc->img_data = ((lv_img_dsc_t *)dsc->src)->data;
             return LV_RES_OK;
         } else {
@@ -655,6 +692,9 @@ static lv_res_t lv_img_decoder_built_in_line_alpha(lv_img_decoder_dsc_t *dsc, lv
         const lv_img_dsc_t *img_dsc = dsc->src;
 
         data_tmp = img_dsc->data + ofs;
+    } else if (dsc->src_type == LV_IMG_SRC_BIN) {
+        const lv_img_dsc_t *img_dsc = dsc->src;
+        data_tmp = img_dsc->data + ofs;
     } else {
         lv_fs_seek(&user_data->f, ofs + 4, LV_FS_SEEK_SET); /*+4 to skip the header*/
         lv_fs_read(&user_data->f, fs_buf, w, NULL);
@@ -721,6 +761,9 @@ static lv_res_t lv_img_decoder_built_in_line_indexed(lv_img_decoder_dsc_t *dsc, 
     }
     const uint8_t *data_tmp = NULL;
     if (dsc->src_type == LV_IMG_SRC_VARIABLE) {
+        const lv_img_dsc_t *img_dsc = dsc->src;
+        data_tmp                     = img_dsc->data + ofs;
+    } else if (dsc->src_type == LV_IMG_SRC_BIN) {
         const lv_img_dsc_t *img_dsc = dsc->src;
         data_tmp                     = img_dsc->data + ofs;
     } else {

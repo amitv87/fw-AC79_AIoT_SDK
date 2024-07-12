@@ -151,7 +151,7 @@ DEFINES := \
 	-DFREETYPE_COMMIT_HASH=\"45903920b984540bb629bc89f4c010159c23a89a\" \
 	-DFT2_BUILD_LIBRARY \
 	-DRLOTTIE_COMMIT_HASH=\"056c0a1bc14bcee6f6b1a821013872a1228b0fa9\" \
-	-DLVGL_COMMIT_HASH=\"release_v9.0_51b8d8e4ea7ed4cb7a4ad295234740b81fc46e6b\" \
+	-DLVGL_COMMIT_HASH=\"release_v9.1_c5109ccceb5e4da741512471401916bafedc34fd\" \
 	-D_XOPEN_SOURCE=700 \
 	-D_GNU_SOURCE \
 	-D__ELF__ \
@@ -769,7 +769,6 @@ c_SRC_FILES := \
 	../../../../../apps/common/example/third_party/lvgl_v9/src/draw/lv_draw_rect.c \
 	../../../../../apps/common/example/third_party/lvgl_v9/src/draw/lv_draw_triangle.c \
 	../../../../../apps/common/example/third_party/lvgl_v9/src/draw/lv_draw_vector.c \
-	../../../../../apps/common/example/third_party/lvgl_v9/src/draw/lv_image_buf.c \
 	../../../../../apps/common/example/third_party/lvgl_v9/src/draw/lv_image_decoder.c \
 	../../../../../apps/common/example/third_party/lvgl_v9/src/draw/sw/blend/lv_draw_sw_blend.c \
 	../../../../../apps/common/example/third_party/lvgl_v9/src/draw/sw/blend/lv_draw_sw_blend_to_argb8888.c \

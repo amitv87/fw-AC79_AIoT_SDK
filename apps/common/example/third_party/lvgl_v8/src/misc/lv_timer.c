@@ -120,6 +120,7 @@ uint32_t LV_ATTRIBUTE_TIMER_HANDLER lv_timer_handler(void)
 
     //解耦了刷新定时器，由外部事件来触发刷新，放在这里执行有利于下面统计时间更精确
     /*if(lv_disp_get_default()->refr_timer==NULL)*/
+    void _lv_disp_refr_timer(lv_timer_t *tmr);
     _lv_disp_refr_timer(NULL);
 
     uint32_t time_till_next = LV_NO_TIMER_READY;

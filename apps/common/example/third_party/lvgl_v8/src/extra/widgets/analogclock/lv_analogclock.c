@@ -477,6 +477,9 @@ static void draw_ticks_and_labels(lv_obj_t *obj, lv_draw_ctx_t *draw_ctx, const 
 
     //如果已经设置了图片表盘，那么不显示刻度表盘
     if (analogclock->dial != NULL) {
+        if (analogclock->dial->src == NULL) {
+            return;
+        }
         lv_coord_t r_edge = lv_area_get_width(scale_area) / 2;
         lv_point_t scale_center;
         scale_center.x = scale_area->x1 + r_edge;
@@ -752,8 +755,8 @@ static void draw_needles(lv_obj_t *obj, lv_draw_ctx_t *draw_ctx, const lv_area_t
             a.y2 = a.y1 + info.h - 1;
 
             lv_opa_t opa = lv_obj_get_style_bg_opa(obj, LV_PART_MAIN);
-            // img_dsc.opa = indic->opa > LV_OPA_MAX ? opa_main : (opa_main * indic->opa) >> 8;
-            img_dsc.opa = opa;
+            img_dsc.opa = indic->opa > LV_OPA_MAX ? opa_main : (opa_main * indic->opa) >> 8;
+
             img_dsc.pivot.x = indic->type_data.needle_img.pivot.x;
             img_dsc.pivot.y = indic->type_data.needle_img.pivot.y;
             angle = angle * 10;

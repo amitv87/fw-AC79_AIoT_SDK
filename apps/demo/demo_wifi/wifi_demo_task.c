@@ -714,7 +714,10 @@ static void wifi_demo_task(void *priv)
 
 static int demo_wifi(void)
 {
+#ifndef RF_FCC_TEST_ENABLE
     return os_task_create(wifi_demo_task, NULL, 10, 1000, 0, "wifi_demo_task");
+#endif
 }
+
 late_initcall(demo_wifi);
 

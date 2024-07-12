@@ -54,7 +54,6 @@
 <Add option="-DCONFIG_UPDATA_ENABLE" />
 <Add option="-DCONFIG_OTA_UPDATA_ENABLE" />
 <Add option="-DCONFIG_ITEM_FORMAT_VM" />
-<Add option="-DCOREMARK_COMMIT_HASH=\&quot;d5fad6bd094899101a4e5fd53af7298160ced6ab\&quot;" />
 <Add option="-fno-unwind-tables" />
 <Add option="-ffunction-sections" />
 <Add option="-fdata-sections" />
@@ -86,8 +85,6 @@
 <Add directory="../../../../../apps/common/system/perf_counter" />
 <Add directory="../../../../../apps/demo/demo_hello/include" />
 <Add directory="../../../../../include_lib/system/os" />
-<Add directory="../../../../../apps/common/example/third_party/BenchMark/coremark" />
-<Add directory="../../../../../apps/common/example/third_party/BenchMark/coremark/posix" />
 </Compiler>
 <Linker>
 <Add option="--plugin-opt=-pi32v2-always-use-itblock=false" />
@@ -160,19 +157,6 @@
 <Unit filename="../../../../../apps/common/config/user_cfg.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/debug/debug.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/debug/debug_user.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="../../../../../apps/common/example/third_party/BenchMark/coremark/core_list_join.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="../../../../../apps/common/example/third_party/BenchMark/coremark/core_main.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="../../../../../apps/common/example/third_party/BenchMark/coremark/core_matrix.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="../../../../../apps/common/example/third_party/BenchMark/coremark/core_state.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="../../../../../apps/common/example/third_party/BenchMark/coremark/core_util.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="../../../../../apps/common/example/third_party/BenchMark/coremark/coremark.h" />
-<Unit filename="../../../../../apps/common/example/third_party/BenchMark/coremark/posix/core_portme.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="../../../../../apps/common/example/third_party/BenchMark/coremark/posix/core_portme.h" />
-<Unit filename="../../../../../apps/common/example/third_party/BenchMark/coremark/posix/core_portme_posix_overrides.h" />
-<Unit filename="../../../../../apps/common/example/third_party/BenchMark/dhrystone/dhry.h" />
-<Unit filename="../../../../../apps/common/example/third_party/BenchMark/dhrystone/dhry21a.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="../../../../../apps/common/example/third_party/BenchMark/dhrystone/dhry21b.c"><Option compilerVer="CC"/></Unit>
-<Unit filename="../../../../../apps/common/example/third_party/BenchMark/main.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/system/init.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/system/perf_counter/example/main.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/system/perf_counter/perf_counter.c"><Option compilerVer="CC"/></Unit>
@@ -204,11 +188,8 @@
 <Unit filename="../../../../../include_lib/c++/include/stdbool.h" />
 <Unit filename="../../../../../include_lib/c++/include/stddef.h" />
 <Unit filename="../../../../../include_lib/c++/include/stdint.h" />
-<Unit filename="../../../../../include_lib/c++/include/stdio.h" />
 <Unit filename="../../../../../include_lib/c++/include/stdlib.h" />
 <Unit filename="../../../../../include_lib/c++/include/string.h" />
-<Unit filename="../../../../../include_lib/c++/simple_pthread/pthread.h" />
-<Unit filename="../../../../../include_lib/c++/simple_pthread/simple_pthread_comm.h" />
 <Unit filename="../../../../../include_lib/driver/cpu/wl82/asm/WL82.h" />
 <Unit filename="../../../../../include_lib/driver/cpu/wl82/asm/adc_api.h" />
 <Unit filename="../../../../../include_lib/driver/cpu/wl82/asm/audio.h" />

@@ -184,7 +184,7 @@ __attribute__((weak)) u8 product_motor_init(void)
     return ERR_NO_SUPPORT_DEV_CMD;
 }
 
-__attribute__((weak)) u8 product_motor_ctl(u8 cmd, int flag, int step)
+__attribute__((weak)) u8 product_motor_ctl(u8 id, u8 cmd, int flag, int step)
 {
     return ERR_NO_SUPPORT_DEV_CMD;
 }
@@ -393,7 +393,7 @@ static u8 motor_control_handler(u8 id, cmd, json_object *args_obj)
         if (flag) {
             step = json_object_get_int(json_object_object_get(args_obj, "step"));
         }
-        rscorr = product_motor_ctl(cmd, flag, step);
+        rscorr = product_motor_ctl(id, cmd, flag, step);
         break;
 
     default:
@@ -816,6 +816,7 @@ static u8 wifi_control_handler(u8 id, cmd, json_object *args_obj)
 
     case CTL_WIFI_LAUNCH_SCAN:
         rscorr = wifi_scan_req() ? ERR_DEV_FAULT : ERR_NULL;
+        rscorr = ERR_NULL;
         break;
 
     case CTL_WIFI_GET_SCAN_RES:

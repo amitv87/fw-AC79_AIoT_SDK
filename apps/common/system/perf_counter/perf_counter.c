@@ -347,7 +347,7 @@ uint32_t timer_get_sec(void)
     return timer_get_ms() / 1000;
 }
 
-uint32_t get_system_us(void)
+int64_t get_system_us(void)
 {
     return (check_systick()) / s_nUSUnit;
 }

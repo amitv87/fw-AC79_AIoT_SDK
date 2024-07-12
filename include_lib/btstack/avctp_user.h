@@ -404,6 +404,8 @@ typedef enum {
     BT_STATUS_BROADCAST_STATE,/*braoadcaset中*/
 
     BT_STATUS_TRIM_OVER,        /*测试盒TRIM完成*/
+    BT_STATUS_CONN_HCRP_CH,    //HCRP连接成功
+    BT_STATUS_DISCONN_HCRP_CH, //HCRP通道断开
 } STATUS_FOR_USER;
 
 typedef enum {
@@ -443,6 +445,7 @@ typedef enum {
 #define    HFP_AG_CH    0x80
 #define    A2DP_SRC_CH  0x2000
 #define    MAP_CH       0x8000
+#define    HCRP_CH       0x10000
 struct sniff_ctrl_config_t {
     u16 sniff_max_interval;
     u16 sniff_mix_interval;
@@ -616,6 +619,8 @@ extern u8 multi_bd_get_call_incoming(void);  //一拖二获取两个设备状态
 #define BD_CLASS_REMOTE_CONTROL     0x00254C
 
 #define BD_CLASS_TRANSFER_HEALTH    0x10091C
+
+#define BD_CLASS_PRINTING           0x140680
 
 /*修改什么的类型，会影响到手机显示的图标*/
 extern void __change_hci_class_type(u32 class);

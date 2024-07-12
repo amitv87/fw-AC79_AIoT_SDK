@@ -292,6 +292,10 @@ static void bt_function_select_init(void)
     ////设置蓝牙设备类型
     __change_hci_class_type(BD_CLASS_CAR_AUDIO);
 #endif
+#if (USER_SUPPORT_PROFILE_HCRP==1)
+    ////设置蓝牙设备类型
+    __change_hci_class_type(BD_CLASS_PRINTING);
+#endif
 
 #if (TCFG_BT_SNIFF_ENABLE == 0)
     void lmp_set_sniff_disable(void);
@@ -864,6 +868,12 @@ static int bt_connction_status_event_handler(struct bt_event *bt)
     case BT_STATUS_RECONN_OR_CONN:
         log_i(" BT_STATUS_RECONN_OR_CONN\n");
         break;
+    case BT_STATUS_CONN_HCRP_CH:
+        log_i("  BT_STATUS_CONN_HCRP_CH \n");
+        break;
+    case BT_STATUS_DISCONN_HCRP_CH:
+        log_i("  BT_STATUS_DISCONN_HCRP_CH \n");
+        break;
     default:
         log_i(" BT STATUS DEFAULT\n");
         break;
@@ -1206,5 +1216,41 @@ int bt_music_key_event_handler(struct key_event *key)
 
     return false;
 }
+
+#if USER_SUPPORT_PROFILE_HCRP
+const char Service_name[] = "Hardcopy Cable Replacement";
+const char Ieee_1284id[] = "MFG:Jieli;CMD:PT-CBP;MDL:JL-001;CLS:PRINTER;CID:Jieli MobilePrinter TypeA1";
+const char Device_name[] = "JL-001";
+const char Friendly_name[] = "Jieli Bluetooth Printer";
+
+//用于将打印机状态返回给协议栈，应答给远端
+u16 printer_port_status()
+{
+    u16 printrt_status_bit = 0x108;
+    return printrt_status_bit;
+}
+
+//用于将接收buffer剩余大小返回给协议栈，应答给远端
+int printer_rx_buffer()
+{
+    int printer_rx_buffer_size = 0xcac;
+    return printer_rx_buffer_size;
+}
+
+//用于厂商自定义命令解析
+u8 hcrp_user_cmd(const u8 *packet, int size, u8 *send_cmd)
+{
+    log_i("no cmd\n");
+    put_buf(packet, size);
+    return strlen(send_cmd);
+}
+
+//接收到的数据
+void hcrp_rx_data_packet(u8 *packet, u16 size)
+{
+    log_i("%s\n", __func__);
+    put_buf(packet, size);
+}
+#endif
 
 #endif

@@ -17,8 +17,11 @@ UART1_PLATFORM_DATA_BEGIN(uart1_data)
     .flags = UART_DEBUG,
 UART1_PLATFORM_DATA_END();
 
-
+#ifdef RF_FCC_TEST_ENABLE
+struct uart_platform_data uart2_data = {
+#else
 UART2_PLATFORM_DATA_BEGIN(uart2_data)
+#endif
 	.baudrate = 1000000,
 	.port = PORT_REMAP,
 	.output_channel = OUTPUT_CHANNEL0,

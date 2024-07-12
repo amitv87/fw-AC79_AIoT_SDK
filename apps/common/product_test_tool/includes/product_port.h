@@ -29,7 +29,7 @@ u8 product_pir_init(void);
 u8 pir_monitor_ctl(u8 on);
 u8 product_license_flag_wr(u8 *flag, u8 is_write);
 u8 product_motor_init(void);
-u8 product_motor_ctl(u8 cmd, int flag, int step);
+u8 product_motor_ctl(u8 id, u8 cmd, int flag, int step);
 u8 product_gsensor_init(void);
 u8 product_gsensor_monitor_ctl(u8 cmd);
 u8 product_touchpanel_init(void);

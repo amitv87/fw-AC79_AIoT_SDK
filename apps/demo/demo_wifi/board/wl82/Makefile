@@ -124,6 +124,9 @@ DEFINES := \
 	-DCONFIG_UPDATA_ENABLE \
 	-DCONFIG_OTA_UPDATA_ENABLE \
 	-DCONFIG_ITEM_FORMAT_VM \
+	-D_POSIX_SOURCE \
+	-DFIONREAD \
+	-DFIONBIO \
 
 
 DEFINES += $(EXT_CFLAGS) # 额外的一些定义
@@ -180,6 +183,7 @@ c_SRC_FILES := \
 	../../../../../apps/common/net/wifi_conf.c \
 	../../../../../apps/common/rf_fcc_tool/bt.c \
 	../../../../../apps/common/rf_fcc_tool/rf_fcc_main.c \
+	../../../../../apps/common/rf_fcc_tool/wifi_adaptivity.c \
 	../../../../../apps/common/system/init.c \
 	../../../../../apps/common/system/perf_counter/example/main.c \
 	../../../../../apps/common/system/perf_counter/perf_counter.c \

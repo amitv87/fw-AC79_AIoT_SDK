@@ -63,6 +63,9 @@
 <Add option="-DCONFIG_UPDATA_ENABLE" />
 <Add option="-DCONFIG_OTA_UPDATA_ENABLE" />
 <Add option="-DCONFIG_ITEM_FORMAT_VM" />
+<Add option="-D_POSIX_SOURCE" />
+<Add option="-DFIONREAD" />
+<Add option="-DFIONBIO" />
 <Add directory="../../../../../include_lib/c++" />
 <Add directory="../../../../../include_lib/c++/include" />
 <Add directory="../../../../../include_lib/newlib/include" />
@@ -247,6 +250,7 @@
 <Unit filename="../../../../../apps/common/key/adkey.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/key/iokey.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/key/key_driver.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../apps/common/net/assign_macaddr.h" />
 <Unit filename="../../../../../apps/common/product_test_tool/communication.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/product_test_tool/devices_control.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/product_test_tool/includes/communication.h" />
@@ -262,6 +266,7 @@
 <Unit filename="../../../../../apps/common/rf_fcc_tool/include/datatype.h" />
 <Unit filename="../../../../../apps/common/rf_fcc_tool/include/rf_fcc_main.h" />
 <Unit filename="../../../../../apps/common/rf_fcc_tool/rf_fcc_main.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../apps/common/rf_fcc_tool/wifi_adaptivity.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/system/app_power_manage.h" />
 <Unit filename="../../../../../apps/common/system/device_mount.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/system/flash_write_protect.c"><Option compilerVer="CC"/></Unit>
@@ -536,6 +541,7 @@
 <Unit filename="../../../../../include_lib/net/json_c/printbuf.h" />
 <Unit filename="../../../../../include_lib/net/lwip_2_2_0/lwip/app/cdp/cdp.h" />
 <Unit filename="../../../../../include_lib/net/lwip_2_2_0/lwip/app/ctp/ctp.h" />
+<Unit filename="../../../../../include_lib/net/lwip_2_2_0/lwip/app/dhcp_srv/dhcp_srv.h" />
 <Unit filename="../../../../../include_lib/net/lwip_2_2_0/lwip/app/sock_api/sock_api.h" />
 <Unit filename="../../../../../include_lib/net/lwip_2_2_0/lwip/port/arch/cc.h" />
 <Unit filename="../../../../../include_lib/net/lwip_2_2_0/lwip/port/arch/cpu.h" />
@@ -662,6 +668,7 @@
 <Unit filename="../../../../../include_lib/utils/event/device_event.h" />
 <Unit filename="../../../../../include_lib/utils/event/event.h" />
 <Unit filename="../../../../../include_lib/utils/event/key_event.h" />
+<Unit filename="../../../../../include_lib/utils/event/net_event.h" />
 <Unit filename="../../../../../include_lib/utils/event/touch_event.h" />
 <Unit filename="../../../../../include_lib/utils/fs/fs.h" />
 <Unit filename="../../../../../include_lib/utils/fs/fs_file_name.h" />

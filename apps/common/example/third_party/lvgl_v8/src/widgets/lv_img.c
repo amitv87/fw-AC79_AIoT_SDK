@@ -87,6 +87,9 @@ void lv_img_set_src(lv_obj_t *obj, const void *src)
     case LV_IMG_SRC_SYMBOL:
         LV_LOG_TRACE("lv_img_set_src: `LV_IMG_SRC_SYMBOL` type found");
         break;
+    case LV_IMG_SRC_BIN:
+        LV_LOG_TRACE("lv_img_set_src: `LV_IMG_SRC_BIN` type found");
+        break;
     default:
         LV_LOG_WARN("lv_img_set_src: unknown type");
     }
@@ -108,6 +111,11 @@ void lv_img_set_src(lv_obj_t *obj, const void *src)
 
     /*Save the source*/
     if (src_type == LV_IMG_SRC_VARIABLE) {
+        if (img->src_type == LV_IMG_SRC_FILE || img->src_type == LV_IMG_SRC_SYMBOL) {
+            lv_mem_free((void *)img->src);
+        }
+        img->src = src;
+    } else if (src_type == LV_IMG_SRC_BIN) {
         /*If memory was allocated because of the previous `src_type` then free it*/
         if (img->src_type == LV_IMG_SRC_FILE || img->src_type == LV_IMG_SRC_SYMBOL) {
             lv_mem_free((void *)img->src);
@@ -653,7 +661,7 @@ static void draw_img(lv_event_t *e)
             img_max_area.x2 -= pright;
             img_max_area.y2 -= pbottom;
 
-            if (img->src_type == LV_IMG_SRC_FILE || img->src_type == LV_IMG_SRC_VARIABLE) {
+            if (img->src_type == LV_IMG_SRC_FILE || img->src_type == LV_IMG_SRC_VARIABLE || img->src_type == LV_IMG_SRC_BIN) {
                 lv_draw_img_dsc_t img_dsc;
                 lv_draw_img_dsc_init(&img_dsc);
                 lv_obj_init_draw_img_dsc(obj, LV_PART_MAIN, &img_dsc);

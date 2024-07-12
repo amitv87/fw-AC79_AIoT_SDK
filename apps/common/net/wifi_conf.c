@@ -53,7 +53,7 @@ const char WIFI_CHANNEL_QUALITY_INDICATION_BAD = 5; //STA模式下的信道通�
 #ifdef CONFIG_RF_TEST_ENABLE
 const char wifi_temperature_drift_trim_on = 0; //WiFi温度漂移校准开关,0为关闭，1为打开
 #else
-const char wifi_temperature_drift_trim_on = 1; //WiFi温度漂移校准开关,0为关闭，1为打开
+const char wifi_temperature_drift_trim_on = 0; //WiFi温度漂移校准开关,0为关闭，1为打开
 #endif
 
 const char wifi_ap_scan_support = 0; //ap扫描开关，0为关闭，1为开启
@@ -1040,6 +1040,28 @@ void wl_auto_adjust_sleep_pwr_level(void)
 #endif
 
 #if 0  //WIFI RX 中庸策略
+
+
+#ifdef CONFIG_WIFI_ADAPTIVITY_ENABLE
+
+const u32 STF_END_CNT_THR_VAL = 190;
+const u32 STF_DET_CNT_THR_VAL = 16;
+const u32 DS_DET_CNT_THR0_VAL = 8;
+const u32 STF_DET_THR1_VAL = 220;
+const u32 STF_DET_THR2_VAL = 180;
+const u32 STF_DET_THR3_VAL = 170;
+const u32 DSSS_XCDET_THR1_VAL = 120;
+const u32 DSSS_XCDET_THR2_VAL = 140;
+const u32 DS_VLD_CNT_THR_VAL = 80;
+const u32 DS_DET_CNT_THR1_VAL = 8;
+
+//WIFI Adaptivity
+/*n/8 dBm 干扰功率阈值, 设置值和真实值有-20dBm的差值, 即默认值为(-80*8)时，干扰功率为-60dBm时进行规避, 最低配置值为(-127*8)*/
+short CHL_PWR_THR = (-70 * 8); //75
+short CHL_BUSY_CONFIG = (0xe & 0x0f); //0xe
+const unsigned char wifi_adaptivity_enable = 1;
+
+#else
 const u32 STF_END_CNT_THR_VAL = 179;
 const u32 STF_DET_CNT_THR_VAL = 16;
 const u32 DS_DET_CNT_THR0_VAL = 3;
@@ -1053,8 +1075,12 @@ const u32 DS_DET_CNT_THR1_VAL = 3;
 
 //WIFI Adaptivity
 /*n/8 dBm 干扰功率阈值, 设置值和真实值有-20dBm的差值, 即默认值为(-80*8)时，干扰功率为-60dBm时进行规避, 最低配置值为(-127*8)*/
+const unsigned char wifi_adaptivity_enable = 1;
 short CHL_PWR_THR = (-80 * 8);
 short CHL_BUSY_CONFIG = (0xc & 0x0f); //0xe
+#endif
+
+
 
 ///=======================================================//
 ///       ram adr        ctl
@@ -1341,6 +1367,27 @@ const unsigned long wl_rfd_ram_lut [256][2] = {
 
 #else  // WIFI RX 抗干扰能力更强策略
 
+
+#ifdef CONFIG_WIFI_ADAPTIVITY_ENABLE
+
+const u32 STF_END_CNT_THR_VAL = 190;
+const u32 STF_DET_CNT_THR_VAL = 16;
+const u32 DS_DET_CNT_THR0_VAL = 8;
+const u32 STF_DET_THR1_VAL = 220;
+const u32 STF_DET_THR2_VAL = 180;
+const u32 STF_DET_THR3_VAL = 170;
+const u32 DSSS_XCDET_THR1_VAL = 120;
+const u32 DSSS_XCDET_THR2_VAL = 140;
+const u32 DS_VLD_CNT_THR_VAL = 80;
+const u32 DS_DET_CNT_THR1_VAL = 8;
+
+//WIFI Adaptivity
+/*n/8 dBm 干扰功率阈值, 设置值和真实值有-20dBm的差值, 即默认值为(-80*8)时，干扰功率为-60dBm时进行规避, 最低配置值为(-127*8)*/
+short CHL_PWR_THR = (-70 * 8); //75
+short CHL_BUSY_CONFIG = (0xe & 0x0f); //0xe
+const unsigned char wifi_adaptivity_enable = 1;
+
+#else
 const u32 STF_END_CNT_THR_VAL = 190;
 const u32 STF_DET_CNT_THR_VAL = 12;
 const u32 DS_DET_CNT_THR0_VAL = 4;
@@ -1352,10 +1399,10 @@ const u32 DSSS_XCDET_THR2_VAL = 100;
 const u32 DS_VLD_CNT_THR_VAL = 80;
 const u32 DS_DET_CNT_THR1_VAL = 4;
 
-//WIFI Adaptivity
-/*n/8 dBm 干扰功率阈值, 设置值和真实值有-20dBm的差值, 即默认值为(-80*8)时，干扰功率为-60dBm时进行规避, 最低配置值为(-127*8)*/
 short CHL_PWR_THR = (-80 * 8);
 short CHL_BUSY_CONFIG = (0xc & 0x0f); //0xe
+const unsigned char wifi_adaptivity_enable = 0;
+#endif
 
 ///=======================================================//
 ///       ram adr        ctl

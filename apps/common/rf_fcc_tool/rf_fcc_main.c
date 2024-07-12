@@ -95,6 +95,10 @@ struct ctl_params {
 static u8 g_cur_mode;
 static struct fcc_mode g_mode_info = {0};
 
+#ifdef CONFIG_NET_ENABLE
+/* static SEC(.volatile_ram) u8 fcc_mode_enable = 0; */
+#endif
+
 
 extern short CHL_BUSY_CONFIG;
 int wifi_get_mac(u8 *mac);
@@ -160,7 +164,7 @@ static u8 comm_dev_init(void)
 }
 
 
-static u32 comm_dev_tx_data(u8 *buf, u32 len)
+static int comm_dev_tx_data(u8 *buf, u32 len)
 {
 #ifdef FCC_USB_COMM
     return cdc_write_data(__THIS->usb_id, buf, len);
@@ -170,7 +174,7 @@ static u32 comm_dev_tx_data(u8 *buf, u32 len)
 }
 
 
-static u32 comm_dev_rx_data(u8 *buf, u32 len)
+static int comm_dev_rx_data(u8 *buf, u32 len)
 {
 #ifdef FCC_USB_COMM
     os_sem_pend(&__THIS->cdc_sem, 0);
@@ -321,7 +325,8 @@ static void comm_dev_recv_task(void *priv)
         move_len = 0;
         memset(data, 0, sizeof(data));
         len = comm_dev_rx_data(data, sizeof(data));
-        if (len < 0) {
+        if (len <= 0) {
+            os_time_dly(5);
             continue;
         }
 
@@ -519,11 +524,11 @@ static int wifi_event_callback(void *network_ctx, enum WIFI_EVENT event)
                 mp_test_pa_mcs_dgain_set(__THIS->tx_rate_tab[i].phy, __THIS->tx_rate_tab[i].mcs, __THIS->g_sign_info.data.gain[i]);
             }
             udp_server_init(30136);
-#ifdef CONFIG_IPERF_ENABLE
-            extern void iperf_test(void);
-            iperf_test();
-#endif
         }
+#ifdef CONFIG_IPERF_ENABLE
+        extern void iperf_test(void);
+        iperf_test();
+#endif
         break;
 
     case WIFI_EVENT_STA_NETWORK_STACK_DHCP_SUCC:
@@ -804,6 +809,13 @@ static void fcc_data_show(u8 opcode, void *priv)
         log_info("OP_FCC_WIFI_CONN:\n");
         log_info("\tssid = %s\n", ((struct WIFI_CONN_INFO *)priv)->ssid);
         log_info("\tpwd  = %s\n", ((struct WIFI_CONN_INFO *)priv)->pwd);
+        //wifi adaptivity
+        /* fcc_mode_enable = 0; */
+
+#ifdef CONFIG_WIFI_ADAPTIVITY_ENABLE
+        void wifi_adaptivity_start(void);
+        wifi_adaptivity_start();
+#endif
         break;
 
     default:
@@ -1883,6 +1895,7 @@ static void fcc_cfg_parse(void)
 
 #ifdef CONFIG_NET_ENABLE
     u8 xosc[2], pa[7];
+    u8 mcs_dgain[20];
     if (json_object_object_get(new_obj, "XOSC")) {
         if (ARRAY_SIZE(xosc) == json_object_array_length(json_object_object_get(new_obj, "XOSC"))) {
             for (u8 i = 0; i < json_object_array_length(json_object_object_get(new_obj, "XOSC")); i++) {
@@ -1900,6 +1913,16 @@ static void fcc_cfg_parse(void)
             syscfg_write(VM_WIFI_PA_DATA, pa, sizeof(pa));
         }
     }
+
+    //modify by tcq
+    if (json_object_object_get(new_obj, "dgain")) {
+        if (ARRAY_SIZE(mcs_dgain) == json_object_array_length(json_object_object_get(new_obj, "dgain"))) {
+            for (u8 i = 0; i < ARRAY_SIZE(mcs_dgain); i++) {
+                mcs_dgain[i] = json_object_get_int(json_object_array_get_idx(json_object_object_get(new_obj, "dgain"), i));
+            }
+            syscfg_write(VM_WIFI_PA_MCS_DGAIN, mcs_dgain, sizeof(mcs_dgain));
+        }
+    }
 #endif
 
 _parse_exit_:
@@ -1915,7 +1938,6 @@ _parse_exit_:
         fclose(fd);
     }
 }
-
 
 u8 rf_fcc_test_init(void)
 {
@@ -2133,9 +2155,10 @@ u8 rf_fcc_test_init(void)
 #endif
     } else if (mode == FCC_WIFI_MODE) {
 #ifdef CONFIG_NET_ENABLE
+        /* fcc_mode_enable = 1; */
         //wifi_set_sta_connect_timeout(10000);
         wifi_set_event_callback(wifi_event_callback);
-        CHL_BUSY_CONFIG = (0xe & 0x0f); //0xe | 0xc ;open close
+        /* CHL_BUSY_CONFIG = (0xe & 0x0f); //0xe | 0xc ;open close */
         wifi_on();
 
         __THIS->tx_params.send_interval = 10;
@@ -2317,10 +2340,12 @@ u8 fcc_wifi_sign_dgain_set(u8 phy, u8 mcs)
 #endif
 
 
+
 AT(.volatile_ram_code)
 u8 is_fcc_auth(void)
 {
-    return FALSE;//__THIS->wifi_stray;
+    //return fcc_mode_enable;//__THIS->wifi_stray;
+    return TRUE;//__THIS->wifi_stray;
 }
 
 #endif

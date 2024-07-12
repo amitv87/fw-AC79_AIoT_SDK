@@ -789,10 +789,13 @@ u8 product_motor_init(void)
 }
 
 
-u8 product_motor_ctl(u8 cmd, int flag, int step)
+u8 product_motor_ctl(u8 id, u8 cmd, int flag, int step)
 {
     u8 rscorr = ERR_NULL;
-    product_info("%s, cmd = %d, flag = %d, step = %d\n", __FUNCTION__, cmd, flag, step);
+    //flag == TRUE,为步进电机,否则为普通电机
+    //id == 0, 马达设备
+    //id == 1, IRCUT电机
+    product_info("%s, id = %d, cmd = %d, flag = %d, step = %d\n", __FUNCTION__, id, cmd, flag, step);
 
     switch (cmd) {
     case CTL_MOTOR_LEFT:

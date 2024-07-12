@@ -17,7 +17,7 @@
 /*********************
  *      DEFINES
  *********************/
-#define MY_CLASS &lv_bar_class
+#define MY_CLASS (&lv_bar_class)
 
 /** hor. pad and ver. pad cannot make the indicator smaller than this [px]*/
 #define LV_BAR_SIZE_MIN  4
@@ -478,11 +478,15 @@ static void draw_indic(lv_event_t *e)
      *
      */
 
-    bool gradient = false;
+    bool mask_needed = false;
     if (hor && draw_rect_dsc.bg_grad.dir == LV_GRAD_DIR_HOR) {
-        gradient = true;
+        mask_needed = true;
     } else if (!hor && draw_rect_dsc.bg_grad.dir == LV_GRAD_DIR_VER) {
-        gradient = true;
+        mask_needed = true;
+    }
+
+    if (draw_rect_dsc.bg_image_src) {
+        mask_needed = true;
     }
 
     bool radius_issue = true;
@@ -495,7 +499,7 @@ static void draw_indic(lv_event_t *e)
         radius_issue = false;
     }
 
-    if (radius_issue || gradient) {
+    if (radius_issue || mask_needed) {
         if (!radius_issue) {
             /*Draw only the shadow*/
             lv_draw_rect_dsc_t draw_tmp_dsc = draw_rect_dsc;
@@ -510,14 +514,14 @@ static void draw_indic(lv_event_t *e)
         }
         draw_rect_dsc.shadow_opa = 0;
 
-        /*If clipped for any reason can the border, outline, and shadow
-         *would be clipped and looked ugly so don't draw them*/
+        /*If clipped for any reason cannot the border, outline, and shadow
+         *as they would be clipped and looked ugly*/
         lv_draw_rect_dsc_t draw_tmp_dsc = draw_rect_dsc;
         draw_tmp_dsc.border_opa = 0;
         draw_tmp_dsc.outline_opa = 0;
         draw_tmp_dsc.shadow_opa = 0;
         lv_area_t indic_draw_area = indic_area;
-        if (gradient) {
+        if (mask_needed) {
             if (hor) {
                 indic_draw_area.x1 = bar_coords.x1 + bg_left;
                 indic_draw_area.x2 = bar_coords.x2 - bg_right;
@@ -540,7 +544,7 @@ static void draw_indic(lv_event_t *e)
             lv_draw_mask_rect(layer_indic, &mask_dsc);
         }
 
-        if (gradient) {
+        if (mask_needed) {
             mask_dsc.area = indic_area;
             mask_dsc.radius = indic_radius;
             lv_draw_mask_rect(layer_indic, &mask_dsc);

@@ -63,6 +63,9 @@
 <Add option="-DCONFIG_LMP_CONN_SUSPEND_ENABLE" />
 <Add option="-DCONFIG_LMP_REFRESH_ENCRYPTION_KEY_ENABLE" />
 <Add option="-DCONFIG_ITEM_FORMAT_VM" />
+<Add option="-D_POSIX_SOURCE" />
+<Add option="-DFIONREAD" />
+<Add option="-DFIONBIO" />
 <Add directory="../../../../include_lib/c++" />
 <Add directory="../../../../include_lib/c++/include" />
 <Add directory="../../../../include_lib/newlib/include" />
@@ -447,6 +450,7 @@
 <Unit filename="../../../../apps/common/rf_fcc_tool/include/datatype.h" />
 <Unit filename="../../../../apps/common/rf_fcc_tool/include/rf_fcc_main.h" />
 <Unit filename="../../../../apps/common/rf_fcc_tool/rf_fcc_main.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/common/rf_fcc_tool/wifi_adaptivity.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/system/app_power_manage.h" />
 <Unit filename="../../../../apps/common/system/device_mount.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/system/flash_write_protect.c"><Option compilerVer="CC"/></Unit>
@@ -778,6 +782,7 @@
 <Unit filename="../../../../include_lib/net/lte_module/lte_module.h" />
 <Unit filename="../../../../include_lib/net/lwip_2_2_0/lwip/app/cdp/cdp.h" />
 <Unit filename="../../../../include_lib/net/lwip_2_2_0/lwip/app/ctp/ctp.h" />
+<Unit filename="../../../../include_lib/net/lwip_2_2_0/lwip/app/dhcp_srv/dhcp_srv.h" />
 <Unit filename="../../../../include_lib/net/lwip_2_2_0/lwip/app/mssdp/mssdp.h" />
 <Unit filename="../../../../include_lib/net/lwip_2_2_0/lwip/app/sock_api/sock_api.h" />
 <Unit filename="../../../../include_lib/net/lwip_2_2_0/lwip/port/arch/cc.h" />

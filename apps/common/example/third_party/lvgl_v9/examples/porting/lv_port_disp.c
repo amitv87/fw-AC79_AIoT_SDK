@@ -105,6 +105,9 @@ void lv_port_disp_init(void)
      * -----------------------------------*/
     lv_display_t *disp = lv_display_create(MY_DISP_HOR_RES, MY_DISP_VER_RES);
     lv_display_set_flush_cb(disp, disp_flush);
+
+    lv_display_delete_refr_timer(disp);
+
 #if 0
     /* Example 1
      * One buffer for partial rendering*/

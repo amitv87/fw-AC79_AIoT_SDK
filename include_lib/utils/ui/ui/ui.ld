@@ -34,4 +34,6 @@
         *(.battery_notify)
         battery_notify_end = .;
 
-
+        ui_module_event_handler_begin = .;
+        KEEP(*(.ui_module_event_handler))
+        ui_module_event_handler_end = .;

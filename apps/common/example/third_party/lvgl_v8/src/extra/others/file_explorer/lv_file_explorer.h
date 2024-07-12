@@ -32,7 +32,6 @@ typedef enum {
     LV_EXPLORER_PICTURES_DIR,
     LV_EXPLORER_VIDEO_DIR,
     LV_EXPLORER_DOCS_DIR,
-    LV_EXPLORER_MNT_DIR,
     LV_EXPLORER_FS_DIR,
 } lv_file_explorer_dir_t;
 #endif
@@ -55,6 +54,8 @@ typedef struct {
     char *pictures_dir;
     char *video_dir;
     char *docs_dir;
+    char *fs_dir;
+    lv_coord_t list_w_pct;
 #endif
     char *sel_fp;
     char   cur_path[LV_FILE_EXPLORER_PATH_MAX_LEN];
@@ -87,6 +88,13 @@ void lv_file_explorer_set_quick_access_path(lv_obj_t *obj, lv_file_explorer_dir_
  * @param state true:display, false: hide
  */
 void lv_file_explorer_set_quick_access_state(lv_obj_t *obj, bool state);
+
+/**
+ * Set file_explorer list width percentage
+ * @param obj   pointer to a file explorer object
+ * @param w     width percentage
+ */
+void lv_file_explorer_set_list_width_pct(lv_obj_t *obj, lv_coord_t w);
 #endif
 
 /*=====================

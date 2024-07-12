@@ -138,7 +138,7 @@ DEFINES := \
 	-DRLOTTIE_COMMIT_HASH=\"056c0a1bc14bcee6f6b1a821013872a1228b0fa9\" \
 	-DFREETYPE_COMMIT_HASH=\"45903920b984540bb629bc89f4c010159c23a89a\" \
 	-DFT2_BUILD_LIBRARY \
-	-DLVGL_COMMIT_HASH=\"release/v8.3_39687e808fd0b84357f646ad390a0eb26764cb3f\" \
+	-DLVGL_COMMIT_HASH=\"release/v8.4_2409c8dfc6b8d9ae3f7970e1c333e743e0fd2911\" \
 	-D_XOPEN_SOURCE=700 \
 	-D_GNU_SOURCE \
 	-D__ELF__ \
@@ -390,6 +390,7 @@ c_SRC_FILES := \
 	../../../../../apps/common/example/third_party/lvgl_v8/examples/libs/rlottie/lv_example_rlottie_2.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/examples/libs/rlottie/lv_example_rlottie_approve.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/examples/libs/sjpg/lv_example_sjpg_1.c \
+	../../../../../apps/common/example/third_party/lvgl_v8/examples/lv_example.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/examples/others/fragment/lv_example_fragment_1.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/examples/others/fragment/lv_example_fragment_2.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/examples/others/gridnav/lv_example_gridnav_1.c \
@@ -539,34 +540,6 @@ c_SRC_FILES := \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/lv_img_buf.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/lv_img_cache.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/lv_img_decoder.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/nxp/pxp/lv_draw_pxp.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/nxp/pxp/lv_draw_pxp_blend.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/nxp/pxp/lv_gpu_nxp_pxp.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/nxp/pxp/lv_gpu_nxp_pxp_osa.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/nxp/vglite/lv_draw_vglite.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/nxp/vglite/lv_draw_vglite_arc.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/nxp/vglite/lv_draw_vglite_blend.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/nxp/vglite/lv_draw_vglite_line.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/nxp/vglite/lv_draw_vglite_rect.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/nxp/vglite/lv_vglite_buf.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/nxp/vglite/lv_vglite_utils.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/renesas/lv_gpu_d2_draw_label.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/renesas/lv_gpu_d2_ra6m3.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sdl/lv_draw_sdl.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sdl/lv_draw_sdl_arc.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sdl/lv_draw_sdl_bg.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sdl/lv_draw_sdl_composite.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sdl/lv_draw_sdl_img.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sdl/lv_draw_sdl_label.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sdl/lv_draw_sdl_layer.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sdl/lv_draw_sdl_line.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sdl/lv_draw_sdl_mask.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sdl/lv_draw_sdl_polygon.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sdl/lv_draw_sdl_rect.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sdl/lv_draw_sdl_stack_blur.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sdl/lv_draw_sdl_texture_cache.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sdl/lv_draw_sdl_utils.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/stm32_dma2d/lv_gpu_stm32_dma2d.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sw/lv_draw_sw.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sw/lv_draw_sw_arc.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sw/lv_draw_sw_blend.c \
@@ -579,7 +552,6 @@ c_SRC_FILES := \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sw/lv_draw_sw_polygon.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sw/lv_draw_sw_rect.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/sw/lv_draw_sw_transform.c \
-	../../../../../apps/common/example/third_party/lvgl_v8/src/draw/swm341_dma2d/lv_gpu_swm341_dma2d.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/extra/layouts/flex/lv_flex.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/extra/layouts/grid/lv_grid.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/extra/libs/barcode/code128.c \
@@ -614,6 +586,7 @@ c_SRC_FILES := \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/extra/others/anim_effect/lv_anim_effect_specials.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/extra/others/anim_effect/lv_anim_effect_zooming.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/extra/others/file_explorer/lv_file_explorer.c \
+	../../../../../apps/common/example/third_party/lvgl_v8/src/extra/others/font/lv_font_loader_bin.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/extra/others/fragment/lv_fragment.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/extra/others/fragment/lv_fragment_manager.c \
 	../../../../../apps/common/example/third_party/lvgl_v8/src/extra/others/gridnav/lv_gridnav.c \

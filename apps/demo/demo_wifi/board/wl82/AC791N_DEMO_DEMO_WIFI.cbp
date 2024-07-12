@@ -54,6 +54,9 @@
 <Add option="-DCONFIG_UPDATA_ENABLE" />
 <Add option="-DCONFIG_OTA_UPDATA_ENABLE" />
 <Add option="-DCONFIG_ITEM_FORMAT_VM" />
+<Add option="-D_POSIX_SOURCE" />
+<Add option="-DFIONREAD" />
+<Add option="-DFIONBIO" />
 <Add directory="../../../../../include_lib/c++" />
 <Add directory="../../../../../include_lib/c++/include" />
 <Add directory="../../../../../include_lib/newlib/include" />
@@ -175,6 +178,7 @@
 <Unit filename="../../../../../apps/common/rf_fcc_tool/include/datatype.h" />
 <Unit filename="../../../../../apps/common/rf_fcc_tool/include/rf_fcc_main.h" />
 <Unit filename="../../../../../apps/common/rf_fcc_tool/rf_fcc_main.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../../apps/common/rf_fcc_tool/wifi_adaptivity.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/system/init.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/system/perf_counter/example/main.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../../apps/common/system/perf_counter/perf_counter.c"><Option compilerVer="CC"/></Unit>

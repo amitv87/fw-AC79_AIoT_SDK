@@ -11,6 +11,7 @@
  *********************/
 #include "lv_port_indev.h"
 #include "../../lvgl.h"
+#include "src/indev/lv_indev_private.h"
 
 /*********************
  *      DEFINES
@@ -92,6 +93,8 @@ void lv_port_indev_init(void)
     indev_touchpad = lv_indev_create();
     lv_indev_set_type(indev_touchpad, LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(indev_touchpad, touchpad_read);
+    lv_timer_del(indev_touchpad->read_timer);
+    indev_touchpad->read_timer = NULL;
 #if 0
     /*------------------
      * Mouse
@@ -165,6 +168,15 @@ void lv_port_indev_init(void)
 #endif
 }
 
+void lv_indev_timer_read(void *user_data)
+{
+    lv_timer_t timer;
+
+    timer.user_data = indev_touchpad;
+    indev_touchpad->user_data = user_data;
+    lv_indev_read_timer_cb(&timer);
+}
+
 /**********************
  *   STATIC FUNCTIONS
  **********************/
@@ -182,22 +194,16 @@ static void touchpad_init(void)
 /*Will be called by the library to read the touchpad*/
 static void touchpad_read(lv_indev_t *indev_drv, lv_indev_data_t *data)
 {
-    int16_t last_x;
-    int16_t last_y;
     unsigned char status;
 
     /*Save the pressed coordinates and the state*/
-    extern void get_touch_x_y_status(lv_coord_t *x, lv_coord_t *y, unsigned char *status);
-    get_touch_x_y_status(&last_x, &last_y, &status);
+    extern void lv_port_get_touch_x_y_status(void *user_data, lv_coord_t *x, lv_coord_t *y, unsigned char *status);
+    lv_port_get_touch_x_y_status(indev_drv->user_data, &data->point.x, &data->point.y, &status);
     if (status) {
         data->state = LV_INDEV_STATE_PR;
     } else {
         data->state = LV_INDEV_STATE_REL;
     }
-
-    /*Set the last pressed coordinates*/
-    data->point.x = last_x;
-    data->point.y = last_y;
 }
 
 /*Return true is the touchpad is pressed*/

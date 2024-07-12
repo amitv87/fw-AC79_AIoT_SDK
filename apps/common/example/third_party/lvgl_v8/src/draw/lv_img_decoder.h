@@ -36,6 +36,14 @@ enum {
     LV_IMG_SRC_FILE, /** File in filesystem*/
     LV_IMG_SRC_SYMBOL, /** Symbol (@ref lv_symbol_def.h)*/
     LV_IMG_SRC_UNKNOWN, /** Unknown source*/
+    LV_IMG_SRC_BIN,
+};
+enum {
+    LV_COMPRESS_NONE = 1, /** 无压缩*/
+    LV_COMPRESS_ZIP, /** zip压缩*/
+    LV_COMPRESS_RLE, /** rle压缩*/
+    LV_COMPRESS_ETC2, /**etc2压缩*/
+    LV_COMPRESS_LZ4, /**lz4压缩*/
 };
 
 typedef uint8_t lv_img_src_t;

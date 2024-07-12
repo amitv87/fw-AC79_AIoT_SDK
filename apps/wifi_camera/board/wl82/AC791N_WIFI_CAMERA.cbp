@@ -63,6 +63,9 @@
 <Add option="-DCONFIG_LMP_CONN_SUSPEND_ENABLE" />
 <Add option="-DCONFIG_LMP_REFRESH_ENCRYPTION_KEY_ENABLE" />
 <Add option="-DCONFIG_ITEM_FORMAT_VM" />
+<Add option="-D_POSIX_SOURCE" />
+<Add option="-DFIONREAD" />
+<Add option="-DFIONBIO" />
 <Add directory="../../../../include_lib/c++" />
 <Add directory="../../../../include_lib/c++/include" />
 <Add directory="../../../../include_lib/newlib/include" />
@@ -268,6 +271,7 @@
 <Unit filename="../../../../apps/common/key/iokey.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/key/key_driver.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/net/assign_macaddr.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/common/net/assign_macaddr.h" />
 <Unit filename="../../../../apps/common/net/config_network.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/net/iperf_test.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/net/platform_cfg.c"><Option compilerVer="CC"/></Unit>
@@ -296,6 +300,7 @@
 <Unit filename="../../../../apps/common/rf_fcc_tool/include/datatype.h" />
 <Unit filename="../../../../apps/common/rf_fcc_tool/include/rf_fcc_main.h" />
 <Unit filename="../../../../apps/common/rf_fcc_tool/rf_fcc_main.c"><Option compilerVer="CC"/></Unit>
+<Unit filename="../../../../apps/common/rf_fcc_tool/wifi_adaptivity.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/system/app_power_manage.h" />
 <Unit filename="../../../../apps/common/system/device_mount.c"><Option compilerVer="CC"/></Unit>
 <Unit filename="../../../../apps/common/system/flash_write_protect.c"><Option compilerVer="CC"/></Unit>

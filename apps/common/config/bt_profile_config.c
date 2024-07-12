@@ -127,6 +127,14 @@ SDP_RECORD_HANDLER_REGISTER(pbap_sdp_record_item) = {
     .service_record_handle = 0x00010007,
 };
 #endif
+#if (USER_SUPPORT_PROFILE_HCRP==1)
+extern const u8 sdp_hcrp_service_data[];
+u8 hcrp_profile_support = 1;
+SDP_RECORD_HANDLER_REGISTER(hcrp_sdp_record_item) = {
+    .service_record = (u8 *)sdp_hcrp_service_data,
+    .service_record_handle = 0x0001000C,
+};
+#endif
 /*注意hid_conn_depend_on_dev_company置1之后，安卓手机会默认断开HID连接 */
 /*注意hid_conn_depend_on_dev_company置2之后，默认不断开HID连接 */
 const u8 hid_conn_depend_on_dev_company = 1;

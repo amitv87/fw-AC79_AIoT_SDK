@@ -14,7 +14,7 @@
 /*********************
  *      DEFINES
  *********************/
-#define MY_CLASS &lv_chart_class
+#define MY_CLASS (&lv_chart_class)
 
 #define LV_CHART_HDIV_DEF 3
 #define LV_CHART_VDIV_DEF 5
@@ -872,9 +872,13 @@ static void draw_series_line(lv_obj_t *obj, lv_layer_t *layer)
     /*If there are at least as many points as pixels then draw only vertical lines*/
     bool crowded_mode = (int32_t)chart->point_cnt >= w;
 
+    line_dsc.base.id1 = _lv_ll_get_len(&chart->series_ll) - 1;
+    point_dsc_default.base.id1 = line_dsc.base.id1;
     /*Go through all data lines*/
     _LV_LL_READ_BACK(&chart->series_ll, ser) {
         if (ser->hidden) {
+            line_dsc.base.id1--;
+            point_dsc_default.base.id1--;
             continue;
         }
         line_dsc.color = ser->color;
@@ -972,10 +976,10 @@ static void draw_series_line(lv_obj_t *obj, lv_layer_t *layer)
                 point_dsc_default.base.id2 = i - 1;
                 lv_draw_rect(layer, &point_dsc_default, &point_area);
             }
-
-            point_dsc_default.base.id1++;
-            line_dsc.base.id1++;
         }
+
+        point_dsc_default.base.id1--;
+        line_dsc.base.id1--;
     }
 
     layer->_clip_area = clip_area_ori;
@@ -1169,6 +1173,7 @@ static void draw_series_bar(lv_obj_t *obj, lv_layer_t *layer)
             x_act += col_w + ser_gap;
 
             if (col_a.x2 < clip_area.x1) {
+                col_dsc.base.id1++;
                 continue;
             }
             if (col_a.x1 > clip_area.x2) {

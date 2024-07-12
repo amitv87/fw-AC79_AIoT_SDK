@@ -13,6 +13,7 @@
 #include "../core/lv_refr.h"
 #include "../misc/lv_mem.h"
 #include "../misc/lv_math.h"
+#include "lv_port_fs.h"
 
 /*********************
  *      DEFINES
@@ -209,7 +210,13 @@ lv_img_src_t lv_img_src_get_type(const void *src)
 #else
     if (u8_p[0] >= 0x20 && u8_p[0] <= 0x7F) {
 #endif
-        img_src_type = LV_IMG_SRC_FILE; /*If it's an ASCII character then it's file name*/
+        JL_get_type type;
+        lv_get_type_bin(src, &type);
+        if (type.first_byte == 0x4a && type.second_byte	== 0x4c) {
+            img_src_type = LV_IMG_SRC_BIN; //如果是前两个字节是"JL",为UI工具生成的bin文件
+        } else {
+            img_src_type = LV_IMG_SRC_FILE; /*If it's an ASCII character then it's file name*/
+        }
     }
 #if LV_BIG_ENDIAN_SYSTEM
     else if (u8_p[3] >= 0x80) {

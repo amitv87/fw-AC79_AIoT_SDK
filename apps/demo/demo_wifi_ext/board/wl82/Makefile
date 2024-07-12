@@ -124,6 +124,9 @@ DEFINES := \
 	-DVM_MAX_SECTOR_ALIGN_SIZE_CONFIG=64*1024 \
 	-DVM_ITEM_MAX_NUM=256 \
 	-DCONFIG_ITEM_FORMAT_VM \
+	-D_POSIX_SOURCE \
+	-DFIONREAD \
+	-DFIONBIO \
 
 
 DEFINES += $(EXT_CFLAGS) # 额外的一些定义
@@ -189,6 +192,7 @@ c_SRC_FILES := \
 	../../../../../apps/common/net/wifi_conf.c \
 	../../../../../apps/common/rf_fcc_tool/bt.c \
 	../../../../../apps/common/rf_fcc_tool/rf_fcc_main.c \
+	../../../../../apps/common/rf_fcc_tool/wifi_adaptivity.c \
 	../../../../../apps/common/system/device_mount.c \
 	../../../../../apps/common/system/init.c \
 	../../../../../apps/common/system/perf_counter/example/main.c \
