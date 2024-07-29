@@ -256,6 +256,7 @@ static int dvp_test_onchange(void *ctr, enum element_change_event event, void *a
     case ON_CHANGE_INIT:
         set_touch_disable();
         get_yuv_init(get_yuv);
+        set_lcd_show_data_mode(UI_CAMERA);//图像合成模式
         set_touch_enable();
         break;
     }
@@ -267,13 +268,18 @@ static int dvp_test_ontouch(void *ctr, struct element_touch_event *e)
     struct ui_grid *grid = (struct ui_grid *)ctr;
     switch (e->event) {
     case ELM_EVENT_TOUCH_DOWN:
-        set_touch_disable();
-        set_lcd_show_data_mode(UI);//ui模式
         ui_hide_curr_main();
         ui_show_main(PAGE_1);
-        dev_ioctl(dev_open("video0.0", NULL), CAMERA_POWER_CTRL, (u8)0); //摄像头硬件复位
-        get_yuv_uninit();
+        set_touch_disable();
         printf(">>>>>>>close_dvp_camere");
+        void *video_dev = NULL;
+        video_dev = dev_open("video0.0", NULL);
+        dev_ioctl(video_dev, CAMERA_POWER_CTRL, (u8)0); //摄像头硬件复位
+        get_yuv_uninit();
+        set_lcd_show_data_mode(UI);//ui模式
+        os_time_dly(10);//需要等彻底不使用lbuf才能清除lbuf
+        extern void clear_te_lbuf(void);//防止下次摄像头出图申请不到lbuf
+        clear_te_lbuf();
         set_touch_enable();
         break;
     }
